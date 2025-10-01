@@ -1,6 +1,8 @@
-# Getting Started with Create React App
+# 2Phishy Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React-based admin dashboard and frontend for the 2Phishy educational game system.
+
+This project provides a comprehensive admin interface for managing users, viewing game analytics, and monitoring learning progress in the 2Phishy phishing awareness educational platform.
 
 ## Available Scripts
 
