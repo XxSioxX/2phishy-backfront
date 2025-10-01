@@ -1,0 +1,319 @@
+@use "../../styles/variables.scss" as *;
+
+.profile {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 79.1vh;
+  background-color: $soft-bg;
+  font-family: sans-serif;
+  border-radius: 12px;
+
+  .profile-container {
+    width: 100%;
+    max-width: 800px;
+    padding: 2rem;
+    background-color: $dark-bg;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+
+    h1 {
+      margin-bottom: 2rem;
+      font-size: 1.8rem;
+      color: $main-color;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .read-only-notice {
+      margin-top: 1rem;
+      padding: 1rem;
+      background-color: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      border-radius: 8px;
+      color: #ffc107;
+      font-size: 0.9rem;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .success-message {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background-color: rgba(46, 204, 113, 0.1);
+      color: #2ecc71;
+      border-radius: 4px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .error-message {
+      margin-top: 0.25rem;
+      color: #e74c3c;
+      font-size: 0.8rem;
+      
+      &.general {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background-color: rgba(231, 76, 60, 0.1);
+        border-radius: 4px;
+        text-align: center;
+      }
+    }
+
+    .profile-sections {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .profile-section {
+      flex: 1 1 350px;
+      min-width: 350px;
+      background: $soft-bg;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      padding: 1.2rem 1rem;
+      margin-bottom: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+
+      h2 {
+        font-size: 1.1rem;
+        color: $soft-color;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        text-align: left;
+      }
+
+      .user-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+
+        .detail-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.5rem 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          label {
+            font-weight: 500;
+            color: $main-color;
+            min-width: 120px;
+          }
+
+          span {
+            color: $soft-color;
+            text-align: right;
+            flex: 1;
+            margin-left: 1rem;
+          }
+
+          .role-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+
+            &.role-student {
+              background-color: rgba(52, 152, 219, 0.2);
+              color: #3498db;
+            }
+
+            &.role-admin {
+              background-color: rgba(230, 126, 34, 0.2);
+              color: #e67e22;
+            }
+
+            &.role-super-admin {
+              background-color: rgba(231, 76, 60, 0.2);
+              color: #e74c3c;
+            }
+          }
+
+          .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+
+            &.status-active {
+              background-color: rgba(46, 204, 113, 0.2);
+              color: #2ecc71;
+            }
+
+            &.status-inactive {
+              background-color: rgba(149, 165, 166, 0.2);
+              color: #95a5a6;
+            }
+
+            &.status-suspended {
+              background-color: rgba(231, 76, 60, 0.2);
+              color: #e74c3c;
+            }
+          }
+        }
+      }
+
+      .profile-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+
+          label {
+            font-weight: 500;
+            color: $main-color;
+            margin-bottom: 0.5rem;
+          }
+
+          input {
+            padding: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            background-color: $dark-bg;
+            color: $main-color;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+
+            &:focus {
+              outline: none;
+              border-color: $main-color;
+              box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+            }
+            
+            &.error {
+              border-color: #e74c3c;
+            }
+            
+            &::placeholder {
+              color: rgba(255, 255, 255, 0.5);
+            }
+            
+            &:disabled {
+              background-color: rgba(255, 255, 255, 0.05);
+              cursor: not-allowed;
+            }
+          }
+        }
+
+        .form-actions {
+          display: flex;
+          gap: 1rem;
+          margin-top: 1rem;
+
+          button {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+
+            &:disabled {
+              cursor: not-allowed;
+              opacity: 0.6;
+            }
+          }
+
+          .cancel-button {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: $soft-color;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+
+            &:hover:not(:disabled) {
+              background-color: rgba(255, 255, 255, 0.2);
+            }
+          }
+
+          .save-button {
+            background-color: $soft-color;
+            color: $main-bg;
+
+            &:hover:not(:disabled) {
+              background-color: $main-color;
+            }
+          }
+        }
+      }
+
+      .edit-button {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: $soft-color;
+        color: $main-bg;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        margin-top: 1rem;
+        transition: background-color 0.2s;
+
+        &:hover {
+          background-color: $main-color;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .profile {
+    .profile-container {
+      .profile-sections {
+        flex-direction: column;
+        gap: 0;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .profile {
+    background-color: $main-bg;
+
+    .profile-container {
+      box-shadow: none;
+      padding: 1.2rem;
+
+      .profile-section {
+        min-width: unset;
+        
+        .user-details {
+          .detail-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+
+            span {
+              margin-left: 0;
+              text-align: left;
+            }
+          }
+        }
+
+        .profile-form {
+          .form-actions {
+            flex-direction: column;
+          }
+        }
+      }
+    }
+  }
+}

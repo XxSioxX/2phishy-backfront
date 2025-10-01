@@ -1,0 +1,149 @@
+@use "../../styles/variables.scss" as *;
+@use "sass:color";
+
+.timezone-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.timezone-modal-content {
+  background-color: $dark-bg;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+  .timezone-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid $soft-bg;
+
+    h2 {
+      color: $main-color;
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .close-button {
+      background: none;
+      border: none;
+      color: $main-color;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background-color 0.3s;
+
+      &:hover {
+        background-color: $soft-bg;
+      }
+    }
+  }
+
+  .timezone-modal-body {
+    padding: 20px;
+  }
+
+  .timezone-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .timezone-option {
+    background-color: $soft-bg;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+
+    &:hover {
+      border-color: $main-color;
+      background-color: color.adjust($soft-bg, $lightness: 5%);
+    }
+
+    &.selected {
+      border-color: $main-color;
+      background-color: color.adjust($main-color, $alpha: -0.9);
+    }
+
+    .timezone-label {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: $main-color;
+      margin-bottom: 4px;
+    }
+
+    .timezone-name {
+      font-size: 0.9rem;
+      color: $soft-color;
+      margin-bottom: 2px;
+    }
+
+    .timezone-value {
+      font-size: 0.8rem;
+      color: color.adjust($soft-color, $alpha: -0.3);
+      font-family: 'Courier New', monospace;
+    }
+  }
+
+  .timezone-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px;
+    border-top: 1px solid $soft-bg;
+
+    .cancel-button,
+    .save-button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.3s;
+    }
+
+    .cancel-button {
+      background-color: $soft-bg;
+      color: $main-color;
+
+      &:hover {
+        background-color: color.adjust($soft-bg, $lightness: 10%);
+      }
+    }
+
+    .save-button {
+      background-color: $main-color;
+      color: white;
+
+      &:hover {
+        background-color: color.adjust($main-color, $lightness: -10%);
+      }
+    }
+  }
+}

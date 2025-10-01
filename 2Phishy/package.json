@@ -1,0 +1,14 @@
+{
+  "devDependencies": {
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "sass-embedded": "^1.89.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@types/react-router-dom": "^5.3.3",
+    "@types/recharts": "^2.0.1",
+    "react-router-dom": "^7.6.0",
+    "recharts": "^2.15.3"
+  }
+}

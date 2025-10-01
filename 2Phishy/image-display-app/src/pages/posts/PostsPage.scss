@@ -1,0 +1,78 @@
+@use "../../styles/variables.scss" as *;
+
+.posts-page {
+  padding: 20px;
+  background-color: $soft-bg;
+  min-height: 79.1vh;
+  color: $main-color;
+  border-radius: 12px;
+
+  .headerWithButton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+
+    h2 {
+      color: $main-color;
+      margin: 0;
+      font-size: 2rem;
+      font-weight: bold;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      .action-btn {
+        background-color: $dark-bg;
+        color: $main-color;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s;
+        &:hover {
+          background-color: lighten($dark-bg, 10%);
+        }
+      }
+    }
+  }
+
+  .posts-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: $dark-bg;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.12);
+    border: 2px solid $main-bg;
+
+    th, td {
+      padding: 14px 20px;
+      text-align: left;
+      color: $main-color;
+    }
+    th {
+      background: $soft-bg;
+      color: $soft-color;
+      font-weight: 600;
+      font-size: 1.05rem;
+      border-bottom: 1px solid $main-bg;
+    }
+    tr:nth-child(even) td {
+      background: $soft-bg;
+    }
+    tr {
+      border-bottom: 1px solid $main-bg;
+      transition: background 0.2s, box-shadow 0.2s;
+      &:hover td {
+        background: lighten($soft-bg, 8%);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+        outline: 2px solid $soft-color;
+        cursor: pointer;
+      }
+    }
+  }
+} 
