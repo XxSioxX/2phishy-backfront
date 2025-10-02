@@ -1,6 +1,7 @@
 {
   "name": "game-test-shakuro",
   "version": "1.0.0",
+  "description": "PROJECT LATEST",
   "type": "module",
   "main": "index.js",
   "license": "MIT",

@@ -1,6 +1,6 @@
-# 2Phishy Frontend
+# PROJECT LATEST
 
-This directory contains the frontend components for the 2Phishy educational game system.
+PROJECT LATEST
 
 ## Components
 

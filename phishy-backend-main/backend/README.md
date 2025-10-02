@@ -1,6 +1,6 @@
-# Phishy Game Backend API
+# PROJECT LATEST
 
-A FastAPI-based backend for the Phishy educational game, providing user management, learning path tracking, and game progress persistence.
+PROJECT LATEST
 
 ## Features
 

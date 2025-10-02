@@ -1,8 +1,8 @@
-# 2Phishy Frontend
+# PROJECT LATEST
 
-React-based admin dashboard and frontend for the 2Phishy educational game system.
+PROJECT LATEST
 
-This project provides a comprehensive admin interface for managing users, viewing game analytics, and monitoring learning progress in the 2Phishy phishing awareness educational platform.
+PROJECT LATEST
 
 ## Available Scripts
 
