@@ -1,0 +1,4 @@
+# Ignore all TypeScript files to prevent webpack compilation
+*.ts
+*.tsx
+src/
