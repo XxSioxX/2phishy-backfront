@@ -1,8 +1,8 @@
-# PROJECT LATEST
+# Project Latest
 
-PROJECT LATEST
+Project Latest
 
-PROJECT LATEST
+Project Latest
 
 ## Available Scripts
 

@@ -1,6 +1,6 @@
-# PROJECT LATEST
+# Project Latest
 
-PROJECT LATEST
+Project Latest
 
 ## Components
 
