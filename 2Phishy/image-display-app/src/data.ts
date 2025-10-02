@@ -50,46 +50,8 @@ export const topScores = [
     },
 ];
 
-export const chartBoxUser = {
-    color: "#8884d8",
-    icon: "/person4.svg",
-    title: "Total Users",
-    number: "500",
-    dataKey: "users",
-    percentage: 80,
-    chartData: [
-        {name: "Sun", users: 61},
-        {name: "Mon", users: 97},
-        {name: "Tue", users: 91},
-        {name: "Wed", users: 84},
-        {name: "Thu", users: 49},
-        {name: "Fri", users: 68},
-        {name: "Sat", users: 50},
-    ],
-};
-
-export const chartBoxActiveParticipants = {
-    color: "#00C49F",
-    icon: "/calendar.svg",
-    title: "Active Participants Over Time",
-    number: "500",
-    dataKey: "active",
-    percentage: 79,
-    chartData: [
-        { name: "Jan", active: 444 },
-        { name: "Feb", active: 233 },
-        { name: "Mar", active: 265 },
-        { name: "Apr", active: 411 },
-        { name: "May", active: 220 },
-        { name: "Jun", active: 242 },
-        { name: "Jul", active: 255 },
-        { name: "Aug", active: 211 },
-        { name: "Sep", active: 337 },
-        { name: "Oct", active: 461 },
-        { name: "Nov", active: 412 },
-        { name: "Dec", active: 264 },
-    ],
-};
+// chartBoxUser and chartBoxActiveParticipants are now dynamically generated in Home.tsx
+// using real data from the backend API
 
 export const barChartBoxVisit = {
     title: "Total Visit",

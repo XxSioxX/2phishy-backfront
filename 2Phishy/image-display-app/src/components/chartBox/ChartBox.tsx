@@ -36,8 +36,12 @@ const ChartBox: React.FC<ChartBoxProps> = (props) => {
                         </ResponsiveContainer>
             </div>
             <div className="texts">
-                <span className="percentage" style={{color: props.percentage<0 ? "tomato": "limegreen"}}>{props.percentage}%</span>
-                <span className="duration">this month</span>
+                <span className="percentage" style={{color: props.percentage<0 ? "tomato": "limegreen"}}>
+                    {props.title === "Total Users" ? `+${props.percentage}` : `${props.percentage}%`}
+                </span>
+                <span className="duration">
+                    {props.title === "Total Users" || props.title === "Active Participants Over Time" ? "this week" : "this month"}
+                </span>
             </div>
             </div>
         </div>

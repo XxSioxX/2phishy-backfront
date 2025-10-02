@@ -19,7 +19,7 @@ import Settings from "./pages/settings/Settings";
 import QuizInsightsPage from "./pages/quizInsights/QuizInsightsPage";
 import PostsPage from "./pages/posts/PostsPage";
 import Users from "./pages/users/Users";
-import AbadiaPage from "./pages/game/AbadiaPage";
+import GamePage from "./pages/game/GamePage";
 import Profile from "./pages/profile/Profile";
 import StudentMenu from "./components/menu/StudentMenu";
 import StudentSettings from "./pages/student-settings/StudentSettings";
@@ -84,7 +84,7 @@ const App: React.FC = () => {
         },
         {
           path: "/play-game",
-          element: <AbadiaPage />
+          element: <RouteGuard allowedRoles={['student', 'admin', 'super-admin']}><GamePage /></RouteGuard>
         },
         {
           path: "/admin",
