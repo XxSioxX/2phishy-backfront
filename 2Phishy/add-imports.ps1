@@ -1,1 +1,0 @@
-$root="image-display-app\public\abadia\src"; Get-ChildItem $root -Recurse -Filter .js | % { $p=$.FullName; $s=Get-Content -Raw $p; if ($s -match '\bPhaser\b' -and $s -notmatch 'from\s+["'']phaser["'']') { "import * as Phaser from 'phaser';rn$s" | Set-Content -Encoding UTF8 $p; Write-Host "Added $p" } }

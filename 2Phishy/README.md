@@ -12,7 +12,7 @@ React-based admin dashboard providing:
 - Role-based access control
 - Authentication system
 
-### 🎮 Abadia Game (`abadia-main/`)
+### 🎮 Phaser Game (`phaser-game/`)
 Complete Phaser.js game implementation featuring:
 - Interactive educational gameplay
 - Game assets and sprites
@@ -28,11 +28,11 @@ npm install
 npm start
 ```
 
-### Abadia Game
+### Phaser Game
 ```bash
-cd abadia-main
+cd phaser-game
 npm install
-npm start
+npm run dev
 ```
 
 ## Features

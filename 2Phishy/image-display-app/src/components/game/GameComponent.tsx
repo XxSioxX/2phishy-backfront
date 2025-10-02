@@ -31,7 +31,7 @@ const GameComponent: React.FC = () => {
           const logo = this.add.image(160, 100, "logo");
           logo.setScale(0.5);
           
-          this.add.text(160, 150, "Abadia Game Placeholder", {
+          this.add.text(160, 150, "Project Latest Game", {
             fontSize: "16px",
             color: "#ffffff"
           }).setOrigin(0.5);
@@ -52,8 +52,8 @@ const GameComponent: React.FC = () => {
   return (
     <div className="game-container">
       <div className="game-header">
-        <h2>La Abadía del Crimen</h2>
-        <p>A reimplementation of the classic game</p>
+        <h2>Project Latest Game</h2>
+        <p>Educational game system</p>
       </div>
       <div ref={gameRef} className="game-canvas" />
     </div>
