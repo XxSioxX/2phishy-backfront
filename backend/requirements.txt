@@ -1,0 +1,21 @@
+# Core frameworks and dependencies
+fastapi~=0.115.12
+uvicorn[standard]
+colorlog~=6.9.0
+
+# Database
+SQLAlchemy~=2.0.40
+psycopg2-binary
+motor~=3.7.0
+
+# Environment and config
+python-dotenv~=1.1.0
+dotenv~=0.9.9
+
+# Data validation and security
+pydantic~=2.11.3
+email-validator
+bcrypt~=4.3.0
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart
