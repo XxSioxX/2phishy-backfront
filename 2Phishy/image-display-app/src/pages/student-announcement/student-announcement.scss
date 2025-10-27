@@ -1,0 +1,175 @@
+@use "../../styles/variables.scss" as *;
+@use "sass:color";
+
+.student-announcement {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: auto;
+  background-color: $soft-bg;
+  font-family: sans-serif;
+  border-radius: 12px;
+  padding: 2rem 0;
+
+  .student-announcement-container {
+    width: 100%;
+    max-width: 1000px;
+    padding: 2rem;
+    background-color: $dark-bg;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+
+    .announcement-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+
+      h1 {
+        font-size: 1.8rem;
+        color: $main-color;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        text-align: left;
+      }
+
+      .subtitle {
+        color: $soft-color;
+        text-align: left;
+        margin-bottom: 0;
+        font-size: 1rem;
+      }
+
+      .refresh-button {
+        background-color: $dark-bg;
+        color: $main-color;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s;
+
+        &:hover {
+          background-color: lighten($dark-bg, 10%);
+        }
+      }
+    }
+
+    .no-announcements {
+      text-align: center;
+      padding: 3rem;
+      color: $soft-color;
+
+      p {
+        font-size: 1.1rem;
+      }
+    }
+
+    .announcements-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .announcement-card {
+      background: $soft-bg;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      transition: transform 0.2s;
+
+      &:hover {
+        transform: translateY(-2px);
+      }
+
+      .announcement-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+
+        .announcement-meta {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+
+          .priority-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            color: white;
+          }
+
+          .date {
+            color: $soft-color;
+            font-size: 0.9rem;
+          }
+        }
+
+        .author {
+          color: $soft-color;
+          font-size: 0.9rem;
+          font-style: italic;
+        }
+      }
+
+      .announcement-content {
+        h3 {
+          color: $main-color;
+          font-size: 1.2rem;
+          font-weight: 600;
+          margin-bottom: 0.75rem;
+          line-height: 1.4;
+        }
+
+        p {
+          color: $soft-color;
+          line-height: 1.6;
+          margin: 0;
+          font-size: 1rem;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .student-announcement {
+    padding: 1rem 0;
+
+    .student-announcement-container {
+      padding: 1rem;
+
+      .announcement-card {
+        padding: 1rem;
+
+        .announcement-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
+
+          .announcement-meta {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .student-announcement {
+    background-color: $main-bg;
+
+    .student-announcement-container {
+      box-shadow: none;
+    }
+  }
+}

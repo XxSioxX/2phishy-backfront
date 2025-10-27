@@ -1,0 +1,720 @@
+[
+  {
+    "topic": "Safe Browsing Practices",
+    "subtopics": [
+      {
+        "name": "Secure vs. Non-Secure Websites",
+        "key": "SECVSNONSEC",
+        "questions": [
+          {
+            "question_id": "sfb_svns_q1",
+            "question": "Which of the following URLs is most likely a phishing attempt?",
+            "choices": ["www.wellfargo.com", "www.wellsfargo.com", "www.google.com", "www.github.com"],
+            "answer": "www.wellfargo.com",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "sfb_svns_q2",
+            "question": "What is one sign of a potentially unsafe website?",
+            "choices": ["Unfamiliar domain names", "Secure payment options", "Contact details available", "HTTPS encryption"],
+            "answer": "Unfamiliar domain names",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "sfb_svns_q3",
+            "question": "You see a site called 'amaz0n.com'. What does this indicate?",
+            "choices": ["It’s Amazon’s mobile site", "It's a secure affiliate site", "It might be a phishing site", "It’s a typo"],
+            "answer": "It might be a phishing site",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "sfb_svns_q4",
+            "question": "Why is checking domain spelling important for security?",
+            "choices": [
+              "Spelling errors increase load time",
+              "Misspelled domains often indicate phishing attempts",
+              "Correct spelling improves search rankings",
+              "All of the above"
+            ],
+            "answer": "Misspelled domains often indicate phishing attempts",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "sfb_svns_q5",
+            "question": "Which domain is most likely legitimate?",
+            "choices": ["www.faceboook.com", "www.facebook.com", "www.face-book.com", "www.faecbook.com"],
+            "answer": "www.facebook.com",
+            "difficulty": "easy"
+          }
+        ]
+      },
+      {
+        "name": "HTTPS vs. HTTP Security",
+        "key": "HTTPVSHTTPS",
+        "questions": [
+          {
+            "question_id": "sfb_https_q1",
+            "question": "What does the 'S' in HTTPS stand for?",
+            "choices": ["Safe", "Secure", "Session", "Server"],
+            "answer": "Secure",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "sfb_https_q2",
+            "question": "What icon typically indicates a secure HTTPS connection?",
+            "choices": ["Lock", "Shield", "Star", "Arrow"],
+            "answer": "Lock",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "sfb_https_q3",
+            "question": "If a site only uses HTTP, what should you avoid doing?",
+            "choices": [
+              "Browsing articles",
+              "Clicking images",
+              "Submitting passwords",
+              "Reading comments"
+            ],
+            "answer": "Submitting passwords",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "sfb_https_q4",
+            "question": "How does HTTPS protect user data?",
+            "choices": [
+              "It hides the IP address",
+              "It prevents all tracking",
+              "It encrypts communication",
+              "It blocks all ads"
+            ],
+            "answer": "It encrypts communication",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "sfb_https_q5",
+            "question": "Which of the following indicates a potentially less secure site?",
+            "choices": [
+              "https://bank.com",
+              "http://login.com",
+              "https://mail.google.com",
+              "https://shopping.site"
+            ],
+            "answer": "http://login.com",
+            "difficulty": "medium"
+          }
+        ]
+      },
+      {
+        "name": "Browser Security Best Practices",
+        "key": "BROWSERSECBP",
+        "questions": [
+          {
+            "question_id": "sfb_bsbp_q1",
+            "question": "What setting can help ensure secure browsing by default?",
+            "choices": [
+              "Disable pop-ups",
+              "Force HTTPS connections",
+              "Enable third-party cookies",
+              "Lower screen brightness"
+            ],
+            "answer": "Force HTTPS connections",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "sfb_bsbp_q2",
+            "question": "Why should browsers be updated regularly?",
+            "choices": [
+              "To make them faster",
+              "To reduce ads",
+              "To receive security patches",
+              "To get new themes"
+            ],
+            "answer": "To receive security patches",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "sfb_bsbp_q3",
+            "question": "What risk comes with granting microphone access to websites?",
+            "choices": [
+              "Battery drain",
+              "Unauthorized audio recording",
+              "Lower resolution",
+              "Faster browsing"
+            ],
+            "answer": "Unauthorized audio recording",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "sfb_bsbp_q4",
+            "question": "Which browser permission can leak your location?",
+            "choices": ["Camera", "Microphone", "Notifications", "Location"],
+            "answer": "Location",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "sfb_bsbp_q5",
+            "question": "What should users consider before granting browser permissions?",
+            "choices": [
+              "How the website looks",
+              "How their data will be used",
+              "Whether the site has ads",
+              "Their internet speed"
+            ],
+            "answer": "How their data will be used",
+            "difficulty": "hard"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Password Security",
+    "subtopics": [
+      {
+        "name": "Commonly Used Passwords",
+        "key": "COMMPASS",
+        "questions": [
+          {
+            "question_id": "ps_cup_q1",
+            "question": "Which of the following passwords is considered weak and commonly used?",
+            "choices": ["123456", "password", "qwerty", "all of the above"],
+            "answer": "all of the above",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "ps_cup_q2",
+            "question": "Why is using pet names as passwords risky?",
+            "choices": [
+              "They are predictable",
+              "They are hard to remember",
+              "They can be stored securely",
+              "They are encrypted automatically"
+            ],
+            "answer": "They are predictable",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "ps_cup_q3",
+            "question": "Which of these is the most secure password?",
+            "choices": ["12345", "summer2025", "a7d1G9#pQ!", "password123"],
+            "answer": "a7d1G9#pQ!",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "ps_cup_q4",
+            "question": "What makes using common passwords like 'qwerty' a bad practice?",
+            "choices": [
+              "They are hard to remember",
+              "They are easy for hackers to guess through dictionary attacks",
+              "They are too long",
+              "They require special characters"
+            ],
+            "answer": "They are easy for hackers to guess through dictionary attacks",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "ps_cup_q5",
+            "question": "What is one of the main reasons why people continue using easily guessable passwords, despite security risks?",
+            "choices": [
+              "They are often simple to remember",
+              "They are stored encrypted",
+              "They use multi-factor authentication",
+              "They are updated frequently"
+            ],
+            "answer": "They are often simple to remember",
+            "difficulty": "hard"
+          }
+        ]
+      },
+      {
+        "name": "Password Strength",
+        "key": "PASSSTREN",
+        "questions": [
+          {
+            "question_id": "ps_ps_q1",
+            "question": "What is the recommended minimum length for a secure password?",
+            "choices": ["8 characters", "10 characters", "12 characters", "16 characters"],
+            "answer": "16 characters",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "ps_ps_q2",
+            "question": "Which of these methods will strengthen your password?",
+            "choices": [
+              "Using your name as a password",
+              "Using a memorable phrase with random characters",
+              "Using the same password for multiple accounts",
+              "Including only numeric characters"
+            ],
+            "answer": "Using a memorable phrase with random characters",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "ps_ps_q3",
+            "question": "Why is it important to use a different password for each account?",
+            "choices": [
+              "To make it easier to remember passwords",
+              "To avoid compromising multiple accounts if one password is breached",
+              "To allow all accounts to be easily accessed by one password manager",
+              "None of the above"
+            ],
+            "answer": "To avoid compromising multiple accounts if one password is breached",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "ps_ps_q4",
+            "question": "What is a passphrase and why is it considered stronger than a regular password?",
+            "choices": [
+              "A passphrase is a random collection of letters that are hard to remember",
+              "A passphrase is a long phrase made up of random words or characters that is difficult to guess",
+              "A passphrase is a short, common word",
+              "None of the above"
+            ],
+            "answer": "A passphrase is a long phrase made up of random words or characters that is difficult to guess",
+            "difficulty": "hard"
+          },
+          {
+            "question_id": "ps_ps_q5",
+            "question": "What is the advantage of using a password manager?",
+            "choices": [
+              "It helps generate and store secure, unique passwords for each account",
+              "It simplifies password recovery for forgotten passwords",
+              "It stores passwords in an unencrypted format",
+              "It avoids the need for multi-factor authentication"
+            ],
+            "answer": "It helps generate and store secure, unique passwords for each account",
+            "difficulty": "hard"
+          }
+        ]
+      },
+      {
+        "name": "Multi-Factor Authentication",
+        "key": "MULTIFACT",
+        "questions": [
+          {
+            "question_id": "ps_mfa_q1",
+            "question": "What is multi-factor authentication (MFA)?",
+            "choices": [
+              "A method to verify your identity using a password only",
+              "A process that uses only biometrics for authentication",
+              "A method that adds an extra layer of security by requiring more than just a password",
+              "A method that automatically logs you in without needing authentication"
+            ],
+            "answer": "A method that adds an extra layer of security by requiring more than just a password",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "ps_mfa_q2",
+            "question": "Which of the following is an example of multi-factor authentication?",
+            "choices": [
+              "Logging in with just your password",
+              "Entering a password and receiving a one-time passcode on your phone",
+              "Using the same password across multiple sites",
+              "Using only a username and email address"
+            ],
+            "answer": "Entering a password and receiving a one-time passcode on your phone",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "ps_mfa_q3",
+            "question": "Which of the following methods is commonly used in multi-factor authentication?",
+            "choices": [
+              "A single password",
+              "Biometric data (e.g., fingerprint or facial recognition)",
+              "Voice recognition only",
+              "Social media logins"
+            ],
+            "answer": "Biometric data (e.g., fingerprint or facial recognition)",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "ps_mfa_q4",
+            "question": "Why should you enable multi-factor authentication on your online accounts?",
+            "choices": [
+              "To make logging in faster",
+              "To improve the overall security of your accounts by adding another verification step",
+              "Because it reduces the need to remember passwords",
+              "None of the above"
+            ],
+            "answer": "To improve the overall security of your accounts by adding another verification step",
+            "difficulty": "hard"
+          },
+          {
+            "question_id": "ps_mfa_q5",
+            "question": "What is the purpose of using an authenticator app for multi-factor authentication?",
+            "choices": [
+              "It stores your passwords",
+              "It generates a unique code every few seconds for login verification",
+              "It automatically logs you into all websites",
+              "It automatically resets your password"
+            ],
+            "answer": "It generates a unique code every few seconds for login verification",
+            "difficulty": "hard"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Malware",
+    "subtopics": [
+      {
+        "name": "Types of Malware",
+        "key": "MALTYPE",
+        "questions": [
+          {
+            "question_id": "mal_tm_q1",
+            "question": "Which type of malware disguises itself as legitimate software?",
+            "choices": ["Virus", "Trojan", "Worm", "Spyware"],
+            "answer": "Trojan",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "mal_tm_q2",
+            "question": "Which malware type can replicate and spread without a host program?",
+            "choices": ["Trojan", "Worm", "Ransomware", "Adware"],
+            "answer": "Worm",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "mal_tm_q3",
+            "question": "What does ransomware do to a victim's files?",
+            "choices": ["Deletes them", "Moves them", "Encrypts them", "Backs them up"],
+            "answer": "Encrypts them",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "mal_tm_q4",
+            "question": "Spyware often does which of the following?",
+            "choices": [
+              "Displays ransom messages",
+              "Deletes system files",
+              "Collects user data without notice",
+              "Replicates across networks"
+            ],
+            "answer": "Collects user data without notice",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "mal_tm_q5",
+            "question": "Adware is a subtype of which malware?",
+            "choices": ["Trojan", "Ransomware", "Spyware", "Worm"],
+            "answer": "Spyware",
+            "difficulty": "easy"
+          }
+        ]
+      },
+      {
+        "name": "Malware Infections and Symptoms",
+        "key": "MALINFOSYM",
+        "questions": [
+          {
+            "question_id": "mal_mis_q1",
+            "question": "Which of the following is a common sign of malware infection?",
+            "choices": [
+              "Faster application loading",
+              "Sudden changes in app appearance",
+              "Improved internet speed",
+              "System updates running"
+            ],
+            "answer": "Sudden changes in app appearance",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "mal_mis_q2",
+            "question": "How can malware typically enter a system?",
+            "choices": [
+              "Via antivirus updates",
+              "Through email attachments and unsafe links",
+              "By opening spreadsheets",
+              "By browsing secure websites"
+            ],
+            "answer": "Through email attachments and unsafe links",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "mal_mis_q3",
+            "question": "What is a symptom of ransomware infection?",
+            "choices": [
+              "Continuous advertisements",
+              "Files getting encrypted with ransom demand",
+              "System becoming faster",
+              "Missing desktop icons"
+            ],
+            "answer": "Files getting encrypted with ransom demand",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "mal_mis_q4",
+            "question": "Which hardware can spread malware like worms?",
+            "choices": ["CPU", "Mouse", "USB drives", "Headphones"],
+            "answer": "USB drives",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "mal_mis_q5",
+            "question": "What should users avoid to reduce the risk of malware?",
+            "choices": [
+              "Using incognito mode",
+              "Clicking on suspicious email attachments",
+              "Installing OS updates",
+              "Using long passwords"
+            ],
+            "answer": "Clicking on suspicious email attachments",
+            "difficulty": "easy"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Social Engineering",
+    "subtopics": [
+      {
+        "name": "Types of Social Engineering Attacks",
+        "questions": [
+          {
+            "question_id": "se_tsea_q1",
+            "question": "What is the main tactic used in phishing attacks?",
+            "choices": [
+              "Sending multiple false alarms",
+              "Using legitimate-looking messages to trick users",
+              "Hacking into Wi-Fi routers",
+              "Physically stealing a device"
+            ],
+            "answer": "Using legitimate-looking messages to trick users",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "se_tsea_q2",
+            "question": "Which of the following is an example of USB phishing?",
+            "choices": [
+              "Sending an email with a suspicious link",
+              "Leaving malware-infected USB drives in public",
+              "Calling users pretending to be IT staff",
+              "Sending fake security alerts"
+            ],
+            "answer": "Leaving malware-infected USB drives in public",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "se_tsea_q3",
+            "question": "What is scareware designed to do?",
+            "choices": [
+              "Steal hardware components",
+              "Scare users into installing malicious software",
+              "Infect USB devices",
+              "Phish for bank account details via SMS"
+            ],
+            "answer": "Scare users into installing malicious software",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "se_tsea_q4",
+            "question": "Phishing often appeals to which of the following emotions?",
+            "choices": ["Happiness", "Boredom", "Urgency and curiosity", "Gratitude"],
+            "answer": "Urgency and curiosity",
+            "difficulty": "easy"
+          },
+          {
+            "question_id": "se_tsea_q5",
+            "question": "What tactic is used in baiting attacks?",
+            "choices": [
+              "Threatening legal action",
+              "Offering free items or services to trick users",
+              "Encrypting files for ransom",
+              "Sending fake invoices"
+            ],
+            "answer": "Offering free items or services to trick users",
+            "difficulty": "medium"
+          }
+        ]
+      },
+      {
+        "name": "Defending Against Social Engineering",
+        "questions": [
+          {
+            "question": "What should you do if you receive an unexpected email asking for personal information?",
+            "choices": [
+              "Reply quickly to verify",
+              "Click on all provided links",
+              "Ignore it or verify with the sender via other means",
+              "Share it on social media"
+            ],
+            "answer": "Ignore it or verify with the sender via other means",
+            "difficulty": "easy"
+          },
+          {
+            "question": "Which of the following is a good defense against scareware?",
+            "choices": [
+              "Downloading free antivirus from pop-ups",
+              "Clicking all system alerts",
+              "Ignoring all software updates",
+              "Being skeptical of sudden alarming pop-ups or messages"
+            ],
+            "answer": "Being skeptical of sudden alarming pop-ups or messages",
+            "difficulty": "medium"
+          },
+          {
+            "question": "How can you avoid falling victim to USB phishing?",
+            "choices": [
+              "Install every USB device you find",
+              "Never use your own USB drive",
+              "Avoid plugging in unknown USB devices",
+              "Share USB drives with coworkers"
+            ],
+            "answer": "Avoid plugging in unknown USB devices",
+            "difficulty": "easy"
+          },
+          {
+            "question": "Which action helps prevent phishing attacks?",
+            "choices": [
+              "Replying with fake information",
+              "Using strong spam filters and verifying sources",
+              "Disabling email",
+              "Only opening email on mobile devices"
+            ],
+            "answer": "Using strong spam filters and verifying sources",
+            "difficulty": "medium"
+          },
+          {
+            "question": "What should you do if a message pressures you to act immediately?",
+            "choices": [
+              "Respond quickly to avoid problems",
+              "Click the link before it expires",
+              "Pause and verify its authenticity",
+              "Download the attachment right away"
+            ],
+            "answer": "Pause and verify its authenticity",
+            "difficulty": "medium"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Incident Response",
+    "subtopics": [
+      {
+        "name": "Steps in Incident Response",
+        "questions": [
+          {
+            "question": "What is the first step when a cybersecurity incident is detected?",
+            "choices": [
+              "Back up all data",
+              "Contact the media",
+              "Disconnect the affected device from the internet",
+              "Format the hard drive"
+            ],
+            "answer": "Disconnect the affected device from the internet",
+            "difficulty": "easy"
+          },
+          {
+            "question": "Which of the following is considered a good preparation step before a cyber incident?",
+            "choices": [
+              "Ignore suspicious emails",
+              "Use weak passwords to avoid forgetting them",
+              "Maintain regular data backups and practice good cybersecurity",
+              "Only install free antivirus tools"
+            ],
+            "answer": "Maintain regular data backups and practice good cybersecurity",
+            "difficulty": "easy"
+          },
+          {
+            "question": "What is the purpose of isolating the affected system during an incident?",
+            "choices": [
+              "To speed up the internet",
+              "To avoid malware updates",
+              "To prevent further spread or unauthorized access",
+              "To erase all user data"
+            ],
+            "answer": "To prevent further spread or unauthorized access",
+            "difficulty": "medium"
+          },
+          {
+            "question": "What should a user do after a cyber incident has been resolved?",
+            "choices": [
+              "Reinstall all applications",
+              "Delete system logs",
+              "Identify what caused the incident and how to prevent it",
+              "Ignore the issue and move on"
+            ],
+            "answer": "Identify what caused the incident and how to prevent it",
+            "difficulty": "medium"
+          },
+          {
+            "question": "Why is changing passwords important after an incident?",
+            "choices": [
+              "To make the system faster",
+              "To comply with antivirus policies",
+              "To prevent compromised credentials from being reused",
+              "To avoid CAPTCHA"
+            ],
+            "answer": "To prevent compromised credentials from being reused",
+            "difficulty": "easy"
+          }
+        ]
+      },
+      {
+        "name": "Personal and Enterprise Incident Response Plans",
+        "questions": [
+          {
+            "question": "Why should even regular users have a personal incident response plan?",
+            "choices": [
+              "To create more passwords",
+              "To act quickly and correctly during an incident",
+              "To help their internet provider",
+              "To get faster Wi-Fi"
+            ],
+            "answer": "To act quickly and correctly during an incident",
+            "difficulty": "easy"
+          },
+          {
+            "question": "What is the benefit of regular backups in incident response?",
+            "choices": [
+              "It improves device speed",
+              "It helps with software updates",
+              "It allows data recovery after a cyber incident",
+              "It increases storage space"
+            ],
+            "answer": "It allows data recovery after a cyber incident",
+            "difficulty": "easy"
+          },
+          {
+            "question": "Which of these should be part of an enterprise incident response plan?",
+            "choices": [
+              "Having a public apology ready",
+              "Isolating systems, informing teams, and documenting the incident",
+              "Deleting all system logs",
+              "Disabling antivirus software"
+            ],
+            "answer": "Isolating systems, informing teams, and documenting the incident",
+            "difficulty": "medium"
+          },
+          {
+            "question": "What is a good post-incident practice?",
+            "choices": [
+              "Forget the incident and move on",
+              "Punish employees involved",
+              "Review and update the response plan based on lessons learned",
+              "Hire a new IT team immediately"
+            ],
+            "answer": "Review and update the response plan based on lessons learned",
+            "difficulty": "medium"
+          },
+          {
+            "question": "Why is understanding common threats important in incident response?",
+            "choices": [
+              "To avoid using computers",
+              "To prepare better and respond more effectively",
+              "To buy more expensive antivirus",
+              "To monitor employees constantly"
+            ],
+            "answer": "To prepare better and respond more effectively",
+            "difficulty": "easy"
+          }
+        ]
+      }
+    ]
+  }
+]

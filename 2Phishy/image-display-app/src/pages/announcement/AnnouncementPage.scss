@@ -1,0 +1,305 @@
+@use "../../styles/variables.scss" as *;
+@use "sass:color";
+
+.announcement-page {
+  padding: 20px;
+  background-color: $soft-bg;
+  min-height: auto;
+  color: $main-color;
+  border-radius: 12px;
+
+
+  .headerWithButton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+
+    h1 {
+      color: $main-color;
+      margin: 0;
+    }
+
+    .addAnnouncementBox {
+      display: flex;
+      gap: 10px;
+
+      .actionButton {
+        background-color: $dark-bg;
+        color: $main-color;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s;
+
+        &:hover {
+          background-color: lighten($dark-bg, 10%);
+        }
+      }
+    }
+  }
+
+  .announcementGrid {
+    background-color: $dark-bg;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    margin-top: 20px;
+
+    .no-announcements {
+      text-align: center;
+      padding: 40px;
+      color: $soft-color;
+      font-size: 1.1rem;
+    }
+
+    .announcement-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid $soft-bg;
+
+      .select-all {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: $main-color;
+        cursor: pointer;
+
+        input[type="checkbox"] {
+          margin: 0;
+        }
+      }
+
+      .selected-count {
+        color: $soft-color;
+        font-size: 0.9rem;
+      }
+    }
+
+    .announcements-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .announcement-card {
+      display: flex;
+      gap: 15px;
+      padding: 15px;
+      background-color: $soft-bg;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: $main-color;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .announcement-checkbox {
+        display: flex;
+        align-items: flex-start;
+        padding-top: 5px;
+
+        input[type="checkbox"] {
+          margin: 0;
+          transform: scale(1.2);
+        }
+      }
+
+      .announcement-content {
+        flex: 1;
+
+        .announcement-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 10px;
+
+          h3 {
+            color: $main-color;
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+          }
+
+          .announcement-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+
+            .date {
+              color: $soft-color;
+              font-size: 0.9rem;
+            }
+
+            .scheduled-badge {
+              background-color: #f39c12;
+              color: white;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 0.8rem;
+              font-weight: 500;
+            }
+
+            .status-badge {
+              background-color: #2ecc71;
+              color: white;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 0.8rem;
+              font-weight: 500;
+
+              &.draft {
+                background-color: #95a5a6;
+              }
+            }
+          }
+        }
+
+        .announcement-text {
+          color: $soft-color;
+          line-height: 1.5;
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  // Modal styles
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background-color: $dark-bg;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid $soft-bg;
+
+      h3 {
+        color: $main-color;
+        margin: 0;
+        font-size: 1.3rem;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        color: $soft-color;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+          color: $main-color;
+        }
+      }
+    }
+
+    .announcement-form {
+      padding: 20px;
+
+      .form-group {
+        margin-bottom: 20px;
+
+        label {
+          display: block;
+          color: $main-color;
+          margin-bottom: 8px;
+          font-weight: 500;
+        }
+
+        input, textarea {
+          width: 100%;
+          padding: 12px;
+          border: 1px solid $soft-bg;
+          border-radius: 6px;
+          background-color: $soft-bg;
+          color: $main-color;
+          font-size: 14px;
+          font-family: inherit;
+
+          &:focus {
+            outline: none;
+            border-color: $main-color;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+          }
+
+          &::placeholder {
+            color: $soft-color;
+          }
+        }
+
+        textarea {
+          resize: vertical;
+          min-height: 100px;
+        }
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 30px;
+
+        button {
+          background-color: $dark-bg;
+          color: $main-color;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 16px;
+          transition: background-color 0.3s;
+
+          &:hover {
+            background-color: lighten($dark-bg, 10%);
+          }
+        }
+      }
+    }
+  }
+
+  // Button disabled state
+  .actionButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    &:hover {
+      background-color: $dark-bg;
+    }
+  }
+}

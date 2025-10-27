@@ -1,0 +1,146 @@
+@use "./variables.scss" as *;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.main {
+  font-family: "Inter", sans-serif;
+  background-color: $main-bg;
+  color: $main-color;
+  min-height: 100vh; /* ensure background covers full viewport */
+  display: flex; /* allow footer to stick to bottom */
+  flex-direction: column;
+  overflow-x: hidden; /* prevent horizontal scrollbar */
+}
+
+.container{
+  display: flex;
+  flex: 1; /* take remaining height to avoid white gap */
+}
+
+.menuContainer{
+  width: 250px;
+  padding: 5px 20px;
+  border-right: 2px solid $soft-bg;
+}
+
+.contentContainer{
+  padding: 5px 20px;
+  width: 100%;
+  overflow-y: auto; /* allow scrolling only when content exceeds container */
+  max-height: calc(100vh - 120px); /* account for navbar and footer */
+}
+
+// User Management Form Styles
+.userForm {
+  padding: 20px;
+  
+  .userForm-container {
+    max-width: 800px;
+    margin: 0 auto;
+    
+    section {
+      background-color: $dark-bg;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      
+      h2 {
+        margin-bottom: 20px;
+        color: $main-color;
+      }
+      
+      ul {
+        list-style: none;
+        
+        li {
+          padding: 10px;
+          border-bottom: 1px solid $soft-bg;
+          color: $main-color;
+          
+          &:last-child {
+            border-bottom: none;
+          }
+        }
+      }
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+      position: relative;
+      z-index: 1;
+      
+      label {
+        display: block;
+        margin-bottom: 5px;
+        color: $main-color;
+      }
+      
+      input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid $soft-bg;
+        border-radius: 4px;
+        background-color: $main-bg;
+        color: $main-color;
+        font-size: 16px;
+        position: relative;
+        z-index: 2;
+        pointer-events: auto;
+        
+        &:focus {
+          outline: none;
+          border-color: $soft-color;
+          box-shadow: 0 0 0 2px rgba($soft-color, 0.2);
+        }
+        
+        &::placeholder {
+          color: $soft-color;
+        }
+      }
+    }
+    
+    .submit-button {
+      width: 100%;
+      padding: 10px;
+      background-color: $soft-bg;
+      color: $main-color;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      position: relative;
+      z-index: 1;
+      
+      &:hover {
+        background-color: $soft-color;
+      }
+      
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+    
+    .error-message {
+      color: #ff4d4f;
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: rgba(255, 77, 79, 0.1);
+      border-radius: 4px;
+      
+      &.general {
+        text-align: center;
+      }
+    }
+  }
+}

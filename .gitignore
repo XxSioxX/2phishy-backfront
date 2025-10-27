@@ -1,0 +1,29 @@
+# --- Python backend ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+virtual_env/
+.env.*
+
+# --- Node.js frontend / phaser ---
+node_modules/
+dist/
+build/
+*.log
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+
+# --- OS / Misc ---
+.DS_Store
+Thumbs.db
+
+# --- Logs / temp files ---
+logs/
+*.log
+*.tmp
+*.bak
