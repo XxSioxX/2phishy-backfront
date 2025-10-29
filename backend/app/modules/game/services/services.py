@@ -9,6 +9,7 @@ from pathlib import Path
 from enum import Enum
 import json
 import random
+import os
 
 
 logger = get_logger()
@@ -27,7 +28,9 @@ def map_subtopic_to_enum(subtopic_str: str) -> Subtopic:
 
 
 def evaluate_assessment(response, evaluator: LearningEvaluator):
-    data_path = "app/data/initial_assessment.json"
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(current_dir, "../../../../../2Phishy/assets/initial_assessment.json")
+    data_path = os.path.normpath(json_path)
     logger.info(f"Evaluating assessment from file path: {data_path}")
 
     question_map = evaluator.build_question_map(data_path)
@@ -137,7 +140,8 @@ async def save_assessment_result(
             "assessments": {
                 topic.value: {
                     "subcat_scores": subcat_grade,
-                    "subcat_priority": subcat_priority
+                    "subcat_priority": subcat_priority,
+                    "question_map": []
                 }
             },
             "timestamp": datetime.utcnow()
@@ -146,26 +150,24 @@ async def save_assessment_result(
         return str(result.inserted_id)
 
     logger.info("Document exists, proceeding with assessment saving")
-    # Document exists, check if topic already present
+    # If the topic already exists under assessments, update it
     if topic.value in user_doc.get("assessments", {}):
-        logger.info("Checking if assessment record exists")
-        # Check if any subtopic already assessed
-        existing_subcats = user_doc["assessments"][topic.value]["subcat_scores"].keys()
-        for subtopic in subcat_grade:
-            subtopic_key = subtopic if isinstance(subtopic, str) else subtopic.value
-            if subtopic_key in existing_subcats:
-                raise ValueError(f"Subtopic '{subtopic_key}' already assessed for this user.")
+        logger.info("Topic already exists, updating its subcategories and priority")
+        update_fields = {
+            f"assessments.{topic.value}.subcat_scores": subcat_grade,
+            f"assessments.{topic.value}.subcat_priority": subcat_priority,
+            f"assessments.{topic.value}.question_map": []
+        }
+        update_fields["timestamp"] = datetime.utcnow()
+        await collection.update_one({"user_id": str(user_id)}, {"$set": mongo_serialize(update_fields)})
+        return str(user_doc["_id"])
 
-        # No duplicate subtopics; add new subcats under this topic (if partial new)
-        # But since topic exists, it means assessments are already present, this case might be rare
-        # You can merge if needed here, or simply raise to prevent partial updates
-
-        raise ValueError(f"Topic '{topic.value}' already assessed for this user.")
-
+    # Otherwise, add a new topic under assessments
     update = {
         f"assessments.{topic.value}": {
             "subcat_scores": subcat_grade,
-            "subcat_priority": subcat_priority
+            "subcat_priority": subcat_priority,
+            "question_map": []
         },
         "timestamp": datetime.utcnow()
     }
@@ -189,44 +191,34 @@ async def db_findby_id(
     return document
 
 
-# Cache knowledge base in memory for performance
-_kb_cache = None
-
 def load_and_prepare_knowledge_base(topic_value: str):
     """
-    Loads knowledge_base.json and returns questions organized by subcategory key.
-    Uses in-memory cache for better performance.
+    Loads knowledge_base.json and returns a dictionary of questions
+    organized by subcategory key for a specific topic.
     """
-    global _kb_cache
-    
-    # Use cached data if available
-    if _kb_cache and topic_value in _kb_cache:
-        return _kb_cache[topic_value]
-    
     data_path = "app/data/knowledge_base.json"
-    logger.info(f"Loading knowledge base from: {data_path}")
-    
+    logger.info("preparing knowledge base")
     try:
         with open(data_path, "r") as f:
             all_topics_data = json.load(f)
+
+            logger.info(f"Loaded knowledgebase: {all_topics_data}")
     except Exception as e:
-        logger.error(f"Failed to load knowledge_base.json: {e}")
+        logger.error(f"Failed to load or parse knowledge_base.json: {e}")
         return {}
 
-    # Build cache
-    if _kb_cache is None:
-        _kb_cache = {}
-    
     kb_questions_by_subcat_key = {}
     for topic_data in all_topics_data:
+        logger.info(f"checking topic_data: {topic_data}")
         if topic_data.get("topic") == topic_value:
-            logger.info(f"Found topic: {topic_value}")
+            logger.info("Found topic!")
             for subtopic in topic_data.get("subtopics", []):
+                logger.info(f"subtopic: {subtopic}")
                 if "key" in subtopic and "questions" in subtopic:
+                    logger.debug(f"checking subtopic: {subtopic}")
                     kb_questions_by_subcat_key[subtopic["key"]] = subtopic["questions"]
             break
-    
-    _kb_cache[topic_value] = kb_questions_by_subcat_key
+    logger.info(f"kb_questions_by_subcat_key: {kb_questions_by_subcat_key}")
     return kb_questions_by_subcat_key
 
 async def generate_question_list(
@@ -336,142 +328,3 @@ async def save_question_result(
         logger.error(f"Error updating document for topic '{topic.value}': {e}")
 
     return question_map
-
-
-# Assessment session functions for MongoDB
-async def save_assessment_session(
-    db: AsyncIOMotorDatabase,
-    user_id: str,
-    topic: str,
-    start_time: datetime
-) -> dict:
-    """Save an assessment session to MongoDB"""
-    collection = db["assessment_sessions"]
-    
-    import uuid as uuid_lib
-    session_id = str(uuid_lib.uuid4())
-    session_doc_id = str(uuid_lib.uuid4())
-    
-    document = {
-        "_id": session_doc_id,
-        "session_id": session_id,
-        "user_id": user_id,
-        "topic": topic,
-        "start_time": start_time,
-        "end_time": None,
-        "total_score": 0,
-        "total_questions": 0,
-        "completed": False,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
-    }
-    
-    await collection.insert_one(document)
-    logger.info(f"Assessment session created: {session_id} for user {user_id}")
-    
-    return {
-        "id": session_doc_id,
-        "session_id": session_id,
-        "user_id": user_id,
-        "topic": topic,
-        "start_time": start_time.isoformat() if isinstance(start_time, datetime) else start_time,
-        "end_time": None,
-        "total_score": 0,
-        "total_questions": 0,
-        "completed": False,
-        "created_at": datetime.utcnow().isoformat(),
-        "updated_at": datetime.utcnow().isoformat()
-    }
-
-
-async def save_assessment_result_item(
-    db: AsyncIOMotorDatabase,
-    session_id: str,
-    user_id: str,
-    result_data: dict
-) -> dict:
-    """Save an individual assessment result to MongoDB"""
-    # First verify the session exists and belongs to the user
-    sessions_collection = db["assessment_sessions"]
-    session = await sessions_collection.find_one({
-        "session_id": session_id,
-        "user_id": user_id
-    })
-    
-    if not session:
-        logger.error(f"Session {session_id} not found for user {user_id}")
-        raise ValueError("Assessment session not found or doesn't belong to user")
-    
-    # Save the result
-    results_collection = db["assessment_results"]
-    
-    import uuid as uuid_lib
-    result_id = str(uuid_lib.uuid4())
-    
-    result_document = {
-        "_id": result_id,
-        "session_id": session_id,
-        "user_id": user_id,
-        "question_id": result_data["question_id"],
-        "user_answer": result_data["user_answer"],
-        "correct_answer": result_data["correct_answer"],
-        "is_correct": result_data["is_correct"],
-        "topic": result_data["topic"],
-        "subcategory": result_data["subcategory"],
-        "timestamp": datetime.fromisoformat(result_data["timestamp"].replace('Z', '+00:00')),
-        "created_at": datetime.utcnow()
-    }
-    
-    await results_collection.insert_one(result_document)
-    logger.info(f"Assessment result saved: {result_id} for session {session_id}")
-    
-    return {"message": "Assessment result submitted successfully"}
-
-
-async def end_assessment_session(
-    db: AsyncIOMotorDatabase,
-    session_id: str,
-    user_id: str,
-    end_time: str,
-    total_score: int,
-    total_questions: int
-) -> dict:
-    """End an assessment session and update it in MongoDB"""
-    collection = db["assessment_sessions"]
-    
-    # Find and update the session
-    session = await collection.find_one({"session_id": session_id, "user_id": user_id})
-    
-    if not session:
-        raise ValueError("Assessment session not found or doesn't belong to user")
-    
-    update_doc = {
-        "$set": {
-            "end_time": datetime.fromisoformat(end_time.replace('Z', '+00:00')),
-            "total_score": total_score,
-            "total_questions": total_questions,
-            "completed": True,
-            "updated_at": datetime.utcnow()
-        }
-    }
-    
-    await collection.update_one({"session_id": session_id}, update_doc)
-    
-    # Get the updated session
-    updated_session = await collection.find_one({"session_id": session_id})
-    
-    logger.info(f"Assessment session ended: {session_id} with score {total_score}/{total_questions}")
-    
-    return {
-        "id": updated_session["_id"],
-        "session_id": updated_session["session_id"],
-        "user_id": updated_session["user_id"],
-        "topic": updated_session["topic"],
-        "start_time": updated_session["start_time"].isoformat(),
-        "end_time": updated_session["end_time"].isoformat() if updated_session["end_time"] else None,
-        "total_score": updated_session["total_score"],
-        "total_questions": updated_session["total_questions"],
-        "completed": updated_session["completed"],
-        "created_at": updated_session["created_at"].isoformat(),
-        "updated_at": updated_session["updated_at"].isoformat()
-    }
