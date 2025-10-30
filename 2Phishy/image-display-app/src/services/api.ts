@@ -50,7 +50,7 @@ export const api = {
     },
 
     async register(userData: Omit<User, 'id'>): Promise<User> {
-        const response = await fetch(`${API_BASE_URL}/users/register`, {
+        const response = await fetch(`${API_BASE_URL}/users/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -120,7 +120,7 @@ export const api = {
     },
 
     async deleteUser(userId: string): Promise<void> {
-        const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
@@ -129,29 +129,31 @@ export const api = {
         }
     },
 
-    // Data related endpoints
+    // Data related endpoints - These endpoints don't exist in backend yet
     async getTopScores(): Promise<TopScore[]> {
-        const response = await fetch(`${API_BASE_URL}/scores`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch scores');
-        }
-        return response.json();
+        // TODO: Implement scores endpoint in backend
+        console.warn('getTopScores: Backend endpoint not implemented yet');
+        return [];
     },
 
     async getReports(): Promise<Report[]> {
-        const response = await fetch(`${API_BASE_URL}/reports`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch reports');
-        }
-        return response.json();
+        // TODO: Implement reports endpoint in backend
+        console.warn('getReports: Backend endpoint not implemented yet');
+        return [];
     },
 
     async getChartData(): Promise<ChartBoxData> {
-        const response = await fetch(`${API_BASE_URL}/chart-data`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch chart data');
-        }
-        return response.json();
+        // TODO: Implement chart-data endpoint in backend
+        console.warn('getChartData: Backend endpoint not implemented yet');
+        return {
+            color: '#8884d8',
+            icon: '/userIcon.svg',
+            title: 'Total Users',
+            number: '0',
+            dataKey: 'users',
+            percentage: 0,
+            chartData: []
+        };
     },
 
     // Dashboard statistics endpoints
@@ -195,22 +197,9 @@ export const api = {
         }
 
         // Get assessment stats for all students
-        const allStats = await Promise.all(
-            studentUsers.map(async (user) => {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/game/assessment/stats/${user.userid}`, {
-                        headers: getAuthHeaders()
-                    });
-                    if (response.ok) {
-                        return await response.json();
-                    }
-                    return null;
-                } catch (error) {
-                    console.warn(`Failed to fetch stats for user ${user.userid}:`, error);
-                    return null;
-                }
-            })
-        );
+        // TODO: Implement assessment stats endpoint in backend
+        console.warn('getAssessmentStats: Backend endpoint not implemented yet');
+        const allStats: any[] = [];
 
         // Aggregate the statistics
         const validStats = allStats.filter(stat => stat !== null);
@@ -474,5 +463,164 @@ export const api = {
             name: item.name,
             users: groupedUsers[item.name] || 0
         }));
+    },
+
+    // Additional user endpoints that exist in backend
+    async getCurrentUserProfile(): Promise<User> {
+        const response = await fetch(`${API_BASE_URL}/users/me/`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch current user profile');
+        }
+        const user = await response.json();
+        return { ...user, userid: user.userid || user.id };
+    },
+
+    async updateCurrentUserProfile(userData: Partial<User>): Promise<User> {
+        const response = await fetch(`${API_BASE_URL}/users/me/`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(userData),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to update user profile');
+        }
+        const user = await response.json();
+        return { ...user, userid: user.userid || user.id };
+    },
+
+    // Admin endpoints
+    async changeUserRole(userId: string, newRole: string): Promise<User> {
+        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/role/${newRole}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to change user role');
+        }
+        const user = await response.json();
+        return { ...user, userid: user.userid || user.id };
+    },
+
+    async changeUserStatus(userId: string, newStatus: string): Promise<User> {
+        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/status/${newStatus}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to change user status');
+        }
+        const user = await response.json();
+        return { ...user, userid: user.userid || user.id };
+    },
+
+    async getAdminRole(): Promise<{user_id: string, username: string, role: string, account_status: string}> {
+        const response = await fetch(`${API_BASE_URL}/admin/my-role`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch admin role');
+        }
+        return response.json();
+    },
+
+    // Game endpoints
+    async submitInitialAssessment(assessmentData: any): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/game/initassess/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(assessmentData),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to submit initial assessment');
+        }
+        return response.json();
+    },
+
+    async getUserGameData(userId: string, collectionName: string): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/game/data?userid=${userId}&collectionName=${collectionName}`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch user game data');
+        }
+        return response.json();
+    },
+
+    async generateQuestionList(userId: string, topic: string, collectionName: string): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/game/generate/qlist/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userid: userId, topic, collectionName }),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to generate question list');
+        }
+        return response.json();
+    },
+
+    async getInitialAssessmentQuestions(topic: string): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/game/questions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ topic }),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch initial assessment questions');
+        }
+        const result = await response.json();
+        return result.data;
+    },
+
+    // Posts endpoints
+    async getPosts(): Promise<any[]> {
+        const response = await fetch(`${API_BASE_URL}/posts/`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch posts');
+        }
+        return response.json();
+    },
+
+    async createPost(postData: any): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/posts/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(postData)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to create post');
+        }
+        return response.json();
+    },
+
+    async updatePost(postId: string, postData: any): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(postData)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to update post');
+        }
+        return response.json();
+    },
+
+    async deletePost(postId: string): Promise<void> {
+        const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to delete post');
+        }
     }
 }; 
