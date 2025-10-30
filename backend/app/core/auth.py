@@ -9,6 +9,7 @@ from app.core.database_postgres import get_db
 from app.modules.user.models.user import User, AccountStatus
 from app.utils.logger import get_logger
 import os
+import uuid
 
 logger = get_logger("auth.py")
 
@@ -27,7 +28,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+    if "sub" in to_encode and isinstance(to_encode["sub"], uuid.UUID):
+        to_encode["sub"] = str(to_encode["sub"])
+
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

@@ -3,6 +3,9 @@ import { Player } from '../../classes/player';
 import { gameObjectsToObjectPoints } from '../../helpers/gameobject-to-object-point';
 import { Enemy } from '../../classes/enemy';
 import AssessmentPopup from '../../helpers/assessment-popup';
+import {AssessmentManager} from "../../helpers/AssessmentManager";
+import {SessionManager} from "../../helpers/session-manager";
+import {ApiService} from "../../helpers/api-service";
 
 export class Level1 extends Scene {
   private king!: GameObjects.Sprite;
@@ -16,8 +19,12 @@ export class Level1 extends Scene {
   private groundLayer!: Tilemaps.TilemapLayer;
   private currentPopup?: Phaser.GameObjects.Container;
   private popupActive = false;
+  private assessmentManager!: AssessmentManager;
   private questions: any[] = [];
   private currentQuestionIndex = 0;
+  private session = SessionManager.getInstance(); // ✅ handles token + user
+  private api = new ApiService(); // 🆕 added: will handle API calls
+
   constructor() {
     super('level-1-scene');
   }
@@ -33,7 +40,20 @@ export class Level1 extends Scene {
     this.popup = new AssessmentPopup(this);
     const data = this.cache.json.get('assessmentData');
     const topic = data.find((t: any) => t.topic === 'Safe Browsing Practices');
-    this.questions = topic.initial_assessment; //this.initEnemies();
+    this.questions = topic.initial_assessment;
+
+    // verify sesssion
+    const currentSession = this.session.getSession();
+    if (!currentSession) {
+      console.error('No user session found. Redirecting to login scene.');
+      this.scene.start('login-scene');
+      return;
+    }
+
+    console.log('Current player:', currentSession.userid);
+
+    // initialize assess manager with userid
+    this.assessmentManager = new AssessmentManager(currentSession.userid, topic.topic);
   }
   update(): void {
     this.player.update();
@@ -42,6 +62,7 @@ export class Level1 extends Scene {
       this.currentPopup.setPosition(cam.midPoint.x, cam.midPoint.y);
     }
   }
+
   private initMap(): void {
     console.log('initMap running');
     this.map = this.make.tilemap({ key: 'assessmentlevel' });
@@ -58,6 +79,7 @@ export class Level1 extends Scene {
 
     this.wallsLayer.setCollisionByProperty({ collides: true });
   }
+
   private initAssessment(): void {
     const AssessmentPoints = gameObjectsToObjectPoints(
       this.map.filterObjects('AssessmentWaypoint', (obj) => obj.name === 'AssessmentPoint')!,
@@ -79,64 +101,52 @@ export class Level1 extends Scene {
     });
   }
 
-  private setupAssessmentCollision(): void {
-    this.assessmentpoints.forEach((assessmentpoint) => {
-      this.physics.add.overlap(this.player, assessmentpoint, () => {
-        this.player.freeze();
-        this.showNextQuestion();
-      });
-    });
-  }
-
-  private showNextQuestion(): void {
+  private async showNextQuestion(): Promise<void> {
     if (this.currentQuestionIndex >= this.questions.length) {
+      // 🆕 all questions complete — build payload
+      const payload = this.assessmentManager.getPayload();
+      console.log('Final Payload:', payload);
+
+      // 🆕 submit to backend via centralized ApiService
+      try {
+        const result = await this.api.submitInitialAssessment(payload);
+        console.log('Assessment submitted successfully:', result);
+      } catch (error) {
+        console.error('Failed to submit assessment:', error);
+      }
+
       this.popup.show('All questions complete!', ['Done'], () => {
-        console.log('Assessment finished!');
         this.player.unfreeze();
       });
       return;
     }
 
+    // Current question
     const q = this.questions[this.currentQuestionIndex];
 
     this.popup.show(q.question, q.choices, (choice) => {
-      console.log('Player picked:', choice, 'Correct answer:', q.answer);
+      // ✅ record answer in AssessmentManager
+      this.assessmentManager.recordAnswer(q.question_id, q.subcat, choice);
+
+      console.log(
+        `Q${this.currentQuestionIndex + 1}: ${choice === q.answer ? '✅ Correct' : '❌ Incorrect'}`,
+      );
 
       this.currentQuestionIndex++;
       this.showNextQuestion();
     });
   }
 
-  private showPopup(): void {
-    if (this.popupActive) return; // don't stack multiple popups
-
-    const cam = this.cameras.main;
-    const cx = cam.midPoint.x;
-    const cy = cam.midPoint.y;
-
-    const bg = this.add.rectangle(
-      0,
-      0,
-      cam.width / cam.zoom - 40,
-      cam.height / cam.zoom - 40,
-      0x000000,
-      0.6,
-    );
-    const box = this.add.rectangle(0, 0, 200, 120, 0xffffff, 1).setStrokeStyle(2, 0x000000);
-    const txt = this.add
-      .text(0, 0, 'Assessment goes here', {
-        fontSize: '16px',
-        color: '#000',
-        align: 'center',
-      })
-      .setOrigin(0.5);
-
-    // put at camera center
-    const popup = this.add.container(cx, cy, [bg, box, txt]);
-    this.currentPopup = popup;
-    this.popupActive = true;
-
-    // close on SPACE for now
+  private setupAssessmentCollision(): void {
+    this.assessmentpoints.forEach((assessmentpoint) => {
+      this.physics.add.overlap(this.player, assessmentpoint, () => {
+        if (!this.popupActive) {
+          this.player.freeze();
+          this.showNextQuestion();
+          this.popupActive = true;
+        }
+      });
+    });
   }
 
   private showDebugWalls(): void {

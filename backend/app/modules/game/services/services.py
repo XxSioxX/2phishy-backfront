@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from enum import Enum
 import json
+import os
 import random
 
 
@@ -27,7 +28,11 @@ def map_subtopic_to_enum(subtopic_str: str) -> Subtopic:
 
 
 def evaluate_assessment(response, evaluator: LearningEvaluator):
-    data_path = "app/data/initial_assessment.json"
+    # Get the absolute path to this file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(current_dir, "../../../../../assets/initial_assessment.json")
+    data_path = os.path.normpath(json_path)
+
     logger.info(f"Evaluating assessment from file path: {data_path}")
 
     question_map = evaluator.build_question_map(data_path)
