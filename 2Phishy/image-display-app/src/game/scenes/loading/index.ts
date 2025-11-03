@@ -1,7 +1,6 @@
-import { Scene, GameObjects } from 'phaser';
+import { Scene } from 'phaser';
 
 export class LoadingScene extends Scene {
-  private king!: GameObjects.Sprite;
   constructor() {
     super('loading-scene');
   }

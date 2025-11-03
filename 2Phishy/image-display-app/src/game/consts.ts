@@ -8,3 +8,5 @@ export enum GameStatus {
   WIN,
   LOSE,
 }
+
+export const WIN_SCORE = 40;
