@@ -1,6 +1,7 @@
-import { Scene } from 'phaser';
+import { Scene, GameObjects } from 'phaser';
 
 export class LoadingScene extends Scene {
+  private king!: GameObjects.Sprite;
   constructor() {
     super('loading-scene');
   }
@@ -32,8 +33,6 @@ export class LoadingScene extends Scene {
   }
   create(): void {
     console.log('Loading scene was created');
-    // Stop this scene first, then start the main scene
-    this.scene.stop('loading-scene');
     this.scene.start('integrated-level-1-scene');
     console.log('loading/index.ts (create)', this.textures.exists('tiles'));
   }

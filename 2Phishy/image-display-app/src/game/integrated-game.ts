@@ -1,6 +1,6 @@
 import Phaser, { Game, Types } from 'phaser';
-import { LoadingScene } from './scenes';
-import { IntegratedLevel1 } from './scenes/level-1';
+import { LoadingScene, IntegratedLevel1 } from './scenes';
+import { WIN_SCORE } from './consts';
 
 type GameConfigExtended = Types.Core.GameConfig & {
   winScore: number;
@@ -59,7 +59,7 @@ export const createPhaserGame = (parentElement: HTMLElement, userData?: any): Ga
       disableWebAudio: false,
     },
     scene: [LoadingScene, IntegratedLevel1],
-    winScore: 40,
+    winScore: WIN_SCORE,
     userData: userData,
   };
 
