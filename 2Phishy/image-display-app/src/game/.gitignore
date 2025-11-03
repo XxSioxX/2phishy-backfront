@@ -1,0 +1,33 @@
+# Node modules
+node_modules/
+
+# Yarn
+.yarn/
+.yarnrc.yml
+
+# WebStorm
+.idea/
+*.iml
+
+# Build output
+dist/
+out/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs & system files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+coverage/
+.vscode/
+
+.env

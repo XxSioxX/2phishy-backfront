@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+
 export default class AssessmentPopup {
   private scene: Phaser.Scene;
   private container!: Phaser.GameObjects.Container;
@@ -11,64 +12,54 @@ export default class AssessmentPopup {
   show(question: string, choices: string[], onChoice: (choice: string) => void): void {
     if (this.container) return;
 
-    // Use fixed screen coordinates instead of camera coordinates
-    const screenWidth = this.scene.scale.width;
-    const screenHeight = this.scene.scale.height;
-    const cx = screenWidth / 2;
-    const cy = screenHeight / 2;
+    const cam = this.scene.cameras.main;
+    const cx = cam.midPoint.x;
+    const cy = cam.midPoint.y;
 
-    const panelWidth = 400;
-    const panelHeight = 500;
+    const panelWidth = 300;
+    const panelHeight = 400;
 
-    // Full screen overlay
     const overlay = this.scene.add
-      .rectangle(cx, cy, screenWidth, screenHeight, 0x000000, 0.7)
-      .setOrigin(0.5)
-      .setScrollFactor(0); // Don't scroll with camera
+      .rectangle(cx, cy, cam.width / cam.zoom, cam.height / cam.zoom, 0x000000, 0.5)
+      .setOrigin(0.5);
 
     const panel = this.scene.add
       .rectangle(cx, cy, panelWidth, panelHeight, 0xffffff, 1)
-      .setStrokeStyle(3, 0x000000)
-      .setScrollFactor(0); // Don't scroll with camera
+      .setStrokeStyle(2, 0x000000);
 
-    // Question text with fixed positioning
+    // ✅ Question text with wrap + high resolution
     const questionText = this.scene.add
-      .text(cx, cy - 180, question, {
-        fontSize: '16px',
+      .text(cx, cy - 140, question, {
+        fontSize: '14px',
         color: '#000',
-        wordWrap: { width: panelWidth - 40 },
+        wordWrap: { width: panelWidth - 20 },
         align: 'center',
       })
       .setOrigin(0.5)
-      .setScrollFactor(0) // Don't scroll with camera
       .setResolution(window.devicePixelRatio || 2);
 
     const buttons: Phaser.GameObjects.Rectangle[] = [];
     const labels: Phaser.GameObjects.Text[] = [];
 
-    // Choices with fixed positioning
     choices.forEach((choice, i) => {
-      const y = cy - 80 + i * 80;
+      const y = cy - 60 + i * 60;
 
       const btn = this.scene.add
-        .rectangle(cx, y, 320, 50, 0xdddddd)
-        .setStrokeStyle(2, 0x000000)
-        .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0); // Don't scroll with camera
+        .rectangle(cx, y, 220, 40, 0xdddddd)
+        .setStrokeStyle(1, 0x000000)
+        .setInteractive({ useHandCursor: true });
 
       const label = this.scene.add
         .text(btn.x, btn.y, choice, {
-          fontSize: '14px',
+          fontSize: '12px',
           color: '#000',
-          wordWrap: { width: 300 },
+          wordWrap: { width: 200 }, // wrap inside the button
           align: 'center',
         })
         .setOrigin(0.5)
-        .setScrollFactor(0) // Don't scroll with camera
         .setResolution(window.devicePixelRatio || 2);
 
-      // Resize button to fit multi-line text
-      btn.height = Math.max(50, label.height + 20);
+      btn.height = label.height + 10;
 
       btn.on('pointerdown', () => {
         this.destroy();
@@ -86,8 +77,7 @@ export default class AssessmentPopup {
       ...buttons,
       ...labels,
     ]);
-    this.container.setDepth(10000); // Very high depth to ensure it's on top
-    this.container.setScrollFactor(0); // Don't scroll with camera
+    this.container.setDepth(1000);
   }
 
   destroy(): void {
