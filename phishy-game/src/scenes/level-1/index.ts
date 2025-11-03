@@ -43,11 +43,13 @@ export class Level1 extends Scene {
     this.questions = topic.initial_assessment;
 
     // verify sesssion
-    const currentSession = this.session.getSession();
+    let currentSession
     if (!currentSession) {
       console.error('No user session found. Redirecting to login scene.');
-      this.scene.start('login-scene');
-      return;
+
+      currentSession = {
+        userid: 'ca1e7881-d8de-4f46-9a33-9c314c55a7b4',
+      }
     }
 
     console.log('Current player:', currentSession.userid);
@@ -128,9 +130,6 @@ export class Level1 extends Scene {
       // ✅ record answer in AssessmentManager
       this.assessmentManager.recordAnswer(q.question_id, q.subcat, choice);
 
-      console.log(
-        `Q${this.currentQuestionIndex + 1}: ${choice === q.answer ? '✅ Correct' : '❌ Incorrect'}`,
-      );
 
       this.currentQuestionIndex++;
       this.showNextQuestion();

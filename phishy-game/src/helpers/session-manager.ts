@@ -9,6 +9,15 @@ export interface UserSession {
 
 const SESSION_KEY = 'phishy-session';
 
+// Temporary fixed test user session (REMOVE IN PRODUCTION)
+const DEFAULT_TEST_SESSION: UserSession = {
+  userid: 'ca1e7881-d8de-4f46-9a33-9c314c55a7b4',
+  username: 'TestUser',
+  email: 'TestUser@example.com',
+  token: 'test-token-placeholder',
+  tokenType: 'Bearer',
+};
+
 export class SessionManager {
   private static instance: SessionManager;
   private userSession: UserSession | null = null;
@@ -16,6 +25,13 @@ export class SessionManager {
   private constructor() {
     const saved = localStorage.getItem(SESSION_KEY);
     if (saved) this.userSession = JSON.parse(saved);
+
+    // ✅ Load fallback test session if none found (testing only)
+    if (!this.userSession) {
+      console.warn('⚠️ No stored session found — using test user session.');
+      this.userSession = DEFAULT_TEST_SESSION;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(DEFAULT_TEST_SESSION));
+    }
   }
 
   static getInstance(): SessionManager {
