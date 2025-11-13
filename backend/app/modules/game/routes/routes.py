@@ -57,7 +57,7 @@ async def initial_assessment_evaluation(
         )
     )
 
-@router.get("/data", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_200_OK
+@router.post("/data", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_200_OK
             )
 async def get_user_data_from_collection(
         request: GetUser,
