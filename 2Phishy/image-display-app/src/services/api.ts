@@ -50,7 +50,7 @@ export const api = {
     },
 
     async register(userData: Omit<User, 'id'>): Promise<User> {
-        const response = await fetch(`${API_BASE_URL}/users/`, {
+        const response = await fetch(`${API_BASE_URL}/users/register`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
