@@ -2,7 +2,7 @@ import { Scene, Tilemaps } from 'phaser';
 import { Player } from '../../classes/player';
 import { gameObjectsToObjectPoints } from '../../helpers/gameobject-to-object-point';
 import AssessmentPopup from '../../helpers/assessment-popup';
-import { gameAPI, AssessmentResult } from '../../services/game-api';
+import { gameAPI, AssessmentResult } from '../../helpers/game-api';
 
 export class IntegratedLevel1 extends Scene {
   private player!: Player;
@@ -150,7 +150,8 @@ export class IntegratedLevel1 extends Scene {
       console.error('❌ Failed to send to backend:', error);
     }
 
-    this.popup.show('Assessment Complete!', ['OK'], () => {
+    this.popup.show('Assessment Complete!', ['Proceed'], () => {
+      this.scene.start('sfb-level-scene')
       this.player.unfreeze();
       this.inAssessment = false;
     });
