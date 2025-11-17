@@ -11,6 +11,7 @@ export class SFBLevel extends Scene {
   private map!: Tilemaps.Tilemap;
   private tileset!: Tilemaps.Tileset;
   private wallsLayer!: Tilemaps.TilemapLayer;
+  private wallsLayer2!: Tilemaps.TilemapLayer;
   private questions: any[] = [];
   private currentQuestionIndex = 0;
   private assessmentResults: AssessmentResult[] = [];
@@ -24,8 +25,9 @@ export class SFBLevel extends Scene {
   create(): void {
     console.log('SFB Level - create()');
     this.initMap();
-    this.player = new Player(this, 100, 100);
+
     this.physics.add.collider(this.player, this.wallsLayer);
+    this.physics.add.collider(this.player, this.wallsLayer2);
     this.initAssessment();
     this.setupAssessmentCollision();
     this.initCamera();
@@ -43,11 +45,22 @@ export class SFBLevel extends Scene {
   }
 
   private initMap(): void {
-    this.map = this.make.tilemap({ key: 'SFBlevel' });
-    this.tileset = this.map.addTilesetImage('d-16-16', 'tiles')!;
-    this.map.createLayer('Ground', this.tileset, 0, 0)!;
-    this.wallsLayer = this.map.createLayer('Walls', this.tileset, 0, 0)!;
-    this.wallsLayer.setCollisionByProperty({ collides: true });
+      this.map = this.make.tilemap({ key: 'SFBlevel' });
+      this.tileset = this.map.addTilesetImage('sfb-tileset', 'tiles')!;
+      this.map.createLayer('Floor', this.tileset, 0, 0)!;
+      this.wallsLayer = this.map.createLayer('Walls', this.tileset, 0, 0)!;
+      this.wallsLayer2 = this.map.createLayer('Walls-second', this.tileset, 0, 0)!;
+      this.wallsLayer.setCollisionByProperty({ collides: true });
+      this.wallsLayer2.setCollisionByProperty({ collides: true });
+
+
+      // Set physics world bounds to match the tilemap
+      this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+
+      // Create player and prevent leaving the world
+      this.player = new Player(this, 100, 100);
+      this.player.bodyRef().setCollideWorldBounds(true);
+
   }
 
   private initAssessment(): void {
@@ -155,7 +168,17 @@ export class SFBLevel extends Scene {
       this.inAssessment = false;
     });
   }
-
+  private showDebugWalls(): void {
+    const debugGraphics = this.add.graphics().setAlpha(0.7);
+    this.wallsLayer.renderDebug(debugGraphics, {
+      tileColor: null,
+      collidingTileColor: new Phaser.Display.Color(243, 234, 48, 255),
+    });
+    this.wallsLayer2.renderDebug(debugGraphics, {
+      tileColor: null,
+      collidingTileColor: new Phaser.Display.Color(243, 234, 48, 255),
+    });
+  }
   private initCamera(): void {
     this.cameras.main.setSize(this.game.scale.width, this.game.scale.height);
     this.cameras.main.startFollow(this.player, true, 0.09, 0.09);

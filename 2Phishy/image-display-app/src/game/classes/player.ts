@@ -123,4 +123,9 @@ export class Player extends Actor {
       this.scaleX = 1;
     }
   }
+
+  public bodyRef(): Phaser.Physics.Arcade.Body {
+    return this.getBody();
+}
+
 }

@@ -36,12 +36,13 @@ const gameConfig: GameConfigExtended = {
   audio: {
     disableWebAudio: false,
   },
-  scene: [
-
+scene: [
   MainMenuScene,
+  LoadingScene,
   IntegratedLevel1,
-  SFBLevel, LoadingScene
+  SFBLevel
 ],
+
   winScore: WIN_SCORE,
 };
 

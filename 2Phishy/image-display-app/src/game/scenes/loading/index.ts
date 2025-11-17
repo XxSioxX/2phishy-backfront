@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import {MainMenuScene} from "../mainmenu";
+import {SFBLevel} from "../level-1-SFB";
 
 export class LoadingScene extends Scene {
   constructor() {
@@ -14,9 +15,10 @@ export class LoadingScene extends Scene {
     // Load the tileset image
     this.load.image('tiles', 'tilemaps/tiles/dungeon-16-16.png');
 
+
     // Load the tilemap JSON
     this.load.tilemapTiledJSON('assessmentlevel', 'tilemaps/tilesets/assessment-level.tmj');
-    this.load.tilemapTiledJSON('SFBlevel', 'tilemaps/tilesets/sfb-level.tmj');
+    this.load.tilemapTiledJSON('SFBlevel', 'tilemaps/tilesets/SFB-level-1-ver3.tmj');
 
     this.load.spritesheet('tiles_spr', 'tilemaps/tiles/dungeon-16-16.png', {
       frameWidth: 16,
@@ -34,8 +36,8 @@ export class LoadingScene extends Scene {
   }
   create(): void {
     console.log('Loading scene was created');
-    this.scene.add('main-menu-scene', MainMenuScene, true);
-
+    this.scene.add('main-menu-scene', MainMenuScene);
+    this.scene.add('sfb-level-scene', SFBLevel);
     this.scene.start('main-menu-scene');
     console.log('loading/index.ts (create)', this.textures.exists('tiles'));
   }

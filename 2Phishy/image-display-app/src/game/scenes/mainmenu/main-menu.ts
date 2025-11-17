@@ -3,6 +3,7 @@ import { gameAPI } from '../../helpers/game-api';
 import AssessmentPopup from "../../helpers/assessment-popup";
 import {Player} from "../../classes/player";
 import {IntegratedLevel1} from "../level1";
+import {SFBLevel} from "../level-1-SFB";
 
 export class MainMenuScene extends Scene {
   private playButton!: Phaser.GameObjects.Text;
@@ -113,6 +114,7 @@ export class MainMenuScene extends Scene {
         await gameAPI.getUserQuestionMap({
           userid: this.userData.userId,
           topic: "Safe Browsing Practices"});
+        this.scene.add('sfb-level-scene', SFBLevel, true);
         this.scene.start('sfb-level-scene');
       }
     } catch (error) {
