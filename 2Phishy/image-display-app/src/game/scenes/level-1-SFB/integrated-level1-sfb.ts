@@ -6,7 +6,7 @@ import { gameAPI, AssessmentResult } from '../../helpers/game-api';
 
 export class SFBLevel extends Scene {
   private player!: Player;
-  private assessmentPoints!: Phaser.GameObjects.Sprite[][];
+  private questionPoints!: Phaser.GameObjects.Sprite[][];
   private popup!: AssessmentPopup;
   private map!: Tilemaps.Tilemap;
   private tileset!: Tilemaps.Tileset;
@@ -15,14 +15,16 @@ export class SFBLevel extends Scene {
   private questions: any[] = [];
   private currentQuestionIndex = 0;
   private assessmentResults: AssessmentResult[] = [];
-  private currentTopic = 'Safe Browsing Practices'; // ⚠️ Change this per level
+  private currentTopic = 'Safe Browsing Practices';
   private inAssessment = false;
+  private userData = (window as any).userData;
+
 
   constructor() {
-    super('sfb-level-scene'); // ⚠️ Change key name per level
+    super('sfb-level-scene');
   }
 
-  create(): void {
+  async create(): Promise<void> {
     console.log('SFB Level - create()');
     this.initMap();
 
@@ -36,6 +38,9 @@ export class SFBLevel extends Scene {
     const data = this.cache.json.get('assessmentData') || [];
     const topicData = (data as any[]).find((t: any) => t.topic === this.currentTopic);
     this.questions = topicData?.initial_assessment || [];
+    await this.createQuestionMap();
+    this.initAssessment();
+    this.setupAssessmentCollision();
 
     console.log(`📚 Loaded ${this.questions.length} questions for topic: ${this.currentTopic}`);
   }
@@ -43,6 +48,7 @@ export class SFBLevel extends Scene {
   update(): void {
     this.player.update();
   }
+
 
   private initMap(): void {
       this.map = this.make.tilemap({ key: 'SFBlevel' });
@@ -61,30 +67,99 @@ export class SFBLevel extends Scene {
       this.player = new Player(this, 100, 100);
       this.player.bodyRef().setCollideWorldBounds(true);
 
+
+  }
+
+  private async createQuestionMap(): Promise<void> {
+    const userData = (window as any).userData;
+
+    const questionmap = await gameAPI.getUserQuestionMap({
+          userid: this.userData.userId,
+          topic: "Safe Browsing Practices"});
+
+    if (Array.isArray(questionmap) && questionmap.length <= 0) {
+      console.log('Creating new questionmap');
+
+      const questionmap = await gameAPI.createUserQuestionMap({
+        userid: this.userData.userId,
+        topic: "Safe Browsing Practices",
+      });
+
+     console.log("SFBLevel questionmap:", questionmap);
+
+      const generatedQuestions = questionmap.data.questions;
+      this.questions = generatedQuestions;
+
+    }
   }
 
   private initAssessment(): void {
-    const points = gameObjectsToObjectPoints(
-      this.map.filterObjects('AssessmentWaypoint', (obj) => obj.name === 'AssessmentPoint') || []
-    );
+  const allPoints = gameObjectsToObjectPoints(
+    this.map.filterObjects('QuestionPoints', obj => obj.name === 'QuestionPoint') || []
+  );
 
-    this.assessmentPoints = points.map((pt) => {
-      const bottom = this.physics.add.sprite(pt.x, pt.y, 'tiles_spr', 341).setScale(1.5);
-      const top = this.physics.add.sprite(pt.x, pt.y - 16, 'tiles_spr', 309).setScale(1.5);
-      return [bottom, top];
-    });
-  }
+  Phaser.Utils.Array.Shuffle(allPoints);
+
+  const selectedPoints = allPoints.slice(0, this.questions.length);
+
+  this.questionPoints = selectedPoints.map((pt, index) => {
+    const bottom = this.physics.add.sprite(pt.x, pt.y, 'tiles_spr', 340).setScale(1.5);
+    const top = this.physics.add.sprite(pt.x, pt.y - 16, 'tiles_spr', 308).setScale(1.5);
+
+    // ⭐ bind question index to each sprite pair
+    const pair = [bottom, top] as any;
+    pair.questionIndex = index;
+
+    return pair;
+  });
+}
+
+
 
   private setupAssessmentCollision(): void {
-    this.assessmentPoints.forEach((ap) => {
-      this.physics.add.overlap(this.player, ap, () => {
+    this.questionPoints.forEach((pointPair: any) => {
+      this.physics.add.overlap(this.player, pointPair, () => {
         if (this.inAssessment) return;
-        this.inAssessment = true;
-        this.player.freeze();
-        this.showNextQuestion();
+
+        const qIndex = pointPair.questionIndex;
+        this.startQuestionAtPoint(pointPair, qIndex);
       });
     });
   }
+
+  private startQuestionAtPoint(pointPair: any, qIndex: number): void {
+    this.inAssessment = true;
+    this.player.freeze();
+
+    const q = this.questions[qIndex];
+
+    this.popup.show(q.question, q.choices, (choice) => {
+      const result: AssessmentResult = {
+        question_id: q.question_id,
+        user_answer: choice,
+        correct_answer: q.answer,
+        topic: this.currentTopic,
+        subcategory: q.subcat,
+        is_correct: choice === q.answer,
+        timestamp: new Date(),
+      };
+
+      this.assessmentResults.push(result);
+
+      // Remove that point so it won't trigger again
+      pointPair.forEach((sprite: Phaser.GameObjects.Sprite) => sprite.destroy());
+
+      this.inAssessment = false;
+      this.player.unfreeze();
+
+      // If all questions answered → finish
+      if (this.assessmentResults.length >= this.questions.length) {
+        this.completeAssessment();
+      }
+    });
+  }
+
+
 
   private async showNextQuestion(): Promise<void> {
     if (this.currentQuestionIndex >= this.questions.length) {
