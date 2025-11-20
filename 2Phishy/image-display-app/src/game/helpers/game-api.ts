@@ -85,7 +85,7 @@ class GameAPI {
 
     console.log('Sending to /game/generate/qlist:', payload);
 
-    const response = await fetch('${this.baseUrl}/game/generate/qlist', {
+    const response = await fetch(`${this.baseUrl}/generate/qlist`, {
       method: 'POST',
       mode: 'cors',
       headers: this.getHeaders(),
@@ -100,6 +100,32 @@ class GameAPI {
 
     return await response.json();
   }
+
+  async createUserQuestionMap(payload: {
+    userid: string;
+    collectionName?: string;
+    topic: string;
+  }) {
+    const { userid, topic, collectionName = 'initial_assessments' } = payload;
+
+    console.log('Sending to /game/generate/qlist:', payload);
+
+    const response = await fetch(`${this.baseUrl}/generate/qlist`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ userid, topic, collectionName }),
+    })
+
+    if(!response.ok) {
+      const err = await response.text();
+      console.error('Failed getting question map:', err);
+      throw new Error(`Failed to get question map: ${err}`);
+    }
+
+   return await response.json();
+  }
+
 }
 
 
