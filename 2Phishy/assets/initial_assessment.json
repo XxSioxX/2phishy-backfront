@@ -3,61 +3,70 @@
     "topic": "Safe Browsing Practices",
     "initial_assessment": [
       {
-        "question_id": "safebrowsing-initassess-001",
+        "assessment_id" : "safebrowsing-initassess-001",
+        "question_id": "sfb_svns_q1",
         "subcat": "SecVsNonSecWeb",
         "question": "Which of the following URLs is most likely a phishing attempt?",
         "choices": ["www.wellfargo.com", "www.wellsfargo.com", "www.google.com", "www.github.com"],
         "answer": "www.wellfargo.com"
       },
       {
-        "question_id": "safebrowsing-initassess-002",
+        "assessment_id": "safebrowsing-initassess-002",
+        "question_id": "sfb_svns_q2",
         "subcat": "SecVsNonSecWeb",
         "question": "What is one sign of a potentially unsafe website?",
         "choices": ["Unfamiliar domain names", "Secure payment options", "Contact details available", "HTTPS encryption"],
         "answer": "Unfamiliar domain names"
       },
       {
-        "question_id": "safebrowsing-initassess-003",
+        "assessment_id" : "safebrowsing-initassess-003",
+        "question_id": "sfb_https_q1",
         "subcat": "HttpVsHttps",
         "question": "What does the 'S' in HTTPS stand for?",
         "choices": ["Safe", "Secure", "Session", "Server"],
         "answer": "Secure"
       },
       {
-        "question_id": "safebrowsing-initassess-004",
+        "assessment_id": "safebrowsing-initassess-004",
+        "question_id": "sfb_https_q2",
         "subcat": "HttpVsHttps",
         "question": "What icon typically indicates a secure HTTPS connection?",
         "choices": ["Lock", "Shield", "Star", "Arrow"],
         "answer": "Lock"
       },
       {
-        "question_id": "safebrowsing-initassess-005",
+        "assessment_id": "safebrowsing-initassess-005",
+        "question_id": "sfb_bsbp_q1",
         "subcat": "BrowserSecBestPrac",
         "question": "What setting can help ensure secure browsing by default?",
         "choices": ["Disable pop-ups", "Force HTTPS connections", "Enable third-party cookies", "Lower screen brightness"],
         "answer": "Force HTTPS connections"
       },
       {
-        "question_id": "safebrowsing-initassess-006",
+        "assessment_id": "safebrowsing-initassess-006",
+        "question_id": "sfb_bsbp_q2",
         "subcat": "BrowserSecBestPrac",
         "question": "Why should browsers be updated regularly?",
         "choices": ["To make them faster", "To reduce ads", "To receive security patches", "To get new themes"],
         "answer": "To receive security patches"
       }
     ]
+
   },
   {
     "topic": "Password Security",
     "initial_assessment": [
       {
-        "question_id": "passsec-initassess-001",
+        "assessment_id": "passsec-initassess-001",
+        "question_id": "ps_cup_q1",
         "subcat": "CommPass",
         "question": "Which of the following passwords is considered weak and commonly used?",
         "choices": ["123456", "password", "qwerty", "all of the above"],
         "answer": "all of the above"
       },
       {
-        "question_id": "passsec-initassess-002",
+        "assessment_id": "passsec-initassess-002",
+        "question_id": "ps_cup_q2",
         "subcat": "CommPass",
         "question": "Why is using pet names as passwords risky?",
         "choices": [
@@ -69,14 +78,16 @@
         "answer": "They are predictable"
       },
       {
-        "question_id": "passsec-initassess-003",
+        "assessment_id": "passsec-initassess-003",
+        "question_id": "ps_ps_q1",
         "subcat": "PassStren",
         "question": "What is the recommended minimum length for a secure password?",
         "choices": ["8 characters", "10 characters", "12 characters", "16 characters"],
         "answer": "16 characters"
       },
       {
-        "question_id": "passsec-initassess-004",
+        "assessment_id": "passsec-initassess-004",
+        "question_id": "ps_ps_q2",
         "subcat": "PassStren",
         "question": "Which of these methods will strengthen your password?",
         "choices": [
@@ -88,7 +99,8 @@
         "answer": "Using a memorable phrase with random characters"
       },
       {
-        "question_id": "passsec-initassess-005",
+        "assessment_id":  "passsec-initassess-005",
+        "question_id": "ps_mfa_q1",
         "subcat": "MultiFact",
         "question": "What is multi-factor authentication (MFA)?",
         "choices": [
@@ -100,7 +112,8 @@
         "answer": "A method that adds an extra layer of security by requiring more than just a password"
       },
       {
-        "question_id": "passsec-initassess-006",
+        "assessment_id": "passsec-initassess-006",
+        "question_id": "ps_mfa_q2",
         "subcat": "MultiFact",
         "question": "Which of the following is an example of multi-factor authentication?",
         "choices": [
@@ -113,68 +126,76 @@
       }
     ]
   },
+
   {
-  "topic": "Malware",
-  "initial_assessment": [
-    {
-      "question_id": "malware-initassess-001",
-      "subcat": "MalType",
-      "question": "Which type of malware disguises itself as legitimate software?",
-      "choices": ["Virus", "Trojan", "Worm", "Spyware"],
-      "answer": "Trojan"
-    },
-    {
-      "question_id": "malware-initassess-002",
-      "subcat": "MalType",
-      "question": "Which malware type can replicate and spread without a host program?",
-      "choices": ["Trojan", "Worm", "Ransomware", "Adware"],
-      "answer": "Worm"
-    },
-    {
-      "question_id": "malware-initassess-003",
-      "subcat": "MalType",
-      "question": "What does ransomware do to a victim's files?",
-      "choices": ["Deletes them", "Moves them", "Encrypts them", "Backs them up"],
-      "answer": "Encrypts them"
-    },
-    {
-      "question_id": "malware-initassess-004",
-      "subcat": "MalType",
-      "question": "Spyware often does which of the following?",
-      "choices": [
-        "Displays ransom messages",
-        "Deletes system files",
-        "Collects user data without notice",
-        "Replicates across networks"
-      ],
-      "answer": "Collects user data without notice"
-    },
-    {
-      "question_id": "malware-initassess-005",
-      "subcat": "MalInfect",
-      "question": "How can malware typically enter a system?",
-      "choices": [
-        "Via antivirus updates",
-        "Through email attachments and unsafe links",
-        "By opening spreadsheets",
-        "By browsing secure websites"
-      ],
-      "answer": "Through email attachments and unsafe links"
-    },
-    {
-      "question_id": "malware-initassess-006",
-      "subcat": "MalInfect",
-      "question": "Which hardware can spread malware like worms?",
-      "choices": ["CPU", "Mouse", "USB drives", "Headphones"],
-      "answer": "USB drives"
-    }
-  ]
-},
+    "topic": "Malware",
+    "initial_assessment": [
+      {
+        "assessment_id": "malware-initassess-001",
+        "question_id": "mal_tm_q1",
+        "subcat": "MalType",
+        "question": "Which type of malware disguises itself as legitimate software?",
+        "choices": ["Virus", "Trojan", "Worm", "Spyware"],
+        "answer": "Trojan"
+      },
+      {
+        "assessment_id": "malware-initassess-002",
+        "question_id": "mal_tm_q2",
+        "subcat": "MalType",
+        "question": "Which malware type can replicate and spread without a host program?",
+        "choices": ["Trojan", "Worm", "Ransomware", "Adware"],
+        "answer": "Worm"
+      },
+      {
+        "assessment_id":  "malware-initassess-003",
+        "question_id": "mal_tm_q3",
+        "subcat": "MalType",
+        "question": "What does ransomware do to a victim's files?",
+        "choices": ["Deletes them", "Moves them", "Encrypts them", "Backs them up"],
+        "answer": "Encrypts them"
+      },
+      {
+        "assessment_id": "malware-initassess-004",
+        "question_id": "mal_tm_q4",
+        "subcat": "MalType",
+        "question": "Spyware often does which of the following?",
+        "choices": [
+          "Displays ransom messages",
+          "Deletes system files",
+          "Collects user data without notice",
+          "Replicates across networks"
+        ],
+        "answer": "Collects user data without notice"
+      },
+      {
+        "assessment_id": "malware-initassess-005",
+        "question_id": "mal_mis_q2",
+        "subcat": "MalInfect",
+        "question": "How can malware typically enter a system?",
+        "choices": [
+          "Via antivirus updates",
+          "Through email attachments and unsafe links",
+          "By opening spreadsheets",
+          "By browsing secure websites"
+        ],
+        "answer": "Through email attachments and unsafe links"
+      },
+      {
+        "assessment_id": "malware-initassess-006",
+        "question_id": "mal_mis_q4",
+        "subcat": "MalInfect",
+        "question": "Which hardware can spread malware like worms?",
+        "choices": ["CPU", "Mouse", "USB drives", "Headphones"],
+        "answer": "USB drives"
+      }
+    ]
+  },
 {
   "topic": "Social Engineering",
   "initial_assessment": [
     {
-      "question_id": "socialengineering-initassess-001",
+      "assessment_id": "socialengineering-initassess-001",
+      "question_id": "se_tsea_q1",
       "subcat": "SocEngType",
       "question": "What is the main tactic used in phishing attacks?",
       "choices": [
@@ -186,7 +207,8 @@
       "answer": "Using legitimate-looking messages to trick users"
     },
     {
-      "question_id": "socialengineering-initassess-002",
+      "assessment_id": "socialengineering-initassess-002",
+      "question_id": "se_tsea_q2",
       "subcat": "SocEngType",
       "question": "Which of the following is an example of USB phishing?",
       "choices": [
@@ -198,14 +220,16 @@
       "answer": "Leaving malware-infected USB drives in public"
     },
     {
-      "question_id": "socialengineering-initassess-003",
+      "assessment_id": "socialengineering-initassess-003",
+      "question_id": "se_tsea_q4",
       "subcat": "SocEngType",
       "question": "Phishing often appeals to which of the following emotions?",
       "choices": ["Happiness", "Boredom", "Urgency and curiosity", "Gratitude"],
       "answer": "Urgency and curiosity"
     },
     {
-      "question_id": "socialengineering-initassess-004",
+      "assessment_id":  "socialengineering-initassess-004",
+      "question_id": "se_tsea_q5",
       "subcat": "SocEngType",
       "question": "What tactic is used in baiting attacks?",
       "choices": [
@@ -217,7 +241,8 @@
       "answer": "Offering free items or services to trick users"
     },
     {
-      "question_id": "socialengineering-initassess-005",
+      "assessment_id": "socialengineering-initassess-005",
+      "question_id": "se_def_q1",
       "subcat": "SocEngDef",
       "question": "What should you do if you receive an unexpected email asking for personal information?",
       "choices": [
@@ -229,7 +254,8 @@
       "answer": "Ignore it or verify with the sender via other means"
     },
     {
-      "question_id": "socialengineering-initassess-006",
+      "assessment_id":  "socialengineering-initassess-006",
+      "question_id": "se_def_q5",
       "subcat": "SocEngDef",
       "question": "What should you do if a message pressures you to act immediately?",
       "choices": [
@@ -242,11 +268,12 @@
     }
   ]
 },
-  {
+{
   "topic": "Incident Response",
   "initial_assessment": [
     {
-      "question_id": "incidentresponse-initassess-001",
+      "assessment_id": "incidentresponse-initassess-001",
+      "question_id": "ir_steps_q1",
       "subcat": "IRProc",
       "question": "What is the first step when a cybersecurity incident is detected?",
       "choices": [
@@ -258,7 +285,8 @@
       "answer": "Disconnect the affected device from the internet"
     },
     {
-      "question_id": "incidentresponse-initassess-002",
+      "assessment_Id": "incidentresponse-initassess-002",
+      "question_id": "ir_steps_q2",
       "subcat": "IRPrep",
       "question": "Which of the following is considered a good preparation step before a cyber incident?",
       "choices": [
@@ -270,7 +298,8 @@
       "answer": "Maintain regular data backups and practice good cybersecurity"
     },
     {
-      "question_id": "incidentresponse-initassess-003",
+      "assessment_id": "incidentresponse-initassess-003",
+      "question_id": "ir_steps_q3",
       "subcat": "IRPost",
       "question": "What is the purpose of isolating the affected system during an incident?",
       "choices": [
@@ -282,7 +311,8 @@
       "answer": "To prevent further spread or unauthorized access"
     },
     {
-      "question_id": "incidentresponse-initassess-004",
+      "assessment_id": "incidentresponse-initassess-004",
+      "question_id": "ir_steps_q4",
       "subcat": "IRPost",
       "question": "What should a user do after a cyber incident has been resolved?",
       "choices": [
@@ -294,7 +324,8 @@
       "answer": "Identify what caused the incident and how to prevent it"
     },
     {
-      "question_id": "incidentresponse-initassess-005",
+      "assessment_id": "incidentresponse-initassess-005",
+      "question_id": "ir_steps_q5",
       "subcat": "IRPost",
       "question": "Why is changing passwords important after an incident?",
       "choices": [
@@ -306,7 +337,8 @@
       "answer": "To prevent compromised credentials from being reused"
     },
     {
-      "question_id": "incidentresponse-initassess-006",
+      "assessment_id": "incidentresponse-initassess-006",
+      "question_id": "ir_plan_q1",
       "subcat": "PIRPlan",
       "question": "Why should even regular users have a personal incident response plan?",
       "choices": [
@@ -319,7 +351,4 @@
     }
   ]
 }
-
-
-
 ]

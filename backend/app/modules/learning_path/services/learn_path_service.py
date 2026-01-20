@@ -61,7 +61,7 @@ def build_question_map(*files):
 
 def evaluate_answer(answer: QuestionRequest, question_map):
     logger.info(f"Evaluating question: {answer}")
-    qid = answer.question_id
+    qid = answer.assessment_request.question_id
     logger.info(f"Evaluating question qid: {qid}")
     user_answer = answer.answer
     logger.info(f"Evaluating question user_answer: {user_answer}")

@@ -30,14 +30,11 @@ export class SFBLevel extends Scene {
 
     this.physics.add.collider(this.player, this.wallsLayer);
     this.physics.add.collider(this.player, this.wallsLayer2);
-    this.initAssessment();
-    this.setupAssessmentCollision();
+
     this.initCamera();
     this.popup = new AssessmentPopup(this);
 
-    const data = this.cache.json.get('assessmentData') || [];
-    const topicData = (data as any[]).find((t: any) => t.topic === this.currentTopic);
-    this.questions = topicData?.initial_assessment || [];
+
     await this.createQuestionMap();
     this.initAssessment();
     this.setupAssessmentCollision();
@@ -71,27 +68,27 @@ export class SFBLevel extends Scene {
   }
 
   private async createQuestionMap(): Promise<void> {
-    const userData = (window as any).userData;
+    const response = await gameAPI.getUserQuestionMap({
+      userid: this.userData.userId,
+      topic: this.currentTopic,
+    });
 
-    const questionmap = await gameAPI.getUserQuestionMap({
-          userid: this.userData.userId,
-          topic: "Safe Browsing Practices"});
 
-    if (Array.isArray(questionmap) && questionmap.length <= 0) {
-      console.log('Creating new questionmap');
-
-      const questionmap = await gameAPI.createUserQuestionMap({
-        userid: this.userData.userId,
-        topic: "Safe Browsing Practices",
-      });
-
-     console.log("SFBLevel questionmap:", questionmap);
-
-      const generatedQuestions = questionmap.data.questions;
-      this.questions = generatedQuestions;
-
+    if (response?.data?.questions?.length > 0) {
+      console.log("📘 Using existing backend question_map");
+      this.questions = response.data.questions;
+      return;
     }
+
+    console.log("🆕 No question_map found, generating...");
+    const created = await gameAPI.createUserQuestionMap({
+      userid: this.userData.userId,
+      topic: this.currentTopic,
+    });
+
+    this.questions = created.data.questions;
   }
+
 
   private initAssessment(): void {
   const allPoints = gameObjectsToObjectPoints(
@@ -106,15 +103,13 @@ export class SFBLevel extends Scene {
     const bottom = this.physics.add.sprite(pt.x, pt.y, 'tiles_spr', 340).setScale(1.5);
     const top = this.physics.add.sprite(pt.x, pt.y - 16, 'tiles_spr', 308).setScale(1.5);
 
-    // ⭐ bind question index to each sprite pair
+    // bind question index to each sprite pair
     const pair = [bottom, top] as any;
     pair.questionIndex = index;
 
     return pair;
   });
 }
-
-
 
   private setupAssessmentCollision(): void {
     this.questionPoints.forEach((pointPair: any) => {
@@ -127,24 +122,56 @@ export class SFBLevel extends Scene {
     });
   }
 
-  private startQuestionAtPoint(pointPair: any, qIndex: number): void {
+  private async startQuestionAtPoint(pointPair: any, qIndex: number): Promise<void> {
     this.inAssessment = true;
     this.player.freeze();
 
     const q = this.questions[qIndex];
-
-    this.popup.show(q.question, q.choices, (choice) => {
-      const result: AssessmentResult = {
+    this.popup.mode = "learning";
+    this.popup.correctAnswer = q.answer;
+    this.popup.show(q.question, q.choices, async(choice) => {
+      const result = {
+        userid: this.userData.userId,
         question_id: q.question_id,
         user_answer: choice,
         correct_answer: q.answer,
         topic: this.currentTopic,
-        subcategory: q.subcat,
+        subcategory: this.inferSubcat(q.question_id),
         is_correct: choice === q.answer,
         timestamp: new Date(),
       };
 
       this.assessmentResults.push(result);
+
+      const apiPayload = {
+        userid: result.userid,
+        question_id: result.question_id,
+        topic: result.topic,
+
+        question_subtopic: this.inferSubcat(q.question_id),
+        answer: result.user_answer,
+
+        is_correct: result.is_correct,
+        timestamp: result.timestamp.toISOString(),
+      };
+
+
+
+      try {
+        await this.submitAnswer({
+          question_id: result.question_id,
+          user_answer: result.user_answer,
+          correct_answer: result.correct_answer,
+          topic: result.topic,
+          subcategory: result.subcategory,
+          is_correct: result.is_correct,
+          timestamp: result.timestamp,
+        });
+
+        console.log("📡 Single question submitted");
+      } catch (err) {
+        console.error("❌ Failed to submit single question", err);
+      }
 
       // Remove that point so it won't trigger again
       pointPair.forEach((sprite: Phaser.GameObjects.Sprite) => sprite.destroy());
@@ -160,30 +187,30 @@ export class SFBLevel extends Scene {
   }
 
 
+  private async submitAnswer(result: AssessmentResult): Promise<void> {
+    const userData = (window as any).userData;
+    if (!userData) return;
 
-  private async showNextQuestion(): Promise<void> {
-    if (this.currentQuestionIndex >= this.questions.length) {
-      await this.completeAssessment();
-      return;
+    try {
+      gameAPI.setToken(userData.token);
+
+      await gameAPI.submit_question_single({
+        userid: userData.userId,
+        question_id: result.question_id,
+        topic: result.topic,
+
+        question_subtopic: result.subcategory,
+        answer: result.user_answer,
+
+        is_correct: result.is_correct,
+        timestamp: result.timestamp.toISOString(),
+      });
+
+
+      console.log("📡 Answer submitted:", result.question_id);
+    } catch (error) {
+      console.error("❌ Failed to submit answer:", error);
     }
-
-    const q = this.questions[this.currentQuestionIndex];
-
-    this.popup.show(q.question, q.choices, async (choice) => {
-      const result: AssessmentResult = {
-        question_id: q.question_id,
-        user_answer: choice,
-        correct_answer: q.answer,
-        topic: this.currentTopic,
-        subcategory: q.subcat,
-        is_correct: choice === q.answer,
-        timestamp: new Date(),
-      };
-
-      this.assessmentResults.push(result);
-      this.currentQuestionIndex++;
-      this.showNextQuestion();
-    });
   }
 
   private async completeAssessment(): Promise<void> {
@@ -260,4 +287,12 @@ export class SFBLevel extends Scene {
     this.cameras.main.setZoom(1.5);
     this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
   }
+
+  private inferSubcat(questionId: string): string {
+  if (questionId.includes('_svns_')) return 'SECVSNONSEC';
+  if (questionId.includes('_https_')) return 'HTTPVSHTTPS';
+  if (questionId.includes('_bsbp_')) return 'BROWSERSECBP';
+  return 'UNKNOWN';
+}
+
 }

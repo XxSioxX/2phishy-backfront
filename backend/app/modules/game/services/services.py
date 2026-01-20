@@ -11,6 +11,7 @@ import json
 import random
 import os
 
+from app.modules.game.schemas.gameschemas import SingleResponseItem
 
 logger = get_logger()
 
@@ -43,20 +44,20 @@ def evaluate_assessment(response, evaluator: LearningEvaluator):
         result_dict = {}
 
         for item in response.responses:
-            q_id = item.question_id
-            subtopic_enum = item.question_subtopic
-            prefix = q_id.split("-")[0]
+            assessment_id = item.assessment_request.assessment_id
+            subtopic_enum = item.assessment_request.question_subtopic
+            prefix = assessment_id.split("-")[0]
             logger.info(f"DEBUG PREFIX: {prefix}")
             if prefix in question_ids:
                 try:
                     result = evaluator.evaluate_answer(item, question_map)
                     logger.info(f"RESULT: {result}")
-                    result_dict[q_id] = (subtopic_enum, result)
+                    result_dict[assessment_id] = (subtopic_enum, result)
                 except ValueError:
 
-                    result_dict[q_id] = "Invalid subtopic"
+                    result_dict[assessment_id] = "Invalid subtopic"
             else:
-                result_dict[q_id] = "Invalid prefix"
+                result_dict[assessment_id] = "Invalid prefix"
         logger.info(f"Evaluated assessment: {result_dict}")
         return result_dict
     except Exception as e:
@@ -122,6 +123,13 @@ async def assessment_check(
 
     return await collection.find_one(query) is not None
 
+async def ensure_initial_assessment_done(db, user_id, topic):
+    doc = await db["initial_assessments"].find_one(
+        {"user_id": str(user_id), f"assessments.{topic.value}": {"$exists": True}}
+    )
+    if not doc:
+        raise Exception("Initial assessment not completed")
+
 
 async def save_assessment_result(
     db: AsyncIOMotorDatabase,
@@ -130,8 +138,11 @@ async def save_assessment_result(
     subcat_grade: dict,
     subcat_priority: list
 ):
+    logger.info("Saving assessment result")
     collection = db["initial_assessments"]
     user_doc = await collection.find_one({"user_id": str(user_id)})
+
+    logger.debug(f"user debug: {user_doc}")
 
     if not user_doc:
         logger.info("No document found, creating new one")
@@ -177,6 +188,31 @@ async def save_assessment_result(
     await collection.update_one({"user_id": str(user_id)}, {"$set": update})
     return str(user_doc["_id"])
 
+async def ensure_initial_assessment_doc(
+    db: AsyncIOMotorDatabase,
+    user_id: UUID
+):
+
+    collection = db["initial_assessments"]
+
+    existing = await collection.find_one({"user_id": str(user_id)})
+    if existing:
+        return existing
+
+    logger.info(f"Initializing initial_assessments for user {user_id}")
+
+    doc = {
+        "user_id": str(user_id),
+        "assessments": {},
+        "progress": {},
+        "timestamp": datetime.utcnow()
+    }
+
+    await collection.insert_one(doc)
+    return doc
+
+
+
 async def db_findby_id(
         db: AsyncIOMotorDatabase,
         user_id: UUID,
@@ -202,7 +238,8 @@ def load_and_prepare_knowledge_base(topic_value: str):
         with open(data_path, "r") as f:
             all_topics_data = json.load(f)
 
-            logger.info(f"Loaded knowledgebase: {all_topics_data}")
+            logger.info(f"Loaded knowledgebase (first 2 topics): {all_topics_data[:2]}")
+
     except Exception as e:
         logger.error(f"Failed to load or parse knowledge_base.json: {e}")
         return {}
@@ -297,7 +334,7 @@ async def generate_question_list(
     return question_map
 
 
-async def save_question_result(
+async def save_assessment_question_result(
         db: AsyncIOMotorDatabase,
         user_id: UUID,
         question_map,
@@ -328,3 +365,158 @@ async def save_question_result(
         logger.error(f"Error updating document for topic '{topic.value}': {e}")
 
     return question_map
+
+async def get_qmap(
+        db: AsyncIOMotorDatabase,
+        user_id: UUID,
+        topic: Topics,
+        collection_name: str
+):
+    logger.info("Getting Document")
+
+    user_doc = await db_findby_id(db, user_id, collection_name)
+
+    if not user_doc:
+        logger.error(f"No document found for user '{user_id}'")
+        raise Exception(f"No document found for user '{user_id}'")
+
+    topic_key = normalize_topic(topic)
+    try:
+
+        question_map = user_doc["assessments"][topic_key]["question_map"]
+
+        return question_map
+    except Exception as e:
+        logger.error(f"Error finding questionmap'{topic_key}': {e}")
+
+
+def normalize_topic(topic: Topics | str) -> str:
+    return topic.value if isinstance(topic, Topics) else topic
+
+
+
+async def check_user_progression(
+    db: AsyncIOMotorDatabase,
+    user_id: UUID,
+):
+    logger.info(f"Checking User Progression: (user_id) {user_id}")
+    collections = await db.list_collection_names()
+    if "progress" not in collections:
+        await db["progress"].insert_one({
+            "user_id": str(user_id),
+            "created_at": datetime.utcnow(),
+            "progress": {}
+        })
+    else:
+        existing = await db["progress"].find_one({"user_id": str(user_id)})
+        if not existing:
+            await db["progress"].insert_one({
+                "user_id": str(user_id),
+                "created_at": datetime.utcnow(),
+                "progress": {}
+            })
+
+async def answer_cross_check (
+        db: AsyncIOMotorDatabase,
+        topic: Topics,
+        question_id: str,
+        user_answer: str,
+        user_id: UUID
+):
+        collection_name = "initial_assessments"
+
+        q_map = await get_qmap(db, user_id, topic, collection_name)
+
+        logger.info(
+            f'FINDING: topic: {topic}, question_id: {question_id}, user_answer: {user_answer}'
+        )
+
+        question_found = None
+        for question in q_map:
+            logger.info(f'checking question: {question}')
+
+            if question["question_id"] == question_id:
+                question_found = question
+                logger.info('Question found')
+                break
+
+        if question_found:
+            if user_answer == question_found["answer"]:
+                return True
+            else:
+                return False
+
+
+
+async def save_popup_question_result(
+        db: AsyncIOMotorDatabase,
+        user_id: UUID,
+        topic: Topics,
+        responseItem: SingleResponseItem,
+        collection_name: str
+):
+    logger.info("saving question result")
+    await check_user_progression(db, user_id)
+
+
+    progression_doc = await db_findby_id(db, user_id, collection_name)
+
+
+    if progression_doc is None:
+        progression_doc = {
+            "user_id": str(user_id),
+            "progress": {}
+        }
+        await db[collection_name].insert_one(progression_doc)
+
+    q_id = responseItem.question_id
+    q_subtopic = responseItem.question_subtopic
+    q_answer = responseItem.answer
+    q_is_correct = responseItem.is_correct
+
+    cross_check_result = await answer_cross_check(db, topic, q_id, q_answer, user_id)
+    logger.info(f"cross check result: {cross_check_result}")
+
+    if cross_check_result != q_is_correct:
+        raise Exception("inconsistent answers between Frontend and Backend")
+
+    if topic not in progression_doc.get("progress", {}):
+        await db[collection_name].update_one(
+            {"user_id": str(user_id)},
+            {"$set": {f"progress.{topic}": []}}
+        )
+
+    exists = await db[collection_name].find_one(
+        {
+            "user_id": str(user_id),
+            f"progress.{topic}.question_id": q_id
+        }
+    )
+
+    payload_dict = {
+        "question_id": q_id,
+        "question_subtopic": q_subtopic,
+        "answer": q_answer,
+        "is_correct": q_is_correct,
+        "timestamp": responseItem.timestamp
+    }
+
+    if exists:
+        await db[collection_name].update_one(
+            {
+                "user_id": str(user_id),
+                f"progress.{topic}.question_id": q_id
+            },
+            {
+                "$set": {
+                    f"progress.{topic}.$.answer": q_answer,
+                    f"progress.{topic}.$.is_correct": q_is_correct,
+                    f"progress.{topic}.$.timestamp": responseItem.timestamp,
+                }
+            }
+        )
+    else:
+        await db[collection_name].update_one(
+            {"user_id": str(user_id)},
+            {"$push": {f"progress.{topic}": payload_dict}}
+        )

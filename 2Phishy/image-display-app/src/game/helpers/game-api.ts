@@ -2,6 +2,7 @@
 import {User} from "../../types";
 
 export interface AssessmentResult {
+  assessment_id: string;
   question_id: string;
   user_answer: string | null;
   correct_answer: string;
@@ -25,32 +26,59 @@ class GameAPI {
       ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
     };
   }
-
   async startInitialAssessment(payload: {
     userid: string;
     topic: string;
     assessment_response: {
       responses: {
+        assessment_id: string;
         question_id: string;
         question_subtopic: string;
         answer: string | null;
+        is_correct: boolean;
+        timestamp: string;
       }[];
     };
   }) {
-    console.log('Sending to /game/initassess/:', payload);
+    const fixedPayload = {
+      userid: payload.userid,
+      topic: payload.topic,
+      assessment_response: {
+        responses: payload.assessment_response.responses.map(r => ({
+          assessment_request: {
+            assessment_id: r.assessment_id,
+            question_id: r.question_id,
+            question_subtopic: r.question_subtopic,
+          },
+          answer: r.answer,
+          is_correct: r.is_correct,
+          timestamp: r.timestamp,
+        })),
+      },
+    };
+
+    console.log('Sending to /game/initassess/:', fixedPayload);
 
     const response = await fetch(`${this.baseUrl}/initassess/`, {
       method: 'POST',
-      mode: 'cors',              // ✅ enable CORS
+      mode: 'cors',
       headers: this.getHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify(fixedPayload),
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      console.error('❌ startInitialAssessment error:', err);
-      throw new Error(`Failed to start initial assessment: ${err}`);
+      const errJson = await response.json();
+
+      if (errJson.detail) {
+        const messages = errJson.detail.map((d: any) =>
+          `Validation error at ${d.loc.join(' → ')}`
+        );
+        throw new Error(messages.join('\n'));
+      }
+
+      throw new Error('Failed to start initial assessment');
     }
+
     return await response.json();
   }
 
@@ -75,6 +103,64 @@ class GameAPI {
 
     return await response.json();
   }
+
+  async submitAssessmentResult(payload: {
+  userid: string;
+  question_id: string;
+  user_answer: string | null;
+  correct_answer: string;
+  topic: string;
+  subcategory: string;
+  is_correct: boolean;
+  timestamp: string; // ISO string
+}) {
+  console.log('Sending to /game/assessment/submit:', payload);
+
+  const response = await fetch(`${this.baseUrl}/assessment/submit`, {
+    method: 'POST',
+    mode: 'cors',
+    headers: this.getHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    console.error('❌ submitAssessmentResult error:', err);
+    throw new Error(`Failed to submit assessment result: ${err}`);
+  }
+
+  return await response.json();
+}
+
+  async submit_question_single(payload: {
+    userid: string;
+    question_id: string;
+    topic: string;
+
+    question_subtopic: string;
+    answer:string | null;
+
+    is_correct: boolean;
+    timestamp: string;
+}) {
+  console.log('Sending to /game/question/submit/single', payload);
+
+  const response = await fetch(`${this.baseUrl}/question/submit/single`, {
+    method: 'POST',
+    mode: 'cors',
+    headers: this.getHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    console.error('❌ submitAssessmentResult error:', err);
+    throw new Error(`Failed to submit assessment result: ${err}`);
+  }
+
+  return await response.json();
+}
+
 
   async getUserQuestionMap(payload: {
     userid: string;

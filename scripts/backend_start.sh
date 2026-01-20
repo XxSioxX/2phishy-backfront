@@ -1,4 +1,4 @@
 #!/bin/bash
 cd backend
-source virtual_env/bin/activate
+source virt_env_wsl/bin/activate
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

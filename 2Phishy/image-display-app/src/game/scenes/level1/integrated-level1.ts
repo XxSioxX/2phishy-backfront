@@ -22,7 +22,7 @@ export class IntegratedLevel1 extends Scene {
   }
 
   create(): void {
-    console.log('🎮 Integrated Level 1 - create()');
+    console.log('Integrated Level 1 - create()');
     this.initMap();
     this.player = new Player(this, 100, 100);
     this.physics.add.collider(this.player, this.wallsLayer);
@@ -30,12 +30,15 @@ export class IntegratedLevel1 extends Scene {
     this.setupAssessmentCollision();
     this.initCamera();
     this.popup = new AssessmentPopup(this);
+    this.popup.mode = "assessment";
+
 
     const data = this.cache.json.get('assessmentData') || [];
     const topicData = (data as any[]).find((t: any) => t.topic === this.currentTopic);
     this.questions = topicData?.initial_assessment || [];
+    console.log('questions:', this.questions);
 
-    console.log(`📚 Loaded ${this.questions.length} questions for topic: ${this.currentTopic}`);
+    console.log(`Loaded ${this.questions.length} questions for topic: ${this.currentTopic}`);
   }
 
   update(): void {
@@ -75,14 +78,15 @@ export class IntegratedLevel1 extends Scene {
 
   private async showNextQuestion(): Promise<void> {
     if (this.currentQuestionIndex >= this.questions.length) {
-      await this.completeAssessment();
-      return;
-    }
-
+        console.log('Assessment complete');
+        this.completeAssessment();
+        return;
+      }
     const q = this.questions[this.currentQuestionIndex];
-
+    this.popup.correctAnswer = q.answer;
     this.popup.show(q.question, q.choices, async (choice) => {
       const result: AssessmentResult = {
+        assessment_id: q.assessment_id,
         question_id: q.question_id,
         user_answer: choice,
         correct_answer: q.answer,
@@ -125,6 +129,7 @@ export class IntegratedLevel1 extends Scene {
     };
 
     const formattedResponses = this.assessmentResults.map((r) => ({
+      assessment_id: r.assessment_id,
       question_id: r.question_id,
       question_subtopic: subcatMap[r.subcategory] || r.subcategory.toUpperCase(),
       answer: r.user_answer,
@@ -137,17 +142,16 @@ export class IntegratedLevel1 extends Scene {
     const payload = {
       userid: userData.userId,
       topic: this.currentTopic,
-      assessment_response: { responses: formattedResponses },
-    };
-
-    console.log('📤 Sending payload:', payload);
+      assessment_response: { responses: formattedResponses }
+    }
+    console.log('Sending payload:', payload);
 
     try {
       gameAPI.setToken(userData.token);
       const response = await gameAPI.startInitialAssessment(payload);
       console.log('✅ Backend response:', response);
     } catch (error) {
-      console.error('❌ Failed to send to backend:', error);
+      console.error('Failed to send to backend:', error);
     }
 
     this.popup.show('Assessment Complete!', ['Proceed'], () => {

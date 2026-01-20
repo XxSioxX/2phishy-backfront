@@ -1,3 +1,5 @@
+from io import StringIO
+
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
@@ -11,8 +13,17 @@ class InitialAssessmentRequest(BaseModel):
     userid: UUID
     topic: Topics
     assessment_response: AssessmentSubmission
+    
+class SingleResponseItem(BaseModel):
+    userid: UUID
+    question_id: str
+    question_subtopic: str
+    answer: str
+    topic: str
+    is_correct: bool
+    timestamp: datetime
 
-class InitialAssessmentResponse(BaseModel):
+class InitialAssessmentResponseItems(BaseModel):
     inserted_id: str
     timestamp: datetime
     userid: UUID
