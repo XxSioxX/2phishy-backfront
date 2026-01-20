@@ -40,8 +40,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = (userData: User, token: string) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };
 

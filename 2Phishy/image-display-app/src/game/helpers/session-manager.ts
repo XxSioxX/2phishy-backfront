@@ -14,7 +14,7 @@ export class SessionManager {
   private userSession: UserSession | null = null;
 
   private constructor() {
-    const saved = localStorage.getItem(SESSION_KEY);
+     const saved = sessionStorage.getItem(SESSION_KEY);
     if (saved) this.userSession = JSON.parse(saved);
   }
 
@@ -45,7 +45,7 @@ export class SessionManager {
     };
 
     this.userSession = session;
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     return session;
   }
 
@@ -67,7 +67,7 @@ export class SessionManager {
 
   logout(): void {
     this.userSession = null;
-    localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
   }
 
   async authorizedFetch(url: string, options: RequestInit = {}) {

@@ -19,7 +19,8 @@ from app.modules.game.services.services import (
     generate_question_list,
     save_popup_question_result,
     save_assessment_question_result,
-    ensure_initial_assessment_doc
+    ensure_initial_assessment_doc,
+    filter_unanswered_questions
 )
 from app.modules.learning_path.services.learn_path_service import DefaultLearningEvaluator
 
@@ -198,7 +199,6 @@ async def generate_user_question_list(
     user_uuid = ""
 
     try:
-        # Convert user_id string from path to UUID, as find_document_by_user_id expects UUID
         user_uuid = request.userid
         logger.info(f"User UUID converted")
     except ValueError:
@@ -216,11 +216,23 @@ async def generate_user_question_list(
 
         logger.info(f"Successfully created question map: {qmap}, proceeding to updating document")
 
-        result = await save_assessment_question_result(db, user_uuid, qmap, request.topic, request.collectionName)
+        await save_assessment_question_result(db, user_uuid, qmap, request.topic, request.collectionName)
+
+        logger.info(f"question map: {qmap}")
+
+        unanswered_qmap = await filter_unanswered_questions(
+            db,
+            user_uuid,
+            request.topic,
+            qmap
+        )
+
+        logger.info(f"Remaining Unanswered questions: {unanswered_qmap}")
+
         return StandardResponse(
             success=True,
-            message="Successfully generated question list",
-            data={"questions": result}
+            message="Successfully generated unanswered question list",
+            data={"questions": unanswered_qmap}
         )
 
     except Exception as e:

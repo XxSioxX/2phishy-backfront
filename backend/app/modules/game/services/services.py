@@ -520,3 +520,28 @@ async def save_popup_question_result(
             {"user_id": str(user_id)},
             {"$push": {f"progress.{topic}": payload_dict}}
         )
+
+async def filter_unanswered_questions(
+        db: AsyncIOMotorDatabase,
+        user_id: UUID,
+        topic: Topics,
+        question_map: list[dict]
+) -> list[dict]:
+    progress_doc = await db["progress"].find_one(
+        {"user_id": str(user_id)}
+    )
+
+    if not progress_doc:
+        return question_map
+
+    topic_progress = progress_doc.get("progress", {}).get(topic.value, [])
+    answered_ids = {
+        q.get("question_id")
+        for q in topic_progress
+        if "question_id" in q
+    }
+
+    return [
+        q for q in question_map
+        if q.get("question_id") not in answered_ids
+    ]
