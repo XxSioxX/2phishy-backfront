@@ -7,11 +7,32 @@
   color: $main-color;
   border-radius: 12px;
 
-  h2 {
-    margin-bottom: 24px;
-    color: $main-color;
-    font-size: 2rem;
-    font-weight: bold;
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+
+    h2 {
+      color: $main-color;
+      margin: 0;
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .refresh-btn {
+      background-color: $dark-bg;
+      color: $main-color;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s;
+      &:hover {
+        background-color: lighten($dark-bg, 10%);
+      }
+    }
   }
 
   .quiz-insights-table {

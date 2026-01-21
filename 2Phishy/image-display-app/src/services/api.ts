@@ -4,7 +4,7 @@ const API_BASE_URL = 'http://localhost:8000';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
-    const token = sessionStorage.getItem('token');
+    const token = localStorage.getItem('token');
     return {
         'Content-Type': 'application/json',
         ...(token && { 'Authorization': `Bearer ${token}` })
@@ -13,20 +13,20 @@ const getAuthHeaders = () => {
 
 // Helper function to check if user is authenticated
 export const isAuthenticated = (): boolean => {
-    const token = sessionStorage.getItem('token');
+    const token = localStorage.getItem('token');
     return !!token;
 };
 
 // Helper function to get current user
 export const getCurrentUser = (): any => {
-    const userStr = sessionStorage.getItem('user');
+    const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
 };
 
 // Helper function to logout
 export const logout = (): void => {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
 };
 
 export const api = {
@@ -57,13 +57,13 @@ export const api = {
             },
             body: JSON.stringify(userData),
         });
-        
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             const errorMessage = errorData.detail || `Registration failed with status ${response.status}`;
             throw new Error(errorMessage);
         }
-        
+
         return response.json();
     },
 

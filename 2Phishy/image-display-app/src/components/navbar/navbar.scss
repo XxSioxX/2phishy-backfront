@@ -115,5 +115,24 @@
       color: #ddd;
       font-size: 13px;
     }
+
+    .report-status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding: 4px 0;
+      color: #bbb;
+
+      .status-resolved {
+        color: #52c41a;
+        font-weight: 600;
+      }
+
+      .status-pending {
+        color: #faad14;
+        font-weight: 600;
+      }
+    }
   }
 }

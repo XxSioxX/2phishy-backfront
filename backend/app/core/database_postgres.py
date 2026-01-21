@@ -13,7 +13,7 @@ DATABASE_URL = os.getenv("DATABASE_POSTGRES_URL")
 
 if not DATABASE_URL:
     logger.warning("DATABASE_POSTGRES_URL is not set in the environment variables! Using default PostgreSQL connection.")
-    DATABASE_URL = "postgresql://postgres:password@localhost:5432/phishy_db"
+    DATABASE_URL = "postgresql://admin:secret@localhost:5432/phishy_db"
 
 logger.info("Database URL successfully loaded")
 

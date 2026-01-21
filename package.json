@@ -4,11 +4,17 @@
   },
   "scripts": {
     "backend:start:win": "powershell -ExecutionPolicy Bypass -File scripts/backend_start.ps1",
-  "backend:start:wsl": "bash ./scripts/backend_start.sh",
-
+    "backend:start:wsl": "bash ./scripts/backend_start.sh",
     "frontend:start": "npm start --prefix 2Phishy/image-display-app",
-
     "start:all:win": "concurrently -n backend,frontend -c green,cyan \"npm run backend:start:win\" \"npm run frontend:start\"",
-    "start:all:wsl": "concurrently -n backend,frontend -c green,cyan \"npm run backend:start:wsl\" \"npm run frontend:start\""
+    "start:all:wsl": "concurrently -n backend,frontend -c green,cyan \"npm run backend:start:wsl\" \"npm run frontend:start\"",
+    "start:all": "concurrently -n backend,frontend,phaser -c green,cyan,magenta \"powershell -ExecutionPolicy Bypass -File scripts/backend_start.ps1\" \"npm start --prefix 2Phishy/image-display-app\" \"npm run dev --prefix phishy-game\""
+  },
+  "dependencies": {
+    "i18next": "^23.10.1",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^13.5.0"
   }
 }

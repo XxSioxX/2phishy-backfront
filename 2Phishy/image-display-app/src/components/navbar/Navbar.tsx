@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import { getReportsFromStorage } from "../../data";
 import { useAuth } from "../../contexts/AuthContext";
+import { Report, ReportWithResolved, Announcement } from "../../types";
 
 const Navbar = () => {
     const [showSearch, setShowSearch] = useState(false);
@@ -10,25 +11,58 @@ const Navbar = () => {
     const [showTooltip, setShowTooltip] = useState(false);
     const [notificationCount, setNotificationCount] = useState(0);
     const [notificationDetails, setNotificationDetails] = useState<{
-        reports: any[];
-        announcements: any[];
+        reports: ReportWithResolved[];
+        announcements: Announcement[];
+        studentReportStatus?: ReportWithResolved[];
     }>({ reports: [], announcements: [] });
     const { user, isAuthenticated } = useAuth();
 
     // Calculate notification count from localStorage data
     useEffect(() => {
         const calculateNotifications = () => {
-            // Get student reports count
-            const studentReports = getReportsFromStorage();
-            const reportsCount = studentReports.length;
+            let reportsCount = 0;
+            let studentReports: ReportWithResolved[] = [];
+            let studentReportStatus: ReportWithResolved[] = [];
+
+            // Admins see unresolved reports only
+            if (user && (user.role === 'admin' || user.role === 'super-admin')) {
+                const allReports = getReportsFromStorage();
+                // Get resolved status
+                const resolvedReportsData = localStorage.getItem('resolvedReportsWithStatus');
+                let reportsWithStatus = allReports;
+                
+                if (resolvedReportsData) {
+                    try {
+                        const resolvedReports = JSON.parse(resolvedReportsData);
+                reportsWithStatus = allReports.map((report: Report) => {
+                    const savedReport = resolvedReports.find((r: ReportWithResolved) => r.id === report.id);
+                    return {
+                        ...report,
+                        resolved: savedReport?.resolved || false
+                    };
+                });
+                    } catch (e) {
+                        console.error('Error parsing resolved reports:', e);
+                    }
+                }
+                
+                studentReports = reportsWithStatus.filter((r: ReportWithResolved) => !r.resolved); // Only unresolved
+                reportsCount = studentReports.length;
+            } 
+            // Students see if their reports were resolved
+            else if (user && user.role === 'student') {
+                const allReports = getReportsFromStorage();
+                studentReportStatus = allReports.filter((report: Report) => report.username === user.username);
+                reportsCount = studentReportStatus.filter((r: ReportWithResolved) => r.resolved).length; // Count resolved reports to notify student
+            }
 
             // Get admin announcements count (published only)
             const storedAnnouncements = localStorage.getItem('adminAnnouncements');
             let announcementsCount = 0;
-            let publishedAnnouncements: any[] = [];
+            let publishedAnnouncements: Announcement[] = [];
             if (storedAnnouncements) {
                 const adminAnnouncements = JSON.parse(storedAnnouncements);
-                publishedAnnouncements = adminAnnouncements.filter((announcement: any) => 
+                publishedAnnouncements = adminAnnouncements.filter((announcement: Announcement) =>
                     announcement.isPublished && !announcement.isScheduled
                 );
                 announcementsCount = publishedAnnouncements.length;
@@ -37,20 +71,25 @@ const Navbar = () => {
             setNotificationCount(reportsCount + announcementsCount);
             setNotificationDetails({
                 reports: studentReports,
-                announcements: publishedAnnouncements
+                announcements: publishedAnnouncements,
+                studentReportStatus: studentReportStatus
             });
         };
 
-        calculateNotifications();
+        if (isAuthenticated && user) {
+            calculateNotifications();
+        }
 
         // Listen for storage changes to update notifications in real-time
         const handleStorageChange = () => {
-            calculateNotifications();
+            if (isAuthenticated && user) {
+                calculateNotifications();
+            }
         };
 
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
-    }, []);
+    }, [isAuthenticated, user]);
 
     const handleSearchClick = () => {
         setShowSearch((prev) => !prev);
@@ -132,11 +171,24 @@ const Navbar = () => {
                             {notificationCount > 0 ? (
                                 <div>
                                     <div className="tooltip-header">
-                                        {notificationCount} notifications - Click to clear
+                                        {notificationCount} Notifications
                                     </div>
-                                    {notificationDetails.reports.length > 0 && (
+                                    {/* Admin/Super-admin see reports */}
+                                    {user && (user.role === 'admin' || user.role === 'super-admin') && notificationDetails.reports.length > 0 && (
                                         <div className="tooltip-section">
                                             <div className="tooltip-section-title">📋 Reports ({notificationDetails.reports.length})</div>
+                                        </div>
+                                    )}
+                                    {/* Students see their own report status */}
+                                    {user && user.role === 'student' && notificationDetails.studentReportStatus && notificationDetails.studentReportStatus.length > 0 && (
+                                        <div className="tooltip-section">
+                                            <div className="tooltip-section-title">📋 Your Reports</div>
+                                            {notificationDetails.studentReportStatus.map((report: ReportWithResolved) => (
+                                                <div key={report.id} className="report-status-item">
+                                                    <span>{report.resolved ? '✓' : '⏳'} {report.message.substring(0, 20)}...</span>
+                                                    <span className={report.resolved ? 'status-resolved' : 'status-pending'}>{report.resolved ? 'Resolved' : 'Pending'}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                     {notificationDetails.announcements.length > 0 && (
@@ -146,7 +198,7 @@ const Navbar = () => {
                                     )}
                                 </div>
                             ) : (
-                                "No new notifications"
+                                'No new notifications'
                             )}
                         </div>
                     )}

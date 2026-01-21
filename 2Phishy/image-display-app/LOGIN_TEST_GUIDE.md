@@ -106,11 +106,11 @@ curl -X POST "http://localhost:8000/users/register" \
 -d '{"username": "student", "email": "student@test.com", "password": "password123", "role": "student"}'
 ```
 
-#### **Admin User:**
+#### **Super Admin User:**
 ```bash
 curl -X POST "http://localhost:8000/users/register" \
 -H "Content-Type: application/json" \
--d '{"username": "admin", "email": "admin@test.com", "password": "admin123", "role": "admin"}'
+-d '{"username": "superadmin", "email": "superadmin@test.com", "password": "admin123", "role": "super-admin"}'
 ```
 
 ### **Success Indicators:**

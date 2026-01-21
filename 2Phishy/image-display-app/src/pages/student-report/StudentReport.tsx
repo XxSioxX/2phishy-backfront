@@ -10,6 +10,7 @@ interface StudentReport {
   date: string;
   type: "Bug" | "Exploit" | "Behavior";
   user_id: string;
+  resolved?: boolean;
 }
 
 const StudentReport: React.FC = () => {
@@ -33,10 +34,30 @@ const StudentReport: React.FC = () => {
       setIsLoading(true);
       // Get reports from localStorage
       const storedReports = localStorage.getItem('studentReports');
+      // Get resolved status from admin page
+      const resolvedReportsData = localStorage.getItem('resolvedReportsWithStatus');
+      
       if (storedReports) {
         const allReports: StudentReport[] = JSON.parse(storedReports);
-        // Filter reports for current user
-        const userReports = allReports.filter(report => report.user_id === user?.userid);
+        
+        // Merge with resolved status
+        let userReports = allReports.filter(report => report.user_id === user?.userid);
+        
+        if (resolvedReportsData) {
+          try {
+            const resolvedReports = JSON.parse(resolvedReportsData);
+            userReports = userReports.map(report => {
+              const resolvedReport = resolvedReports.find((r: StudentReport) => r.id === report.id);
+              return {
+                ...report,
+                resolved: resolvedReport?.resolved || false
+              };
+            });
+          } catch (e) {
+            console.error('Error parsing resolved reports:', e);
+          }
+        }
+        
         setReports(userReports);
       } else {
         setReports([]);
@@ -241,47 +262,92 @@ const StudentReport: React.FC = () => {
         )}
 
         <div className="reports-list">
-          <h2>Your Reports ({reports.length})</h2>
-          {reports.length === 0 ? (
-            <div className="no-reports">
-              <p>You haven't submitted any reports yet.</p>
-              <p>Click "Add New Report" to get started.</p>
-            </div>
-          ) : (
-            <div className="reports-grid">
-              {reports.map((report) => (
-                <div key={report.id} className="report-card">
-                  <div className="report-header">
-                    <div className="report-meta">
-                      <span 
-                        className="type-badge"
-                        style={{ backgroundColor: getTypeColor(report.type) }}
+          {/* Pending Reports Section */}
+          <div className="reports-section">
+            <h2>Pending Reports ({reports.filter(r => !r.resolved).length})</h2>
+            {reports.filter(r => !r.resolved).length === 0 ? (
+              <div className="no-reports">
+                <p>No pending reports.</p>
+              </div>
+            ) : (
+              <div className="reports-grid">
+                {reports.filter(r => !r.resolved).map((report) => (
+                  <div key={report.id} className="report-card">
+                    <div className="report-header">
+                      <div className="report-meta">
+                        <span 
+                          className="type-badge"
+                          style={{ backgroundColor: getTypeColor(report.type) }}
+                        >
+                          {report.type}
+                        </span>
+                        <span 
+                          className="status-badge"
+                          style={{ backgroundColor: getStatusColor(report.status) }}
+                        >
+                          {report.status}
+                        </span>
+                      </div>
+                      <button 
+                        className="delete-btn"
+                        onClick={() => handleDelete(report.id)}
+                        title="Delete Report"
                       >
-                        {report.type}
-                      </span>
-                      <span 
-                        className="status-badge"
-                        style={{ backgroundColor: getStatusColor(report.status) }}
-                      >
-                        {report.status}
-                      </span>
+                        ×
+                      </button>
                     </div>
-                    <button 
-                      className="delete-btn"
-                      onClick={() => handleDelete(report.id)}
-                      title="Delete Report"
-                    >
-                      ×
-                    </button>
+                    <div className="report-content">
+                      <p>{report.message}</p>
+                    </div>
+                    <div className="report-footer">
+                      <span className="date">{report.date}</span>
+                    </div>
                   </div>
-                  <div className="report-content">
-                    <p>{report.message}</p>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Resolved Reports Section */}
+          {reports.filter(r => r.resolved).length > 0 && (
+            <div className="reports-section">
+              <h2>Resolved Reports ({reports.filter(r => r.resolved).length})</h2>
+              <div className="reports-grid">
+                {reports.filter(r => r.resolved).map((report) => (
+                  <div key={report.id} className="report-card resolved">
+                    <div className="report-header">
+                      <div className="report-meta">
+                        <span 
+                          className="type-badge"
+                          style={{ backgroundColor: getTypeColor(report.type) }}
+                        >
+                          {report.type}
+                        </span>
+                        <span 
+                          className="status-badge"
+                          style={{ backgroundColor: getStatusColor(report.status) }}
+                        >
+                          {report.status}
+                        </span>
+                      </div>
+                      <button 
+                        className="delete-btn"
+                        onClick={() => handleDelete(report.id)}
+                        title="Delete Report"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="report-content">
+                      <p>{report.message}</p>
+                    </div>
+                    <div className="report-footer">
+                      <span className="date">{report.date}</span>
+                      <span className="resolved-badge">✓ Resolved</span>
+                    </div>
                   </div>
-                  <div className="report-footer">
-                    <span className="date">{report.date}</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>

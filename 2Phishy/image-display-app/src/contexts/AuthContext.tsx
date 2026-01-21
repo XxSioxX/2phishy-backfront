@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { User } from '../types';
 import { isAuthenticated, getCurrentUser, logout as apiLogout } from '../services/api';
 
@@ -24,9 +24,33 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Function to reset inactivity timer
+  const resetInactivityTimer = () => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    if (user) {
+      inactivityTimerRef.current = setTimeout(() => {
+        console.log('Auto-logout due to inactivity');
+        logout();
+      }, INACTIVITY_TIMEOUT);
+    }
+  };
+
+  // Function to clear inactivity timer
+  const clearInactivityTimer = () => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+    }
+  };
 
   useEffect(() => {
     // Check if user is already logged in
@@ -34,18 +58,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const savedUser = getCurrentUser();
       if (savedUser) {
         setUser(savedUser);
+        resetInactivityTimer(); // Start inactivity timer if user is logged in
       }
     }
     setLoading(false);
+
+    // Set up activity event listeners
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+
+    const handleActivity = () => {
+      resetInactivityTimer();
+    };
+
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity, true);
+    });
+
+    // Cleanup function
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity, true);
+      });
+      clearInactivityTimer();
+    };
   }, []);
 
+  // Reset timer when user changes
+  useEffect(() => {
+    if (user) {
+      resetInactivityTimer();
+    } else {
+      clearInactivityTimer();
+    }
+  }, [user]);
+
   const login = (userData: User, token: string) => {
-    sessionStorage.setItem('token', token);
-    sessionStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
+    resetInactivityTimer();
   };
 
   const logout = () => {
+    clearInactivityTimer();
     apiLogout();
     setUser(null);
   };

@@ -39,8 +39,8 @@ def create_super_admin():
         return
     
     # Default super admin credentials
-    username = "admin"
-    email = "admin@phishy.com"
+    username = "superadmin"
+    email = "superadmin@phishy.com"
     password = "admin123"
     
     # Check if username or email already exists

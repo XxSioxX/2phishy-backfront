@@ -13,7 +13,12 @@ const Users = () => {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deactivateLoading, setDeactivateLoading] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [userToChangeRole, setUserToChangeRole] = useState<User | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>('student');
+  const [roleChangeLoading, setRoleChangeLoading] = useState(false);
 
   // Fetch users from backend
   const fetchUsers = async () => {
@@ -88,6 +93,78 @@ const Users = () => {
     setUserToDelete(null);
   };
 
+  const handleDeactivate = async (user: User) => {
+    const userId = getUserIdString(user);
+    const newStatus = user.account_status === 'active' ? 'suspended' : 'active';
+
+    setDeactivateLoading(userId);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await api.changeUserStatus(userId, newStatus);
+      // Update user in local state
+      setUsers(prev => prev.map(u =>
+        getUserIdString(u) === userId
+          ? { ...u, account_status: newStatus as "active" | "inactive" | "suspended" }
+          : u
+      ));
+      setSuccessMessage(`User "${user.username}" has been ${newStatus === 'suspended' ? 'deactivated' : 'activated'} successfully.`);
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to change user status");
+      console.error("Error changing user status:", err);
+    } finally {
+      setDeactivateLoading(null);
+    }
+  };
+
+  const handleChangeRoleClick = (user: User) => {
+    setUserToChangeRole(user);
+    setSelectedRole(user.role || 'student');
+    setShowRoleModal(true);
+  };
+
+  // Helper function to get consistent user ID string
+  const getUserIdString = (user: User): string => {
+    return (user.userid?.toString() || user.id?.toString() || '').toString();
+  };
+
+  const handleRoleChange = async () => {
+    if (!userToChangeRole) return;
+
+    const userId = getUserIdString(userToChangeRole);
+    setRoleChangeLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await api.changeUserRole(userId, selectedRole);
+      // Update user in local state
+      setUsers(prev => prev.map(u =>
+        getUserIdString(u) === userId
+          ? { ...u, role: selectedRole as "student" | "admin" | "super-admin" }
+          : u
+      ));
+      setSuccessMessage(`User "${userToChangeRole.username}" role has been changed to "${selectedRole}" successfully.`);
+      setShowRoleModal(false);
+      setUserToChangeRole(null);
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to change user role");
+      console.error("Error changing user role:", err);
+    } finally {
+      setRoleChangeLoading(false);
+    }
+  };
+
+  const handleRoleCancel = () => {
+    setShowRoleModal(false);
+    setUserToChangeRole(null);
+  };
+
   if (loading) {
     return (
       <div className="users">
@@ -131,35 +208,117 @@ const Users = () => {
         </div>
       ) : (
         <div className="users-grid">
-          {users.map((user) => (
-            <div key={user.userid || user.id} className="user-card">
+          {users.map((targetUser) => (
+            <div key={targetUser.userid || targetUser.id} className="user-card">
               <div className="user-info">
-                <h3>{user.username}</h3>
-                <p className="email">{user.email}</p>
-                <p className="user-id">ID: {user.userid || user.id}</p>
-                <p className="user-role">Role: {user.role || 'N/A'}</p>
+                <h3>{targetUser.username}</h3>
+                <p className="email">{targetUser.email}</p>
+                <p className="user-id">ID: {targetUser.userid || targetUser.id}</p>
+                <p className="user-role">Role: {targetUser.role || 'N/A'}</p>
+                <p className="account-status">Status: {targetUser.account_status || 'N/A'}</p>
                 <p className="last-login">
-                  Last Online: {formatDatePH(user.last_login || '', true)}
+                  Last Online: {formatDatePH(targetUser.last_login || '', true)}
                 </p>
               </div>
               <div className="user-actions">
-                <button 
-                  className="delete-btn"
-                  onClick={() => handleDeleteClick(user)}
-                  disabled={deleteLoading === (user.userid || user.id?.toString())}
-                >
-                  {deleteLoading === (user.userid || user.id?.toString()) ? (
-                    <>
-                      <span className="loading-spinner"></span>
-                      Deleting...
-                    </>
-                  ) : (
-                    'Delete'
-                  )}
-                </button>
+                {user.role === 'super-admin' && targetUser.role !== 'super-admin' && (
+                  <>
+                    <button
+                      className="change-role-btn"
+                      onClick={() => handleChangeRoleClick(targetUser)}
+                      disabled={roleChangeLoading}
+                    >
+                      Change Role
+                    </button>
+                    <button
+                      className={`deactivate-btn ${targetUser.account_status === 'suspended' ? 'activate' : ''}`}
+                      onClick={() => handleDeactivate(targetUser)}
+                      disabled={deactivateLoading === (targetUser.userid || targetUser.id?.toString())}
+                    >
+                      {deactivateLoading === (targetUser.userid || targetUser.id?.toString()) ? (
+                        <>
+                          <span className="loading-spinner"></span>
+                          {targetUser.account_status === 'suspended' ? 'Activating...' : 'Deactivating...'}
+                        </>
+                      ) : (
+                        targetUser.account_status === 'suspended' ? 'Activate' : 'Deactivate'
+                      )}
+                    </button>
+                  </>
+                )}
+                {user.role === 'super-admin' && (
+                  <button
+                    className="delete-btn"
+                    onClick={() => handleDeleteClick(targetUser)}
+                    disabled={deleteLoading === (targetUser.userid || targetUser.id?.toString())}
+                  >
+                    {deleteLoading === (targetUser.userid || targetUser.id?.toString()) ? (
+                      <>
+                        <span className="loading-spinner"></span>
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete'
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Change Role Modal */}
+      {showRoleModal && userToChangeRole && (
+        <div className="modal-overlay" onClick={handleRoleCancel}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Change User Role</h3>
+              <button className="modal-close" onClick={handleRoleCancel}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>
+                Change role for user <strong>"{userToChangeRole.username}"</strong>
+              </p>
+              <div className="role-selection">
+                <label>Select New Role:</label>
+                <select 
+                  value={selectedRole} 
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  disabled={roleChangeLoading}
+                >
+                  <option value="student">Student</option>
+                  <option value="admin">Admin (IT Admin)</option>
+                  <option value="super-admin">Super Admin</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="cancel-btn" 
+                onClick={handleRoleCancel}
+                disabled={roleChangeLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                className="confirm-btn" 
+                onClick={handleRoleChange}
+                disabled={roleChangeLoading}
+              >
+                {roleChangeLoading ? (
+                  <>
+                    <span className="loading-spinner"></span>
+                    Changing...
+                  </>
+                ) : (
+                  'Change Role'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

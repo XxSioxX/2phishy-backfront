@@ -76,6 +76,11 @@ def authenticate_user(db: Session, login_data: UserLogin):
         logger.warning(f"User not found: {login_data.username}")
         return None
 
+    # Check if account is active
+    if user.account_status != AccountStatus.ACTIVE:
+        logger.warning(f"User account is not active: {login_data.username} (status: {user.account_status.value})")
+        return None
+
     # Check password
     if not verify_password(login_data.password, user.password):
         logger.warning(f"Invalid password for user: {login_data.username}")
@@ -134,6 +139,10 @@ def update_user_status(db: Session, user_id: str, new_status: AccountStatus, adm
     # Prevent users from changing their own status
     if user.userid == admin_user.userid:
         raise ValueError("Users cannot change their own account status")
+
+    # Prevent deactivating super admin accounts
+    if user.role == UserRole.SUPER_ADMIN and new_status == AccountStatus.SUSPENDED:
+        raise ValueError("Super admin accounts cannot be deactivated")
 
     user.account_status = new_status
     db.commit()

@@ -21,6 +21,15 @@ export interface Report {
   user_role?: "student" | "admin" | "super-admin";
 }
 
+export interface ReportWithResolved extends Report {
+  resolved?: boolean;
+}
+
+export interface Announcement {
+  isPublished: boolean;
+  isScheduled: boolean;
+}
+
 export interface TopScore {
   id: number;
   Img: string;

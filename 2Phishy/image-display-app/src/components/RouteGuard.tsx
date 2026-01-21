@@ -8,12 +8,27 @@ interface RouteGuardProps {
   redirectTo?: string;
 }
 
-const RouteGuard: React.FC<RouteGuardProps> = ({ 
-  children, 
-  allowedRoles = [], 
-  redirectTo = "/play-game" 
+const RouteGuard: React.FC<RouteGuardProps> = ({
+  children,
+  allowedRoles = [],
+  redirectTo = "/play-game"
 }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
 
   // If not authenticated, redirect to login
   if (!isAuthenticated) {
