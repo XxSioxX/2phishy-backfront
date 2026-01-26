@@ -20,7 +20,8 @@ from app.modules.game.services.services import (
     save_popup_question_result,
     save_assessment_question_result,
     ensure_initial_assessment_doc,
-    filter_unanswered_questions
+    filter_unanswered_questions,
+    fetch_knowledge_list
 )
 from app.modules.learning_path.services.learn_path_service import DefaultLearningEvaluator
 
@@ -28,6 +29,7 @@ from app.utils.logger import get_logger
 from app.core.database_mongo import get_mongo_db
 from app.core.standard_response import StandardResponse
 from datetime import datetime
+
 
 router = APIRouter(prefix="/game", tags=["game"])
 logger = get_logger(__name__)
@@ -188,6 +190,64 @@ async def get_user_data_from_collection(
             data=None
         )
 
+@router.post("/generate/knowledgelist/", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
+async def generate_knowledge_list(
+        request: GetUserTopic,
+        db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+        response: Response = Response()
+):
+    logger.info("Fetching knowledge list...")
+
+    user_uuid = ""
+
+    try:
+        logger.info("checking user_uuid")
+        user_uuid = request.userid
+        logger.info(f"User UUID converted")
+    except ValueError:
+        logger.error(f"Invalid user_id format: {user_uuid}. Must be a valid UUID.")
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return StandardResponse(
+            success=False,
+            message="Invalid user_id format. Must be a valid UUID.",
+            data=None
+        )
+
+    try:
+        logger.info("Fetching question list")
+
+        qmap = await generate_question_list(db, user_uuid, request.topic, request.collectionName)
+
+        unanswered_qmap = await filter_unanswered_questions(
+            db,
+            user_uuid,
+            request.topic,
+            qmap
+        )
+
+        logger.info(f"Calling generate_knowledge_list {request.topic, qmap}")
+        knowledge = await fetch_knowledge_list(
+            request.topic.value if hasattr(request.topic, "value") else request.topic,
+            unanswered_qmap
+        )
+
+        return StandardResponse(
+            success=True,
+            message="Knowledge list generated successfully.",
+            data={
+                "knowledge": knowledge
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in fetching knowledge list: {e}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message="Failed to fetch knowledge list",
+            data=None
+        )
+
 @router.post("/generate/qlist/", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_201_CREATED)
 async def generate_user_question_list(
         request: GetUserTopic,
@@ -228,11 +288,14 @@ async def generate_user_question_list(
         )
 
         logger.info(f"Remaining Unanswered questions: {unanswered_qmap}")
-
+        logger.info(f"questionsTotal: {len(qmap)}")
         return StandardResponse(
             success=True,
             message="Successfully generated unanswered question list",
-            data={"questions": unanswered_qmap}
+            data={
+                "questions": unanswered_qmap,
+                "questionsTotal": len(qmap)
+            }
         )
 
     except Exception as e:

@@ -118,4 +118,72 @@ export default class AssessmentPopup {
       this.container = undefined!;
     }
   }
+
+  showInfo(title: string, content: string, onClose?: () => void): void {
+    if (this.container) return;
+
+    const cam = this.scene.cameras.main;
+    const cx = cam.midPoint.x;
+    const cy = cam.midPoint.y;
+
+    const panelWidth = 300;
+    const panelHeight = 300;
+
+    const overlay = this.scene.add
+      .rectangle(cx, cy, cam.width / cam.zoom, cam.height / cam.zoom, 0x000000, 0.5)
+      .setOrigin(0.5);
+
+    const panel = this.scene.add
+      .rectangle(cx, cy, panelWidth, panelHeight, 0xffffff)
+      .setStrokeStyle(2, 0x000000);
+
+    const titleText = this.scene.add
+      .text(cx, cy - 120, title, {
+        fontSize: '16px',
+        color: '#000',
+        fontStyle: 'bold',
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setResolution(window.devicePixelRatio || 2);
+
+    const bodyText = this.scene.add
+      .text(cx, cy - 20, content, {
+        fontSize: '13px',
+        color: '#000',
+        wordWrap: { width: panelWidth - 30 },
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setResolution(window.devicePixelRatio || 2);
+
+    const okBtn = this.scene.add
+      .rectangle(cx, cy + 110, 120, 36, 0xdddddd)
+      .setStrokeStyle(1, 0x000000)
+      .setInteractive({ useHandCursor: true });
+
+    const okText = this.scene.add
+      .text(okBtn.x, okBtn.y, 'OK', {
+        fontSize: '14px',
+        color: '#000',
+      })
+      .setOrigin(0.5);
+
+    okBtn.on('pointerdown', () => {
+      this.destroy();
+      onClose?.();
+    });
+
+    this.container = this.scene.add.container(0, 0, [
+      overlay,
+      panel,
+      titleText,
+      bodyText,
+      okBtn,
+      okText,
+    ]);
+
+    this.container.setDepth(1000);
+  }
+
 }

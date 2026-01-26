@@ -15,29 +15,33 @@ from app.modules.game.schemas.gameschemas import SingleResponseItem
 
 logger = get_logger()
 
+REPO_ROOT = Path(__file__).resolve().parents[6]
+ASSETS_DIR = REPO_ROOT / "2phishy-backfront"  / "2Phishy" / "assets"
+
 def map_subtopic_to_enum(subtopic_str: str) -> Subtopic:
-    """
-    Map the subtopic string to the corresponding Subtopic enum.
-    """
     try:
-        # Convert the subtopic string to enum using .__getattr__()
         return Subtopic[subtopic_str.upper()]
     except KeyError:
-        # Handle cases where subtopic string does not match enum keys
         logger.error(f"Invalid subtopic: {subtopic_str}")
         raise ValueError(f"Invalid subtopic: {subtopic_str}")
 
 
 def evaluate_assessment(response, evaluator: LearningEvaluator):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(current_dir, "../../../../../2Phishy/assets/initial_assessment.json")
-    data_path = os.path.normpath(json_path)
-    logger.info(f"Evaluating assessment from file path: {data_path}")
+    json_path = ASSETS_DIR / "initial_assessment.json"
 
-    question_map = evaluator.build_question_map(data_path)
+    logger.info(f"Evaluating assessment from file path: {json_path}")
+
+    question_map = evaluator.build_question_map(json_path)
     logger.info(f"Loaded question map with {len(question_map)} questions")
 
-    question_ids = ["safebrowsing", "passsec", "malware", "socialengineering", "incidentresponse"]
+    question_ids = [
+        "safebrowsing",
+        "passsec",
+        "malware",
+        "socialengineering",
+        "incidentresponse",
+    ]
+
     logger.info(f"Evaluating assessment with response: {response}")
 
     try:
@@ -75,17 +79,10 @@ def evaluate_subcat_grade(assessment_result: dict) -> dict:
         if is_correct:
             subtopic_scores[subtopic]["correct"] += 1
 
-    # Calculate accuracy per subtopic
     return {
         subtopic: round(scores["correct"] / scores["total"], 2)
         for subtopic, scores in subtopic_scores.items()
     }
-    #example output:
-    #   {
-    #     "SECVSNONSEC": 0.5,        # 1 correct out of 2
-    #     "HTTPVSHTTPS": 1.0,        # 2 correct out of 2
-    #     "BROWSERSECBP": 0.0        # 0 correct out of 1
-    # }
 
 def mongo_serialize(obj):
     if isinstance(obj, dict):
@@ -227,24 +224,22 @@ async def db_findby_id(
     return document
 
 
-def load_and_prepare_knowledge_base(topic_value: str):
-    """
-    Loads knowledge_base.json and returns a dictionary of questions
-    organized by subcategory key for a specific topic.
-    """
-    data_path = "app/data/knowledge_base.json"
-    logger.info("preparing knowledge base")
+def load_question_base(topic_value: str):
+
+    QUESTION_BASE_PATH = ASSETS_DIR / "question_base.json"
+
+    logger.info("preparing question base")
     try:
-        with open(data_path, "r") as f:
+        with open(QUESTION_BASE_PATH, "r") as f:
             all_topics_data = json.load(f)
 
-            logger.info(f"Loaded knowledgebase (first 2 topics): {all_topics_data[:2]}")
+            logger.info(f"Loaded question base (first 2 topics): {all_topics_data[:2]}")
 
     except Exception as e:
-        logger.error(f"Failed to load or parse knowledge_base.json: {e}")
+        logger.error(f"Failed to load or parse question_base.json: {e}")
         return {}
 
-    kb_questions_by_subcat_key = {}
+    qb_questions_by_subcat_key = {}
     for topic_data in all_topics_data:
         logger.info(f"checking topic_data: {topic_data}")
         if topic_data.get("topic") == topic_value:
@@ -253,10 +248,70 @@ def load_and_prepare_knowledge_base(topic_value: str):
                 logger.info(f"subtopic: {subtopic}")
                 if "key" in subtopic and "questions" in subtopic:
                     logger.debug(f"checking subtopic: {subtopic}")
-                    kb_questions_by_subcat_key[subtopic["key"]] = subtopic["questions"]
+                    qb_questions_by_subcat_key[subtopic["key"]] = subtopic["questions"]
             break
-    logger.info(f"kb_questions_by_subcat_key: {kb_questions_by_subcat_key}")
-    return kb_questions_by_subcat_key
+    logger.info(f"kb_questions_by_subcat_key: {qb_questions_by_subcat_key}")
+    return qb_questions_by_subcat_key
+
+async def fetch_knowledge_list(
+    topic: str,
+    questions: list[dict]
+) -> list[dict]:
+
+    KNOWLEDGE_BASE_PATH = ASSETS_DIR / "knowledge_base.json"
+    logger.info("fetching knowledge base")
+
+    try:
+        with open(KNOWLEDGE_BASE_PATH, "r") as f:
+            all_knowledge_data = json.load(f)
+
+    except Exception as e:
+        logger.error(f"Failed to load or parse knowledge_base.json: {e}")
+        return []
+
+    # collect question_ids
+    question_ids = {q["question_id"] for q in questions}
+
+    logger.debug(f"question_ids: {question_ids}")
+
+    # derive subtopics from question_id
+    subtopics = set()
+    for q in questions:
+        qid = q["question_id"]
+        if "_svns_" in qid or "_secvsnonsec_" in qid:
+            subtopics.add("SECVSNONSEC")
+        elif "_https_" in qid:
+            subtopics.add("HTTPVSHTTPS")
+        elif "_bsbp_" in qid:
+            subtopics.add("BROWSERSECBP")
+
+    knowledge_list = []
+
+
+    for topic_block in all_knowledge_data:
+        if topic_block["topic"] != topic:
+            continue
+
+        for subtopic in topic_block.get("subtopics", []):
+            matched_points = []
+
+            for kp in subtopic.get("knowledge_points", []):
+                if kp["question_id"] in question_ids:
+                    matched_points.append(kp)
+
+            if matched_points:
+                knowledge_list.append({
+                    "topic": topic_block["topic"],
+                    "subtopic": subtopic["name"],
+                    "subtopic_key": subtopic["key"],
+                    "knowledge_points": matched_points
+                })
+
+    logger.debug(f"knowledge_list: {knowledge_list}")
+    return knowledge_list
+
+
+
 
 async def generate_question_list(
         db: AsyncIOMotorDatabase,
@@ -273,9 +328,9 @@ async def generate_question_list(
         "LOW": 1
     }
 
-    kb_questions = load_and_prepare_knowledge_base(topic.value)
-    logger.info(f"kb_questions: {kb_questions}")
-    if not kb_questions:
+    qb_questions = load_question_base(topic.value)
+    logger.info(f"kb_questions: {qb_questions}")
+    if not qb_questions:
         logger.error(f"No questions found for topic '{topic.value}' in knowledge base.")
         return []
 
@@ -312,7 +367,7 @@ async def generate_question_list(
         num_to_select = QUESTIONS_PER_PRIORITY.get(priority.upper(), 1)
 
         # Get the available questions for this subtopic from the loaded knowledge base
-        available_questions = kb_questions.get(subcat_key)
+        available_questions = qb_questions.get(subcat_key)
 
         if available_questions:
             # Ensure we don't try to select more than what's available

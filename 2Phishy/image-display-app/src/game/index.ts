@@ -39,6 +39,7 @@ const gameConfig: GameConfigExtended = {
 scene: [
   MainMenuScene,
   LoadingScene,
+  UIScene,
   IntegratedLevel1,
   SFBLevel
 ],

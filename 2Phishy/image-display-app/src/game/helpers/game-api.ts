@@ -187,6 +187,31 @@ class GameAPI {
     return await response.json();
   }
 
+  async getUserKnowledgeList(payload:{
+    userid: string;
+    collectionName?: string;
+    topic: string;
+  }) {
+    const { userid, topic, collectionName = 'initial_assessments' } = payload;
+
+    console.log('Sending to /game/generate/knowledgelist:', payload);
+
+    const response = await fetch(`${this.baseUrl}/generate/knowledgelist`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ userid, topic, collectionName }),
+    })
+
+    if(!response.ok) {
+      const err = await response.text();
+      console.error('Failed getting knowledge map:', err);
+      throw new Error(`Failed to get knowledge map: ${err}`);
+    }
+
+    return await response.json();
+  }
+
   async createUserQuestionMap(payload: {
     userid: string;
     collectionName?: string;

@@ -15,7 +15,6 @@ export class LoadingScene extends Scene {
     // Load the tileset image
     this.load.image('tiles', 'tilemaps/tiles/dungeon-16-16.png');
 
-
     // Load the tilemap JSON
     this.load.tilemapTiledJSON('assessmentlevel', 'tilemaps/tilesets/assessment-level.tmj');
     this.load.tilemapTiledJSON('SFBlevel', 'tilemaps/tilesets/SFB-level-1-ver3.tmj');

@@ -11,6 +11,9 @@ export class Player extends Actor {
   private hpValue: Text;
   private keySpace!: Input.Keyboard.Key;
   private frozen = false;
+  private questionValue!: Text;
+  private totalQuestions = 0;
+  private remainingQuestions = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'king');
@@ -37,9 +40,19 @@ export class Player extends Actor {
     // PHYSICS
     this.getBody().setSize(30, 30);
     this.getBody().setOffset(8, 0);
-    this.hpValue = new Text(this.scene, this.x, this.y - this.height, this.hp.toString())
+    //this.hpValue = new Text(this.scene, this.x, this.y - this.height, this.hp.toString())
+    //  .setFontSize(12)
+    //  .setOrigin(0.8, 0.5);
+    this.questionValue = new Text(
+      this.scene,
+      this.x,
+      this.y - this.height - 4, // slightly above HP
+      ''
+    )
       .setFontSize(12)
-      .setOrigin(0.8, 0.5);
+      .setOrigin(0.5, 1);
+
+
     // Running
     this.initAnimations();
     this.on('destroy', () => {
@@ -77,9 +90,38 @@ export class Player extends Actor {
       !this.anims.isPlaying && this.anims.play('run', true);
     }
 
-    this.hpValue.setPosition(this.x, this.y - this.height * 0.4);
-    this.hpValue.setOrigin(0.8, 0.5);
+    //this.hpValue.setPosition(this.x, this.y - this.height * 0.4);
+    //this.hpValue.setOrigin(0.8, 0.5);
+
+    this.questionValue.setPosition(
+      this.body.x + this.body.width / 2,
+      this.body.y - 2
+    );
+
+
+
   }
+
+  public initQuestions(totalquestions: number, totalunanswered: number): void {
+    this.totalQuestions = totalquestions;
+    this.remainingQuestions = totalquestions - totalunanswered;
+    this.updateQuestionText();
+  }
+
+  public setRemainingQuestions(value: number): void {
+    if (this.remainingQuestions === value) return;
+    this.remainingQuestions = value;
+    this.updateQuestionText();
+  }
+
+  private updateQuestionText(): void {
+
+    this.questionValue.setText(
+      `(${this.remainingQuestions}/${this.totalQuestions})`
+    );
+  }
+
+
 
   public getDamage(value?: number): void {
     super.getDamage(value);

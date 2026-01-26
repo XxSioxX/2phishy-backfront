@@ -116,6 +116,7 @@ export class MainMenuScene extends Scene {
           topic: "Safe Browsing Practices"});
         this.scene.add('sfb-level-scene', SFBLevel, true);
         this.scene.start('sfb-level-scene');
+
       }
     } catch (error) {
       console.error(error);

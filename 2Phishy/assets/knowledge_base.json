@@ -1,0 +1,396 @@
+[
+  {
+    "topic": "Safe Browsing Practices",
+    "subtopics": [
+      {
+        "name": "Secure vs. Non-Secure Websites",
+        "key": "SECVSNONSEC",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_sfb_secvsnonsec_001",
+            "question_id": "sfb_secvsnonsec_001",
+            "knowledge_content": "Phishing websites often imitate trusted brands by using domain names that look almost correct but contain subtle spelling changes."
+          },
+          {
+            "knowledge_id": "kb_sfb_secvsnonsec_002",
+            "question_id": "sfb_secvsnonsec_002",
+            "knowledge_content": "Websites with strange or unfamiliar domain names should be treated cautiously, especially when they request personal information."
+          },
+          {
+            "knowledge_id": "kb_sfb_secvsnonsec_003",
+            "question_id": "sfb_secvsnonsec_003",
+            "knowledge_content": "Attackers commonly replace letters with similar-looking numbers or characters in domain names to deceive users."
+          },
+          {
+            "knowledge_id": "kb_sfb_secvsnonsec_004",
+            "question_id": "sfb_secvsnonsec_004",
+            "knowledge_content": "Carefully checking the spelling of a website’s address can help detect fake sites designed to steal information."
+          },
+          {
+            "knowledge_id": "kb_sfb_secvsnonsec_005",
+            "question_id": "sfb_secvsnonsec_005",
+            "knowledge_content": "Legitimate websites usually use simple, correctly spelled domain names without extra letters, symbols, or substitutions."
+          }
+        ]
+      },
+      {
+        "name": "HTTPS vs. HTTP Security",
+        "key": "HTTPVSHTTPS",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_sfb_httpvshttps_001",
+            "question_id": "sfb_httpvshttps_001",
+            "knowledge_content": "HTTPS adds a security layer that helps protect data as it travels between a user’s browser and a website."
+          },
+          {
+            "knowledge_id": "kb_sfb_httpvshttps_002",
+            "question_id": "sfb_httpvshttps_002",
+            "knowledge_content": "Modern browsers use visual indicators in the address bar to show when a connection is protected."
+          },
+          {
+            "knowledge_id": "kb_sfb_httpvshttps_003",
+            "question_id": "sfb_httpvshttps_003",
+            "knowledge_content": "Information sent through unencrypted connections can potentially be read or altered by attackers."
+          },
+          {
+            "knowledge_id": "kb_sfb_httpvshttps_004",
+            "question_id": "sfb_httpvshttps_004",
+            "knowledge_content": "Encryption ensures that data exchanged with a website cannot be easily intercepted or understood by third parties."
+          },
+          {
+            "knowledge_id": "kb_sfb_httpvshttps_005",
+            "question_id": "sfb_httpvshttps_005",
+            "knowledge_content": "Websites that do not use secure connections should be treated cautiously, especially on login or form pages."
+          }
+        ]
+      },
+      {
+        "name": "Browser Security Best Practices",
+        "key": "BROWSERSECBP",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_sfb_bsbp_001",
+            "question_id": "sfb_bsbp_001",
+            "knowledge_content": "Some browser settings automatically prefer secure connections, helping reduce exposure to unsafe websites."
+          },
+          {
+            "knowledge_id": "kb_sfb_bsbp_002",
+            "question_id": "sfb_bsbp_002",
+            "knowledge_content": "Browser updates often include fixes for known security weaknesses that attackers may try to exploit."
+          },
+          {
+            "knowledge_id": "kb_sfb_bsbp_003",
+            "question_id": "sfb_bsbp_003",
+            "knowledge_content": "Granting hardware access permissions can allow websites to interact with your device beyond normal browsing."
+          },
+          {
+            "knowledge_id": "kb_sfb_bsbp_004",
+            "question_id": "sfb_bsbp_004",
+            "knowledge_content": "Some browser permissions can reveal sensitive personal information, including physical whereabouts."
+          },
+          {
+            "knowledge_id": "kb_sfb_bsbp_005",
+            "question_id": "sfb_bsbp_005",
+            "knowledge_content": "Understanding how a website collects, stores, and uses data is important before allowing extra permissions."
+          }
+        ]
+      }
+      ]
+  },
+  {
+    "topic": "Password Security",
+    "subtopics": [
+      {
+        "name": "Commonly Used Passwords",
+        "key": "COMMPASS",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_ps_commpass_001",
+            "question_id": "ps_commpass_001",
+            "knowledge_content": "Passwords that are widely known or frequently reused are among the first ones attackers try when attempting to break into accounts."
+          },
+          {
+            "knowledge_id": "kb_ps_commpass_002",
+            "question_id": "ps_commpass_002",
+            "knowledge_content": "Personal details such as pet names can often be guessed or discovered through social media and public information."
+          },
+          {
+            "knowledge_id": "kb_ps_commpass_003",
+            "question_id": "ps_commpass_003",
+            "knowledge_content": "Strong passwords usually combine length with a mix of letters, numbers, and symbols, making them harder to crack."
+          },
+          {
+            "knowledge_id": "kb_ps_commpass_004",
+            "question_id": "ps_commpass_004",
+            "knowledge_content": "Attackers commonly use automated tools that test large lists of known passwords in a short amount of time."
+          },
+          {
+            "knowledge_id": "kb_ps_commpass_005",
+            "question_id": "ps_commpass_005",
+            "knowledge_content": "People often prioritize convenience over security, especially when they need to remember many different passwords."
+          }
+        ]
+      },
+      {
+        "name": "Password Strength",
+        "key": "PASSSTREN",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_ps_passstren_001",
+            "question_id": "ps_passstren_001",
+            "knowledge_content": "Longer passwords are generally harder to crack because they dramatically increase the number of possible combinations."
+          },
+          {
+            "knowledge_id": "kb_ps_passstren_002",
+            "question_id": "ps_passstren_002",
+            "knowledge_content": "Combining memorable phrases with added randomness can create passwords that are both strong and usable."
+          },
+          {
+            "knowledge_id": "kb_ps_passstren_003",
+            "question_id": "ps_passstren_003",
+            "knowledge_content": "When the same password is reused, a single data breach can put multiple accounts at risk."
+          },
+          {
+            "knowledge_id": "kb_ps_passstren_004",
+            "question_id": "ps_passstren_004",
+            "knowledge_content": "Passphrases rely on length and unpredictability, making them more resistant to guessing and automated attacks."
+          },
+          {
+            "knowledge_id": "kb_ps_passstren_005",
+            "question_id": "ps_passstren_005",
+            "knowledge_content": "Password managers reduce the need to remember many passwords while helping maintain strong, unique credentials."
+          }
+        ]
+      },
+      {
+        "name": "Multi-Factor Authentication",
+        "key": "MULTIFACT",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_ps_multifact_001",
+            "question_id": "ps_multifact_001",
+            "knowledge_content": "Multi-factor authentication strengthens account security by requiring more than one form of verification during login."
+          },
+          {
+            "knowledge_id": "kb_ps_multifact_002",
+            "question_id": "ps_multifact_002",
+            "knowledge_content": "Using a temporary code sent to a separate device adds an extra barrier against unauthorized access."
+          },
+          {
+            "knowledge_id": "kb_ps_multifact_003",
+            "question_id": "ps_multifact_003",
+            "knowledge_content": "Biometric verification relies on unique physical characteristics that are difficult to copy or guess."
+          },
+          {
+            "knowledge_id": "kb_ps_multifact_004",
+            "question_id": "ps_multifact_004",
+            "knowledge_content": "Additional authentication steps can protect accounts even if a password has been exposed."
+          },
+          {
+            "knowledge_id": "kb_ps_multifact_005",
+            "question_id": "ps_multifact_005",
+            "knowledge_content": "Authenticator apps create frequently changing codes, limiting the usefulness of stolen login details."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Malware",
+    "subtopics": [
+      {
+        "name": "Types of Malware",
+        "key": "MALTYPE",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_mal_types_001",
+            "question_id": "mal_types_001",
+            "knowledge_content": "Some malicious programs appear harmless or useful on the surface but perform harmful actions once installed."
+          },
+          {
+            "knowledge_id": "kb_mal_types_002",
+            "question_id": "mal_types_002",
+            "knowledge_content": "Certain malware can spread automatically across systems and networks without user interaction."
+          },
+          {
+            "knowledge_id": "kb_mal_types_003",
+            "question_id": "mal_types_003",
+            "knowledge_content": "Attackers may restrict access to important files as a way to pressure victims into taking action."
+          },
+          {
+            "knowledge_id": "kb_mal_types_004",
+            "question_id": "mal_types_004",
+            "knowledge_content": "Some malware focuses on secretly monitoring user activity and collecting information without permission."
+          },
+          {
+            "knowledge_id": "kb_mal_types_005",
+            "question_id": "mal_types_005",
+            "knowledge_content": "Advertising-focused malware is often designed to track behavior in order to display targeted or intrusive ads."
+          }
+        ]
+      },
+      {
+        "name": "Malware Infections and Symptoms",
+        "key": "MALINFOSYM",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_mal_infect_001",
+            "question_id": "mal_infect_001",
+            "knowledge_content": "Unexpected changes in how programs look or behave can indicate that malicious software is interfering with the system."
+          },
+          {
+            "knowledge_id": "kb_mal_infect_002",
+            "question_id": "mal_infect_002",
+            "knowledge_content": "Malware often enters systems when users interact with untrusted emails, links, or downloaded files."
+          },
+          {
+            "knowledge_id": "kb_mal_infect_003",
+            "question_id": "mal_infect_003",
+            "knowledge_content": "Some attacks restrict access to files and display messages demanding payment to restore them."
+          },
+          {
+            "knowledge_id": "kb_mal_infect_004",
+            "question_id": "mal_infect_004",
+            "knowledge_content": "Removable storage devices can transfer malware between systems if they are infected."
+          },
+          {
+            "knowledge_id": "kb_mal_infect_005",
+            "question_id": "mal_infect_005",
+            "knowledge_content": "Avoiding interaction with suspicious attachments or links helps reduce the risk of infection."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic":"Social Engineering",
+    "subtopics": [
+       {
+        "name": "Types of Social Engineering Attacks",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_se_types_001",
+            "question_id": "se_types_001",
+            "knowledge_content": "Phishing attacks rely on messages that appear trustworthy in order to manipulate users into revealing information or taking unsafe actions."
+          },
+          {
+            "knowledge_id": "kb_se_types_002",
+            "question_id": "se_types_002",
+            "knowledge_content": "Attackers may leave infected storage devices in public places, hoping someone will plug them into a computer out of curiosity."
+          },
+          {
+            "knowledge_id": "kb_se_types_003",
+            "question_id": "se_types_003",
+            "knowledge_content": "Some malicious tactics use fear or false warnings to pressure users into installing harmful software."
+          },
+          {
+            "knowledge_id": "kb_se_types_004",
+            "question_id": "se_types_004",
+            "knowledge_content": "Messages that create urgency or spark curiosity can cause users to act quickly without verifying authenticity."
+          },
+          {
+            "knowledge_id": "kb_se_types_005",
+            "question_id": "se_types_005",
+            "knowledge_content": "Baiting attacks often promise rewards or freebies to entice users into interacting with malicious content."
+          }
+        ]
+      },
+      {
+        "name": "Defending Against Social Engineering",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_se_defending_001",
+            "question_id": "se_defending_001",
+            "knowledge_content": "Unsolicited requests for personal information should be treated with caution and verified through trusted channels."
+          },
+          {
+            "knowledge_id": "kb_se_defending_002",
+            "question_id": "se_defending_002",
+            "knowledge_content": "Sudden warnings or alarming messages are often used to trigger fear and rush users into unsafe decisions."
+          },
+          {
+            "knowledge_id": "kb_se_defending_003",
+            "question_id": "se_defending_003",
+            "knowledge_content": "Unknown external devices can carry malware and should not be connected to a system."
+          },
+          {
+            "knowledge_id": "kb_se_defending_004",
+            "question_id": "se_defending_004",
+            "knowledge_content": "Combining technical protections with careful verification helps reduce exposure to phishing attempts."
+          },
+          {
+            "knowledge_id": "kb_se_defending_005",
+            "question_id": "se_defending_005",
+            "knowledge_content": "Taking a moment to assess unexpected or urgent messages can prevent costly security mistakes."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Incident Response",
+    "subtopics": [
+      {
+        "name": "Steps in Incident Response",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_ir_steps_001",
+            "question_id": "ir_steps_001",
+            "knowledge_content": "Disconnecting a compromised device can help stop an incident from spreading or causing further damage."
+          },
+          {
+            "knowledge_id": "kb_ir_steps_002",
+            "question_id": "ir_steps_002",
+            "knowledge_content": "Preparation, such as maintaining backups and practicing safe habits, reduces the impact of potential incidents."
+          },
+          {
+            "knowledge_id": "kb_ir_steps_003",
+            "question_id": "ir_steps_003",
+            "knowledge_content": "Isolating affected systems limits an attacker’s ability to move laterally or access additional data."
+          },
+          {
+            "knowledge_id": "kb_ir_steps_004",
+            "question_id": "ir_steps_004",
+            "knowledge_content": "Reviewing what caused an incident helps strengthen defenses and prevent similar issues in the future."
+          },
+          {
+            "knowledge_id": "kb_ir_steps_005",
+            "question_id": "ir_steps_005",
+            "knowledge_content": "Changing credentials after an incident helps ensure that stolen or exposed passwords can no longer be used."
+          }
+        ]
+      },
+      {
+        "name": "Personal and Enterprise Incident Response Plans",
+        "knowledge_points": [
+          {
+            "knowledge_id": "kb_ir_response_001",
+            "question_id": "ir_response_001",
+            "knowledge_content": "Having a clear plan helps individuals respond calmly and make correct decisions during unexpected security incidents."
+          },
+          {
+            "knowledge_id": "kb_ir_response_002",
+            "question_id": "ir_response_002",
+            "knowledge_content": "Regular backups ensure that important data can be restored if systems are damaged or compromised."
+          },
+          {
+            "knowledge_id": "kb_ir_response_003",
+            "question_id": "ir_response_003",
+            "knowledge_content": "Organized response steps and clear communication are critical for managing incidents at an enterprise scale."
+          },
+          {
+            "knowledge_id": "kb_ir_response_004",
+            "question_id": "ir_response_004",
+            "knowledge_content": "Analyzing incidents after they occur helps improve defenses and response strategies over time."
+          },
+          {
+            "knowledge_id": "kb_ir_response_005",
+            "question_id": "ir_response_005",
+            "knowledge_content": "Understanding common threats allows faster recognition and more effective handling of security incidents."
+          }
+        ]
+      }
+    ]
+  }
+]
+
