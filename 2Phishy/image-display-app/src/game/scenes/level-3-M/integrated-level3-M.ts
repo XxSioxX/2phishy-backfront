@@ -6,7 +6,7 @@ import { gameAPI, AssessmentResult } from '../../helpers/game-api';
 
 
 
-export class SFBLevel extends Scene {
+export class MLEVEL extends Scene {
   private player!: Player;
   private questionPoints!: Phaser.GameObjects.Sprite[][];
   private totalquestions: number = 0;
@@ -19,11 +19,10 @@ export class SFBLevel extends Scene {
   private tileset!: Tilemaps.Tileset;
   private wallsLayer!: Tilemaps.TilemapLayer;
   private wallsLayer2!: Tilemaps.TilemapLayer;
-
   private questions: any[] = [];
   private currentQuestionIndex = 0;
   private assessmentResults: AssessmentResult[] = [];
-  private currentTopic = 'Safe Browsing Practices';
+  private currentTopic = 'Malware';
   private inAssessment = false;
   private userData = (window as any).userData;
 
@@ -31,11 +30,11 @@ export class SFBLevel extends Scene {
 
 
   constructor() {
-    super('sfb-level-scene');
+    super('m-level-scene');
   }
 
   async create(): Promise<void> {
-    console.log('SFB Level - create()');
+    console.log('M Level - create()');
     this.initMap();
 
     this.physics.add.collider(this.player, this.wallsLayer);
@@ -51,7 +50,6 @@ export class SFBLevel extends Scene {
       'questions:init',
       this.questions.length
     );
-
 
     this.initAssessment();
     this.setupAssessmentCollision();
@@ -71,10 +69,8 @@ export class SFBLevel extends Scene {
     this.initKnowledge();
     this.setupKnowledgeCollision();
     
-
-
     this.showLevelIntroBanner(
-      'Level 1 — Safe Browsing Practices',
+      'Level 3 — Malware',
       'Explore the area, open Knowledge Chests, and uncover smart browsing habits.\nApproach the Wards to prove what you’ve learned!\n\n The number above your character represents the remaining questions you must answer in this level.'
     );
 
@@ -101,21 +97,19 @@ export class SFBLevel extends Scene {
       }
 
       point.wasTouching = touching;
-
-
     });
   }
 
 
 
   private initMap(): void {
-      this.map = this.make.tilemap({ key: 'SFBlevel' });
+      this.map = this.make.tilemap({ key: 'Mlevel' });
       this.tileset = this.map.addTilesetImage('sfb-tileset', 'tiles')!;
       this.map.createLayer('Floor', this.tileset, 0, 0)!;
       this.wallsLayer = this.map.createLayer('Walls', this.tileset, 0, 0)!;
       this.wallsLayer2 = this.map.createLayer('Walls-second', this.tileset, 0, 0)!;
       this.wallsLayer.setCollisionByProperty({ collides: true });
-      this.wallsLayer2.setCollisionByProperty({ collides: true });
+      this.wallsLayer2.setCollisionByProperty({ collides: false });
 
       // Set physics world bounds to match the tilemap
       this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -179,14 +173,18 @@ export class SFBLevel extends Scene {
 
 
   private initKnowledge(): void {
+    if (!Array.isArray(this.knowledgeList) || this.knowledgeList.length === 0) {
+      console.warn('No knowledge entries to spawn');
+      return;
+    }
+
     const allPoints = gameObjectsToObjectPoints(
       this.map.filterObjects('KnowledgePoints', obj => obj.name === 'KnowledgePoint') || []
     );
 
-    // 🎲 Randomize spawn LOCATIONS
+    // 🎲 Randomize spawn LOCATIONS only
     Phaser.Utils.Array.Shuffle(allPoints);
 
-    // 🔢 Spawn exactly as many as needed
     const selectedPoints = allPoints.slice(0, this.knowledgeList.length);
 
     this.knowledgePoints = selectedPoints.map((pt, index) => {
@@ -201,22 +199,21 @@ export class SFBLevel extends Scene {
       point.isOpen = false;
       point.isAnimating = false;
 
-      // ✅ DIRECT 1:1 binding (no randomness here)
-      const knowledge = this.knowledgeList[index];
+      // ✅ Direct 1:1 mapping (NO randomness here)
+      const knowledgeEntry = this.knowledgeList[index];
 
       point.knowledge = {
-        knowledge_id: knowledge.knowledge_id,
-        question_id: knowledge.question_id,
-        knowledge_content: knowledge.knowledge_content,
-        subtopic: knowledge.subtopic,
-        subtopic_key: knowledge.subtopic_key,
+        knowledge_id: knowledgeEntry.knowledge_id,
+        question_id: knowledgeEntry.question_id,
+        knowledge_content: knowledgeEntry.knowledge_content,
+        subtopic: knowledgeEntry.subtopic,
+        subtopic_key: knowledgeEntry.subtopic_key,
       };
 
       point.wasTouching = false;
       return point;
     });
   }
-
 
 
 
@@ -328,6 +325,7 @@ export class SFBLevel extends Scene {
       this.assessmentResults.push(result);
 
 
+
       try {
         await this.submitAnswer({
           question_id: result.question_id,
@@ -358,7 +356,11 @@ export class SFBLevel extends Scene {
       }
       this.player.setRemainingQuestions(this.assessmentResults.length);
     });
-      }
+
+
+
+  }
+
 
 
   private async submitAnswer(result: AssessmentResult): Promise<void> {
@@ -380,11 +382,11 @@ export class SFBLevel extends Scene {
         timestamp: result.timestamp.toISOString(),
       });
 
-      console.log("Answer submitted:", result.question_id);
-    } catch (error) {
-      console.error("Failed to submit answer:", error);
-    }
 
+      console.log("📡 Answer submitted:", result.question_id);
+    } catch (error) {
+      console.error("❌ Failed to submit answer:", error);
+    }
   }
 
   private showLevelIntroBanner(
@@ -479,36 +481,54 @@ export class SFBLevel extends Scene {
     spaceKey?.once('down', closeBanner);
   }
 
+
   private async completeAssessment(): Promise<void> {
-    if (this.assessmentCompleted) return;
-    this.assessmentCompleted = true;
-
-    try {
-      gameAPI.setToken(this.userData.token);
-
-      await gameAPI.markTopicCompleted({
-        userid: this.userData.userId,
-        topic: this.currentTopic,
-      });
-
-      console.log('Topic marked as completed');
-
-    } catch (err) {
-      console.error('Failed to mark topic completed', err);
+    const userData = (window as any).userData;
+    if (!userData || !userData.token || !userData.userId) {
+      console.warn('User not logged in. Results stored locally.');
+      this.popup.show('Please log in to save your progress.', ['OK'], () => this.player.unfreeze());
+      this.inAssessment = false;
+      return;
     }
 
-    this.popup.show('Level Complete!', ['Continue'], () => {
+    const subcatMap: Record<string, string> = {
+      MALTYPE: 'MALTYPE',
+      MALINFOSYM: 'MALINFOSYM',
+    };
+
+
+
+    const formattedResponses = this.assessmentResults.map((r) => ({
+      question_id: r.question_id,
+      question_subtopic: subcatMap[r.subcategory] || r.subcategory.toUpperCase(),
+      answer: r.user_answer,
+      correct_answer: r.correct_answer,
+      topic: r.topic,
+      is_correct: r.is_correct,
+      timestamp: r.timestamp.toISOString(),
+    }));
+
+    const payload = {
+      userid: userData.userId,
+      topic: this.currentTopic,
+      assessment_response: { responses: formattedResponses },
+    };
+
+    console.log('📤 Sending payload:', payload);
+
+    try {
+      gameAPI.setToken(userData.token);
+      const response = await gameAPI.startInitialAssessment(payload);
+      console.log('✅ Backend response:', response);
+    } catch (error) {
+      console.error('❌ Failed to send to backend:', error);
+    }
+
+    this.popup.show('Assessment Complete!', ['OK'], () => {
       this.player.unfreeze();
       this.inAssessment = false;
-
-      this.scene.start('assessment-scene', {
-        topic: 'Password Security',
-        nextScene: 'ps-level-scene',
-      });
     });
   }
-
-
   private showDebugWalls(): void {
     const debugGraphics = this.add.graphics().setAlpha(0.7);
     this.wallsLayer.renderDebug(debugGraphics, {
@@ -527,10 +547,10 @@ export class SFBLevel extends Scene {
   }
 
   private inferSubcat(questionId: string): string {
-    if (questionId.includes('_svns_')) return 'SECVSNONSEC';
-    if (questionId.includes('_https_')) return 'HTTPVSHTTPS';
-    if (questionId.includes('_bsbp_')) return 'BROWSERSECBP';
-    return 'UNKNOWN';
-  }
+  if (questionId.startsWith('mal_types_')) return 'MALTYPE';
+  if (questionId.startsWith('mal_infect_')) return 'MALINFOSYM';
+  return 'UNKNOWN';
+}
+
 
 }

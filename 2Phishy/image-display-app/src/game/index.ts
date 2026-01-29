@@ -1,5 +1,5 @@
 import Phaser, { Game, Types } from 'phaser';
-import { LoadingScene, IntegratedLevel1, UIScene, SFBLevel, MainMenuScene } from './scenes';
+import { LoadingScene, AssessmentLevel, UIScene, SFBLevel, MainMenuScene } from './scenes';
 import { WIN_SCORE } from './consts';
 
 type GameConfigExtended = Types.Core.GameConfig & {
@@ -40,7 +40,7 @@ scene: [
   MainMenuScene,
   LoadingScene,
   UIScene,
-  IntegratedLevel1,
+  AssessmentLevel,
   SFBLevel
 ],
 

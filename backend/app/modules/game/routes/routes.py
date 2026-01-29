@@ -9,7 +9,8 @@ from app.modules.game.schemas.gameschemas import (
     InitialAssessmentResponseItems,
     GetUser,
     GetUserTopic,
-    SingleResponseItem
+    SingleResponseItem,
+    TopicCompletionRequest
 )
 from app.modules.game.services.services import (
     evaluate_assessment,
@@ -28,8 +29,8 @@ from app.modules.learning_path.services.learn_path_service import DefaultLearnin
 from app.utils.logger import get_logger
 from app.core.database_mongo import get_mongo_db
 from app.core.standard_response import StandardResponse
-from datetime import datetime
 
+from datetime import datetime
 
 router = APIRouter(prefix="/game", tags=["game"])
 logger = get_logger(__name__)
@@ -89,7 +90,7 @@ async def assessment_submit(
                 user_id=item.userid,
                 topic=item.topic,
                 responseItem=item,
-                collection_name="progression"
+                collection_name="progress"
             )
 
             inserted_items.append(save_result)
@@ -128,8 +129,6 @@ async def single_question_submit(
             data=None
         )
 
-    await save_popup_question_result(db, request.userid, request.topic, request, "progress")
-
     save_result = await save_popup_question_result(
         db=db,
         user_id=request.userid,
@@ -144,6 +143,35 @@ async def single_question_submit(
         data={"saved": save_result}
     )
 
+@router.post(
+    "/progress/complete",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK
+)
+async def mark_topic_completed(
+    request: TopicCompletionRequest,
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db)
+):
+    logger.info(f"Marking topic completed: {request.topic}")
+
+    result = await db.progress.update_one(
+        {"user_id": request.userid},
+        {
+            "$set": {
+                f"progress.{request.topic}.level_completed": True,
+                f"progress.{request.topic}.level_completed_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+
+    return StandardResponse(
+        success=True,
+        message="Topic marked as completed",
+        data={"updated": result.modified_count}
+    )
+
+
 @router.post("/data", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
 async def get_user_data_from_collection(
         request: GetUser,
@@ -154,9 +182,9 @@ async def get_user_data_from_collection(
 
 
     try:
-        user_uuid = request.userid
+        user_id = request.userid
     except ValueError:
-        logger.error(f"Invalid user_id format: {user_uuid}. Must be a valid UUID.")
+        logger.error(f"Invalid user_id format: {user_id}. Must be a valid UUID.")
         response.status_code = status.HTTP_400_BAD_REQUEST
         return StandardResponse(
             success=False,
@@ -165,30 +193,33 @@ async def get_user_data_from_collection(
         )
 
     logger.info("requesting db")
-    document = await db_findby_id(db, user_uuid, request.collectionName)
+    #If a specific collection is requested > old behavior
+    if request.collectionName:
+        document = await db_findby_id(db, user_id, request.collectionName)
+        if not document:
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return StandardResponse(False, "Data not found", None)
 
-    if document:
-        logger.info(f"Document found. User ID: '{user_uuid}', Collection: '{request.collectionName}'.")
+        document["_id"] = str(document["_id"])
+        return StandardResponse(True, "Data retrieved", document)
 
-        if "_id" in document and isinstance(document["_id"], ObjectId):
-            document["_id"] = str(document["_id"])
+    # Otherwise > return BOTH
+    initial = await db["initial_assessments"].find_one({"user_id": str(user_id)})
+    progress = await db["progress"].find_one({"user_id": str(user_id)})
 
-        # Removed the try-except block for mapping to InitialAssessmentResponse
-        # Now returning the document directly
+    if initial and "_id" in initial:
+        initial["_id"] = str(initial["_id"])
+    if progress and "_id" in progress:
+        progress["_id"] = str(progress["_id"])
 
-        return StandardResponse(
-            success=True,
-            message="Data retrieved successfully.",
-            data=document  # Return the raw document
-        )
-    else:
-        logger.info(f"No document found. User ID: '{user_uuid}', Collection: '{request.collectionName}'.")
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return StandardResponse(
-            success=False,
-            message=f"Data not found for user '{user_uuid}' in collection '{request.collectionName}'.",
-            data=None
-        )
+    return StandardResponse(
+        success=True,
+        message="User progress retrieved",
+        data={
+            "initial_assessments": initial,
+            "progress": progress,
+        }
+    )
 
 @router.post("/generate/knowledgelist/", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
 async def generate_knowledge_list(

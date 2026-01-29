@@ -122,7 +122,11 @@ async def assessment_check(
 
 async def ensure_initial_assessment_done(db, user_id, topic):
     doc = await db["initial_assessments"].find_one(
-        {"user_id": str(user_id), f"assessments.{topic.value}": {"$exists": True}}
+        {
+            "user_id": str(user_id),
+            f"assessments.{topic.value}.assessment_completed": True
+        }
+
     )
     if not doc:
         raise Exception("Initial assessment not completed")
@@ -139,14 +143,14 @@ async def save_assessment_result(
     collection = db["initial_assessments"]
     user_doc = await collection.find_one({"user_id": str(user_id)})
 
-    logger.debug(f"user debug: {user_doc}")
-
     if not user_doc:
         logger.info("No document found, creating new one")
         document = {
             "user_id": str(user_id),
             "assessments": {
                 topic.value: {
+                    "assessment_completed": True,
+                    "assessment_completed_at": datetime.utcnow(),
                     "subcat_scores": subcat_grade,
                     "subcat_priority": subcat_priority,
                     "question_map": []
@@ -158,32 +162,27 @@ async def save_assessment_result(
         return str(result.inserted_id)
 
     logger.info("Document exists, proceeding with assessment saving")
-    # If the topic already exists under assessments, update it
-    if topic.value in user_doc.get("assessments", {}):
-        logger.info("Topic already exists, updating its subcategories and priority")
-        update_fields = {
-            f"assessments.{topic.value}.subcat_scores": subcat_grade,
-            f"assessments.{topic.value}.subcat_priority": subcat_priority,
-            f"assessments.{topic.value}.question_map": []
-        }
-        update_fields["timestamp"] = datetime.utcnow()
-        await collection.update_one({"user_id": str(user_id)}, {"$set": mongo_serialize(update_fields)})
-        return str(user_doc["_id"])
 
-    # Otherwise, add a new topic under assessments
-    update = {
-        f"assessments.{topic.value}": {
-            "subcat_scores": subcat_grade,
-            "subcat_priority": subcat_priority,
-            "question_map": []
-        },
+    # ALWAYS set completion flags (works for both new & existing topics)
+    update_fields = {
+        f"assessments.{topic.value}.assessment_completed": True,
+        f"assessments.{topic.value}.assessment_completed_at": datetime.utcnow(),
+        f"assessments.{topic.value}.subcat_scores": subcat_grade,
+        f"assessments.{topic.value}.subcat_priority": subcat_priority,
         "timestamp": datetime.utcnow()
     }
 
-    update = mongo_serialize(update)
-    logger.info(f"Updating records{update}")
-    await collection.update_one({"user_id": str(user_id)}, {"$set": update})
+    # Reset question_map only if topic already existed
+    if topic.value in user_doc.get("assessments", {}):
+        update_fields[f"assessments.{topic.value}.question_map"] = []
+
+    await collection.update_one(
+        {"user_id": str(user_id)},
+        {"$set": mongo_serialize(update_fields)}
+    )
+
     return str(user_doc["_id"])
+
 
 async def ensure_initial_assessment_doc(
     db: AsyncIOMotorDatabase,
@@ -259,55 +258,36 @@ async def fetch_knowledge_list(
 ) -> list[dict]:
 
     KNOWLEDGE_BASE_PATH = ASSETS_DIR / "knowledge_base.json"
-    logger.info("fetching knowledge base")
 
     try:
         with open(KNOWLEDGE_BASE_PATH, "r") as f:
             all_knowledge_data = json.load(f)
-
     except Exception as e:
-        logger.error(f"Failed to load or parse knowledge_base.json: {e}")
+        logger.error(f"Failed to load knowledge_base.json: {e}")
         return []
 
-    # collect question_ids
+    # unanswered question ids
     question_ids = {q["question_id"] for q in questions}
 
-    logger.debug(f"question_ids: {question_ids}")
-
-    # derive subtopics from question_id
-    subtopics = set()
-    for q in questions:
-        qid = q["question_id"]
-        if "_svns_" in qid or "_secvsnonsec_" in qid:
-            subtopics.add("SECVSNONSEC")
-        elif "_https_" in qid:
-            subtopics.add("HTTPVSHTTPS")
-        elif "_bsbp_" in qid:
-            subtopics.add("BROWSERSECBP")
-
     knowledge_list = []
-
 
     for topic_block in all_knowledge_data:
         if topic_block["topic"] != topic:
             continue
 
         for subtopic in topic_block.get("subtopics", []):
-            matched_points = []
-
             for kp in subtopic.get("knowledge_points", []):
                 if kp["question_id"] in question_ids:
-                    matched_points.append(kp)
+                    knowledge_list.append({
+                        "topic": topic_block["topic"],
+                        "subtopic": subtopic["name"],
+                        "subtopic_key": subtopic["key"],
+                        "question_id": kp["question_id"],
+                        "knowledge_id": kp["knowledge_id"],
+                        "knowledge_content": kp["knowledge_content"],
+                    })
 
-            if matched_points:
-                knowledge_list.append({
-                    "topic": topic_block["topic"],
-                    "subtopic": subtopic["name"],
-                    "subtopic_key": subtopic["key"],
-                    "knowledge_points": matched_points
-                })
-
-    logger.debug(f"knowledge_list: {knowledge_list}")
+    logger.debug(f"Flattened knowledge list: {knowledge_list}")
     return knowledge_list
 
 
@@ -504,18 +484,18 @@ async def answer_cross_check (
 
 
 async def save_popup_question_result(
-        db: AsyncIOMotorDatabase,
-        user_id: UUID,
-        topic: Topics,
-        responseItem: SingleResponseItem,
-        collection_name: str
+    db: AsyncIOMotorDatabase,
+    user_id: UUID,
+    topic: Topics,
+    responseItem: SingleResponseItem,
+    collection_name: str
 ):
     logger.info("saving question result")
     await check_user_progression(db, user_id)
 
+    topic_key = topic.value if hasattr(topic, "value") else topic
 
     progression_doc = await db_findby_id(db, user_id, collection_name)
-
 
     if progression_doc is None:
         progression_doc = {
@@ -535,16 +515,25 @@ async def save_popup_question_result(
     if cross_check_result != q_is_correct:
         raise Exception("inconsistent answers between Frontend and Backend")
 
-    if topic not in progression_doc.get("progress", {}):
+    # ✅ Ensure topic container exists
+    if topic_key not in progression_doc.get("progress", {}):
         await db[collection_name].update_one(
             {"user_id": str(user_id)},
-            {"$set": {f"progress.{topic}": []}}
+            {
+                "$set": {
+                    f"progress.{topic_key}": {
+                        "answers": [],
+                        "level_completed": False,
+                        "level_completed_at": None
+                    }
+                }
+            }
         )
 
     exists = await db[collection_name].find_one(
         {
             "user_id": str(user_id),
-            f"progress.{topic}.question_id": q_id
+            f"progress.{topic_key}.answers.question_id": q_id
         }
     )
 
@@ -560,21 +549,22 @@ async def save_popup_question_result(
         await db[collection_name].update_one(
             {
                 "user_id": str(user_id),
-                f"progress.{topic}.question_id": q_id
+                f"progress.{topic_key}.answers.question_id": q_id
             },
             {
                 "$set": {
-                    f"progress.{topic}.$.answer": q_answer,
-                    f"progress.{topic}.$.is_correct": q_is_correct,
-                    f"progress.{topic}.$.timestamp": responseItem.timestamp,
+                    f"progress.{topic_key}.answers.$.answer": q_answer,
+                    f"progress.{topic_key}.answers.$.is_correct": q_is_correct,
+                    f"progress.{topic_key}.answers.$.timestamp": responseItem.timestamp,
                 }
             }
         )
     else:
         await db[collection_name].update_one(
             {"user_id": str(user_id)},
-            {"$push": {f"progress.{topic}": payload_dict}}
+            {"$push": {f"progress.{topic_key}.answers": payload_dict}}
         )
+
 
 async def filter_unanswered_questions(
         db: AsyncIOMotorDatabase,
@@ -589,7 +579,13 @@ async def filter_unanswered_questions(
     if not progress_doc:
         return question_map
 
-    topic_progress = progress_doc.get("progress", {}).get(topic.value, [])
+    topic_progress = (
+        progress_doc
+        .get("progress", {})
+        .get(topic.value, {})
+        .get("answers", [])
+    )
+
     answered_ids = {
         q.get("question_id")
         for q in topic_progress
@@ -600,3 +596,18 @@ async def filter_unanswered_questions(
         q for q in question_map
         if q.get("question_id") not in answered_ids
     ]
+
+async def mark_level_completed(
+    db: AsyncIOMotorDatabase,
+    user_id: UUID,
+    topic: Topics
+):
+    await db["progress"].update_one(
+        {"user_id": str(user_id)},
+        {
+            "$set": {
+                f"progress.{topic}.level_completed": True,
+                f"progress.{topic}.level_completed_at": datetime.utcnow()
+            }
+        }
+    )

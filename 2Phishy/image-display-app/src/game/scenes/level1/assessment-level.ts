@@ -4,7 +4,7 @@ import { gameObjectsToObjectPoints } from '../../helpers/gameobject-to-object-po
 import AssessmentPopup from '../../helpers/assessment-popup';
 import { gameAPI, AssessmentResult } from '../../helpers/game-api';
 
-export class IntegratedLevel1 extends Scene {
+export class AssessmentLevel extends Scene {
   private player!: Player;
   private assessmentPoints!: Phaser.GameObjects.Sprite[][];
   private popup!: AssessmentPopup;
@@ -14,32 +14,56 @@ export class IntegratedLevel1 extends Scene {
   private questions: any[] = [];
   private currentQuestionIndex = 0;
   private assessmentResults: AssessmentResult[] = [];
-  private currentTopic = 'Safe Browsing Practices';
+  private currentTopic!: string;
   private inAssessment = false;
+  private nextScene!: string;
+
+
 
   constructor() {
-    super('integrated-level-1-scene');
+    super('assessment-scene');
   }
 
   create(): void {
-    console.log('Integrated Level 1 - create()');
+    console.log('Assessment Level Create');
+    this.currentQuestionIndex = 0;
+    this.assessmentResults = [];
+    this.inAssessment = false;
+
+
     this.initMap();
+
     this.player = new Player(this, 100, 100);
     this.physics.add.collider(this.player, this.wallsLayer);
+
     this.initAssessment();
     this.setupAssessmentCollision();
     this.initCamera();
+
     this.popup = new AssessmentPopup(this);
     this.popup.mode = "assessment";
 
 
     const data = this.cache.json.get('assessmentData') || [];
-    const topicData = (data as any[]).find((t: any) => t.topic === this.currentTopic);
+    const topicData = (data as any[]).find(
+      (t: any) => t.topic === this.currentTopic
+    );
+
     this.questions = topicData?.initial_assessment || [];
     console.log('questions:', this.questions);
 
     console.log(`Loaded ${this.questions.length} questions for topic: ${this.currentTopic}`);
   }
+
+  init(data: { topic: string; nextScene: string }) {
+    if (!data?.topic || !data?.nextScene) {
+      throw new Error('AssessmentLevel requires topic and nextScene');
+    }
+
+    this.currentTopic = data.topic;
+    this.nextScene = data.nextScene;
+  }
+
 
   update(): void {
     this.player.update();
@@ -155,7 +179,10 @@ export class IntegratedLevel1 extends Scene {
     }
 
     this.popup.show('Assessment Complete!', ['Proceed'], () => {
-      this.scene.start('sfb-level-scene')
+            this.scene.start(this.nextScene, {
+        topic: this.currentTopic,
+      });
+
       this.player.unfreeze();
       this.inAssessment = false;
     });

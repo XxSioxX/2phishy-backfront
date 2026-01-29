@@ -43,7 +43,7 @@
             "knowledge_content": "HTTPS adds a security layer that helps protect data as it travels between a user’s browser and a website."
           },
           {
-            "knowledge_id": "kb_sfb_httpvshttps_002",
+            "knowledge_id": "kb_sfb_httpvshttps_002" ,
             "question_id": "sfb_httpvshttps_002",
             "knowledge_content": "Modern browsers use visual indicators in the address bar to show when a connection is protected."
           },

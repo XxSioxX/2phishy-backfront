@@ -89,77 +89,97 @@ class GameAPI {
       method: 'POST',
       mode: 'cors',
       headers: this.getHeaders(),
-      body: JSON.stringify({
-        userid: userid,
-        collectionName: 'initial_assessments'
-    }),
+      body: JSON.stringify({ userid }),
     });
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('getUserProgress error:', err);
       throw new Error(`Failed to get user progress: ${err}`);
     }
 
     return await response.json();
   }
 
+
   async submitAssessmentResult(payload: {
-  userid: string;
-  question_id: string;
-  user_answer: string | null;
-  correct_answer: string;
-  topic: string;
-  subcategory: string;
-  is_correct: boolean;
-  timestamp: string; // ISO string
-}) {
-  console.log('Sending to /game/assessment/submit:', payload);
-
-  const response = await fetch(`${this.baseUrl}/assessment/submit`, {
-    method: 'POST',
-    mode: 'cors',
-    headers: this.getHeaders(),
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    console.error('❌ submitAssessmentResult error:', err);
-    throw new Error(`Failed to submit assessment result: ${err}`);
-  }
-
-  return await response.json();
-}
-
-  async submit_question_single(payload: {
     userid: string;
     question_id: string;
+    user_answer: string | null;
+    correct_answer: string;
     topic: string;
-
-    question_subtopic: string;
-    answer:string | null;
-
+    subcategory: string;
     is_correct: boolean;
-    timestamp: string;
-}) {
-  console.log('Sending to /game/question/submit/single', payload);
+    timestamp: string; // ISO string
+  }) {
+    console.log('Sending to /game/assessment/submit:', payload);
 
-  const response = await fetch(`${this.baseUrl}/question/submit/single`, {
-    method: 'POST',
-    mode: 'cors',
-    headers: this.getHeaders(),
-    body: JSON.stringify(payload),
-  });
+    const response = await fetch(`${this.baseUrl}/assessment/submit`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
 
-  if (!response.ok) {
-    const err = await response.text();
-    console.error('❌ submitAssessmentResult error:', err);
-    throw new Error(`Failed to submit assessment result: ${err}`);
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('❌ submitAssessmentResult error:', err);
+      throw new Error(`Failed to submit assessment result: ${err}`);
+    }
+
+    return await response.json();
   }
 
-  return await response.json();
-}
+    async submit_question_single(payload: {
+      userid: string;
+      question_id: string;
+      topic: string;
+
+      question_subtopic: string;
+      answer:string | null;
+
+      is_correct: boolean;
+      timestamp: string;
+  }) {
+    console.log('Sending to /game/question/submit/single', payload);
+
+    const response = await fetch(`${this.baseUrl}/question/submit/single`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('❌ submitAssessmentResult error:', err);
+      throw new Error(`Failed to submit assessment result: ${err}`);
+    }
+
+    return await response.json();
+  }
+
+  async markTopicCompleted(payload: {
+    userid: string;
+    topic: string;
+  }) {
+    console.log('Marking topic completed:', payload);
+
+    const response = await fetch(`${this.baseUrl}/progress/complete`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('markTopicCompleted error:', err);
+      throw new Error(`Failed to mark topic completed: ${err}`);
+    }
+
+    return await response.json();
+  }
+
 
 
   async getUserQuestionMap(payload: {

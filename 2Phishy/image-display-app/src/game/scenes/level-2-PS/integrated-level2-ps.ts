@@ -6,7 +6,7 @@ import { gameAPI, AssessmentResult } from '../../helpers/game-api';
 
 
 
-export class SFBLevel extends Scene {
+export class PSLEVEL extends Scene {
   private player!: Player;
   private questionPoints!: Phaser.GameObjects.Sprite[][];
   private totalquestions: number = 0;
@@ -23,19 +23,18 @@ export class SFBLevel extends Scene {
   private questions: any[] = [];
   private currentQuestionIndex = 0;
   private assessmentResults: AssessmentResult[] = [];
-  private currentTopic = 'Safe Browsing Practices';
+  private currentTopic = 'Password Security';
   private inAssessment = false;
   private userData = (window as any).userData;
 
   private assessmentCompleted = false;
 
-
   constructor() {
-    super('sfb-level-scene');
+    super('ps-level-scene');
   }
 
   async create(): Promise<void> {
-    console.log('SFB Level - create()');
+    console.log('PS Level - create()');
     this.initMap();
 
     this.physics.add.collider(this.player, this.wallsLayer);
@@ -51,7 +50,6 @@ export class SFBLevel extends Scene {
       'questions:init',
       this.questions.length
     );
-
 
     this.initAssessment();
     this.setupAssessmentCollision();
@@ -71,10 +69,8 @@ export class SFBLevel extends Scene {
     this.initKnowledge();
     this.setupKnowledgeCollision();
     
-
-
     this.showLevelIntroBanner(
-      'Level 1 — Safe Browsing Practices',
+      'Level 2 — Password Security',
       'Explore the area, open Knowledge Chests, and uncover smart browsing habits.\nApproach the Wards to prove what you’ve learned!\n\n The number above your character represents the remaining questions you must answer in this level.'
     );
 
@@ -101,15 +97,13 @@ export class SFBLevel extends Scene {
       }
 
       point.wasTouching = touching;
-
-
     });
   }
 
 
 
   private initMap(): void {
-      this.map = this.make.tilemap({ key: 'SFBlevel' });
+      this.map = this.make.tilemap({ key: 'PSlevel' });
       this.tileset = this.map.addTilesetImage('sfb-tileset', 'tiles')!;
       this.map.createLayer('Floor', this.tileset, 0, 0)!;
       this.wallsLayer = this.map.createLayer('Walls', this.tileset, 0, 0)!;
@@ -179,14 +173,18 @@ export class SFBLevel extends Scene {
 
 
   private initKnowledge(): void {
+    if (!Array.isArray(this.knowledgeList) || this.knowledgeList.length === 0) {
+      console.warn('No knowledge entries to spawn');
+      return;
+    }
+
     const allPoints = gameObjectsToObjectPoints(
       this.map.filterObjects('KnowledgePoints', obj => obj.name === 'KnowledgePoint') || []
     );
 
-    // 🎲 Randomize spawn LOCATIONS
+    // 🎲 Randomize spawn LOCATIONS only
     Phaser.Utils.Array.Shuffle(allPoints);
 
-    // 🔢 Spawn exactly as many as needed
     const selectedPoints = allPoints.slice(0, this.knowledgeList.length);
 
     this.knowledgePoints = selectedPoints.map((pt, index) => {
@@ -201,22 +199,21 @@ export class SFBLevel extends Scene {
       point.isOpen = false;
       point.isAnimating = false;
 
-      // ✅ DIRECT 1:1 binding (no randomness here)
-      const knowledge = this.knowledgeList[index];
+      // ✅ Direct 1:1 mapping (NO randomness here)
+      const knowledgeEntry = this.knowledgeList[index];
 
       point.knowledge = {
-        knowledge_id: knowledge.knowledge_id,
-        question_id: knowledge.question_id,
-        knowledge_content: knowledge.knowledge_content,
-        subtopic: knowledge.subtopic,
-        subtopic_key: knowledge.subtopic_key,
+        knowledge_id: knowledgeEntry.knowledge_id,
+        question_id: knowledgeEntry.question_id,
+        knowledge_content: knowledgeEntry.knowledge_content,
+        subtopic: knowledgeEntry.subtopic,
+        subtopic_key: knowledgeEntry.subtopic_key,
       };
 
       point.wasTouching = false;
       return point;
     });
   }
-
 
 
 
@@ -328,6 +325,7 @@ export class SFBLevel extends Scene {
       this.assessmentResults.push(result);
 
 
+
       try {
         await this.submitAnswer({
           question_id: result.question_id,
@@ -358,7 +356,11 @@ export class SFBLevel extends Scene {
       }
       this.player.setRemainingQuestions(this.assessmentResults.length);
     });
-      }
+
+
+
+  }
+
 
 
   private async submitAnswer(result: AssessmentResult): Promise<void> {
@@ -380,11 +382,11 @@ export class SFBLevel extends Scene {
         timestamp: result.timestamp.toISOString(),
       });
 
-      console.log("Answer submitted:", result.question_id);
-    } catch (error) {
-      console.error("Failed to submit answer:", error);
-    }
 
+      console.log("📡 Answer submitted:", result.question_id);
+    } catch (error) {
+      console.error("❌ Failed to submit answer:", error);
+    }
   }
 
   private showLevelIntroBanner(
@@ -479,6 +481,7 @@ export class SFBLevel extends Scene {
     spaceKey?.once('down', closeBanner);
   }
 
+
   private async completeAssessment(): Promise<void> {
     if (this.assessmentCompleted) return;
     this.assessmentCompleted = true;
@@ -502,12 +505,11 @@ export class SFBLevel extends Scene {
       this.inAssessment = false;
 
       this.scene.start('assessment-scene', {
-        topic: 'Password Security',
-        nextScene: 'ps-level-scene',
+        topic: 'Malware',
+        nextScene: 'm-level-scene',
       });
     });
   }
-
 
   private showDebugWalls(): void {
     const debugGraphics = this.add.graphics().setAlpha(0.7);
@@ -527,10 +529,11 @@ export class SFBLevel extends Scene {
   }
 
   private inferSubcat(questionId: string): string {
-    if (questionId.includes('_svns_')) return 'SECVSNONSEC';
-    if (questionId.includes('_https_')) return 'HTTPVSHTTPS';
-    if (questionId.includes('_bsbp_')) return 'BROWSERSECBP';
-    return 'UNKNOWN';
-  }
+  if (questionId.startsWith('ps_cup_')) return 'COMMPASS';
+  if (questionId.startsWith('ps_ps_')) return 'PASSSTREN';
+  if (questionId.startsWith('ps_mfa_')) return 'MULTIFACT';
+  return 'UNKNOWN';
+}
+
 
 }

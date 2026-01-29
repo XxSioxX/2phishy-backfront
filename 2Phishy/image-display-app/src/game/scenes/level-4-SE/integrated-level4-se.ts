@@ -6,7 +6,7 @@ import { gameAPI, AssessmentResult } from '../../helpers/game-api';
 
 
 
-export class SFBLevel extends Scene {
+export class SELEVEL extends Scene {
   private player!: Player;
   private questionPoints!: Phaser.GameObjects.Sprite[][];
   private totalquestions: number = 0;
@@ -23,7 +23,7 @@ export class SFBLevel extends Scene {
   private questions: any[] = [];
   private currentQuestionIndex = 0;
   private assessmentResults: AssessmentResult[] = [];
-  private currentTopic = 'Safe Browsing Practices';
+  private currentTopic = 'Social Engineering';
   private inAssessment = false;
   private userData = (window as any).userData;
 
@@ -31,11 +31,11 @@ export class SFBLevel extends Scene {
 
 
   constructor() {
-    super('sfb-level-scene');
+    super('se-level-scene');
   }
 
   async create(): Promise<void> {
-    console.log('SFB Level - create()');
+    console.log('SE Level - create()');
     this.initMap();
 
     this.physics.add.collider(this.player, this.wallsLayer);
@@ -74,7 +74,7 @@ export class SFBLevel extends Scene {
 
 
     this.showLevelIntroBanner(
-      'Level 1 — Safe Browsing Practices',
+      'Level 4 — Social Engineering',
       'Explore the area, open Knowledge Chests, and uncover smart browsing habits.\nApproach the Wards to prove what you’ve learned!\n\n The number above your character represents the remaining questions you must answer in this level.'
     );
 
@@ -106,10 +106,8 @@ export class SFBLevel extends Scene {
     });
   }
 
-
-
   private initMap(): void {
-      this.map = this.make.tilemap({ key: 'SFBlevel' });
+      this.map = this.make.tilemap({ key: 'SElevel' });
       this.tileset = this.map.addTilesetImage('sfb-tileset', 'tiles')!;
       this.map.createLayer('Floor', this.tileset, 0, 0)!;
       this.wallsLayer = this.map.createLayer('Walls', this.tileset, 0, 0)!;
@@ -502,8 +500,8 @@ export class SFBLevel extends Scene {
       this.inAssessment = false;
 
       this.scene.start('assessment-scene', {
-        topic: 'Password Security',
-        nextScene: 'ps-level-scene',
+        topic: 'Incident Response',
+        nextScene: 'ir-level-scene',
       });
     });
   }
@@ -527,9 +525,8 @@ export class SFBLevel extends Scene {
   }
 
   private inferSubcat(questionId: string): string {
-    if (questionId.includes('_svns_')) return 'SECVSNONSEC';
-    if (questionId.includes('_https_')) return 'HTTPVSHTTPS';
-    if (questionId.includes('_bsbp_')) return 'BROWSERSECBP';
+    if (questionId.includes('se_types_')) return 'SocEngType';
+    if (questionId.includes('se_defending_')) return 'SocEngDef';
     return 'UNKNOWN';
   }
 

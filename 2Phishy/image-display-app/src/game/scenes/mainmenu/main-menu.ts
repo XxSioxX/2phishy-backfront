@@ -1,16 +1,14 @@
 import { Scene } from 'phaser';
 import { gameAPI } from '../../helpers/game-api';
 import AssessmentPopup from "../../helpers/assessment-popup";
-import {Player} from "../../classes/player";
-import {IntegratedLevel1} from "../level1";
-import {SFBLevel} from "../level-1-SFB";
+
 
 export class MainMenuScene extends Scene {
   private playButton!: Phaser.GameObjects.Text;
   private loadingText!: Phaser.GameObjects.Text;
   private userData = (window as any).userData;
   private popup!: AssessmentPopup;
-  private player!: Player;
+
 
   constructor() {
     super('main-menu-scene');
@@ -38,88 +36,102 @@ export class MainMenuScene extends Scene {
   private async handlePlayClick() {
     this.playButton.disableInteractive();
     this.loadingText.setText('Loading your progress...');
-    let progress = null;
+
     const userData = (window as any).userData;
+
     try {
-      if (userData?.token && userData?.userId) {
-        gameAPI.setToken(userData.token);
-        progress = await gameAPI.getUserProgress(userData.userId);
-        console.log('📊 User progress:', progress);
-      } else {
-        console.warn('⚠️ User not logged in. Starting new game.');
+      if (!userData?.token || !userData?.userId) {
+        this.startInitialAssessment();
+        return;
       }
 
+      gameAPI.setToken(userData.token);
+      const response = await gameAPI.getUserProgress(userData.userId);
 
-    if (progress && progress.success) {
-      console.log('Received response, checking progress');
+      console.log(response);
 
-
-        const hasProgression = progress?.data && Object.prototype.hasOwnProperty.call(progress.data, 'progression' )
-        if (hasProgression) {
-
-        } else {
-          console.log('No progress yet, starting with level 1')
-          this.loadingText.setText('Continuing');
-          this.playButton.setInteractive();
-          this.scene.start('sfb-level-scene');
-        }
-      } else {
-        this.loadingText.setText('No user progress yet, starting new game');
-        this.playButton.setInteractive();
-        this.scene.start('integrated-level-1-scene');
+      if (!response?.success || !response.data) {
+        this.startInitialAssessment();
+        return;
       }
+
+      const initial = response.data.initial_assessments?.assessments;
+      const progress = response.data.progress?.progress;
+;
+
+      const sfbAssessment = initial?.['Safe Browsing Practices'];
+      const sfbProgress = progress?.['Safe Browsing Practices'];
+
+      const psAssessment = initial?.['Password Security'];
+      const psProgress = progress?.['Password Security'];
+
+      const mAssessment = initial?.['Malware'];
+      const mProgress = progress?.['Malware'];
+
+      // 1️⃣ Safe Browsing assessment not done
+      if (!sfbAssessment?.assessment_completed) {
+        this.startInitialAssessment();
+        return;
+      }
+
+      // 2️⃣ Safe Browsing level not done
+      if (!sfbProgress?.level_completed) {
+        this.scene.start('sfb-level-scene');
+        return;
+      }
+
+      // 3️⃣ Password Security assessment not done
+      if (!psAssessment?.assessment_completed) {
+        this.scene.start('assessment-scene', {
+          topic: 'Password Security',
+          nextScene: 'ps-level-scene',
+        });
+        return;
+      }
+
+      // 4️⃣ Password Security level not done
+      if (!psProgress?.level_completed) {
+        this.scene.start('ps-level-scene');
+        return;
+      }
+
+      if (!mAssessment?.assessment_completed) {
+        this.scene.start('assessment-scene', {
+          topic: 'Malware',
+          nextScene: 'm-level-scene',
+        });
+        return;
+      }
+
+      // 4️⃣ Password Security level not done
+      if (!mProgress?.level_completed) {
+        this.scene.start('m-level-scene');
+        return;
+      }
+
+      // 5️⃣ Everything done (future-proof)
+      this.popup.show(
+        'All levels completed!',
+        ['OK'],
+        () => this.playButton.setInteractive()
+      );
 
     } catch (error) {
-      console.error(' Failed to fetch progress:', error);
-      this.loadingText.setText('No user progress yet, starting new game');
-      this.playButton.setInteractive();
-      this.scene.start('integrated-level-1-scene');
+      console.error('❌ Failed to fetch progress:', error);
+      this.startInitialAssessment();
     }
   }
 
-  private async checkUserProgress(){
-    try {
-      if (!this.userData || !this.userData.token || !this.userData.userId) {
-        console.warn('User not logged in. Results stored locally.');
-        this.popup.show(
-          'Please log in to save your progress.',
-          ['OK'],
-          () => this.player.unfreeze()
-        );
-        return;
-      }
-      const response = await gameAPI.getUserProgress(this.userData.userId);
-      if (!response?.data) {
-        console.warn('User has no data, starting SFB initial assessment');
-        this.scene.start('integrated-level-1-scene');
-        return;
-      }
 
-      const progressData = response.data;
-      const assessments = progressData.assessments || {};
-      const safeBrowsing = assessments['Safe Browsing Practices'];
 
-      if (!safeBrowsing) {
-        console.warn('No Safe Browsing record, starting new assessment');
-        this.scene.start('integrated-level-1-scene');
-        return;
-      }
+  private startInitialAssessment() {
+    this.loadingText.setText('Starting new game...');
+    this.playButton.setInteractive();
 
-      const questionMap = safeBrowsing.question_map;
-      if (Array.isArray(questionMap) && questionMap.length > 0) {
-        console.log('Safe Browsing question map:', questionMap);
-        this.scene.start('sfb-level-scene');
-      } else {
-        console.warn(' No question map content, initializing SFB content');
-        await gameAPI.getUserQuestionMap({
-          userid: this.userData.userId,
-          topic: "Safe Browsing Practices"});
-        this.scene.add('sfb-level-scene', SFBLevel, true);
-        this.scene.start('sfb-level-scene');
-
-      }
-    } catch (error) {
-      console.error(error);
-    }
+    this.scene.start('assessment-scene', {
+      topic: 'Safe Browsing Practices',
+      nextScene: 'sfb-level-scene',
+    });
   }
+
 }

@@ -29,8 +29,12 @@ class InitialAssessmentResponseItems(BaseModel):
     userid: UUID
 
 class GetUser(BaseModel):
-    userid: UUID
-    collectionName: str
+    userid: str
+    collectionName: Optional[str] = None
+
+class TopicCompletionRequest(BaseModel):
+    userid: str
+    topic: str
 
 class GetUserTopic(GetUser):
     topic: Topics
