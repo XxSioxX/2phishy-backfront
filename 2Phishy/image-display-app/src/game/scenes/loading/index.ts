@@ -1,8 +1,8 @@
 import { Scene } from 'phaser';
 import {MainMenuScene} from "../mainmenu";
 import {SFBLevel} from "../level-1-SFB";
-import {PSLEVEL} from "../level-2-PS/integrated-level2-ps";
-import {MLEVEL} from "../level-3-M/integrated-level3-M";
+import {PSLevel} from "../level-2-PS/integrated-level2-ps";
+import {MLevel} from "../level-3-M/integrated-level3-M";
 
 export class LoadingScene extends Scene {
   constructor() {
@@ -41,8 +41,8 @@ export class LoadingScene extends Scene {
     console.log('Loading scene was created');
     this.scene.add('main-menu-scene', MainMenuScene);
     this.scene.add('sfb-level-scene', SFBLevel);
-    this.scene.add('ps-level-scene', PSLEVEL);
-    this.scene.add('m-level-scene', MLEVEL);
+    this.scene.add('ps-level-scene', PSLevel);
+    this.scene.add('m-level-scene', MLevel);
 
     this.scene.start('main-menu-scene');
     console.log('loading/index.ts (create)', this.textures.exists('tiles'));

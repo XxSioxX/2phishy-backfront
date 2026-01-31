@@ -1,0 +1,127 @@
+// scenes/core/LevelConfigurations.ts
+import { LevelConfig } from './LevelConfig';
+
+export const LEVEL_CONFIGS = {
+  // =========================
+  // LEVEL 1 — SAFE BROWSING
+  // =========================
+  SFB: {
+    sceneKey: 'sfb-level-scene',
+
+    topic: 'Safe Browsing Practices',
+
+    mapKey: 'SFBlevel',
+    tilesetName: 'sfb-tileset',
+
+    intro: {
+      title: 'Level 1 — Safe Browsing Practices',
+      description:
+        'Explore the area, open Knowledge Chests, and uncover smart browsing habits.\n' +
+        'Approach the Wards to prove what you’ve learned!\n\n' +
+        'The number above your character represents the remaining questions you must answer in this level.',
+    },
+
+    next: {
+      sceneKey: 'ps-level-scene',
+      topic: 'Password Security',
+    },
+
+    inferSubcat: (id: string) => {
+      if (id.includes('_svns_')) return 'SECVSNONSEC';
+      if (id.includes('_https_')) return 'HTTPVSHTTPS';
+      if (id.includes('_bsbp_')) return 'BROWSERSECBP';
+      return 'UNKNOWN';
+    },
+  } satisfies LevelConfig,
+
+  // =========================
+  // LEVEL 2 — PASSWORD SECURITY
+  // =========================
+  PS: {
+    sceneKey: 'ps-level-scene',
+
+    topic: 'Password Security',
+
+    mapKey: 'PSlevel',
+    tilesetName: 'ps-tileset',
+
+    intro: {
+      title: 'Level 2 — Password Security',
+      description:
+        'Learn how attackers exploit weak passwords and how to defend against them.\n' +
+        'Open Knowledge Chests and face the Wards to test your understanding.',
+    },
+
+    next: {
+      sceneKey: 'm-level-scene',
+      topic: 'Malware',
+    },
+
+    inferSubcat: (id: string) => {
+      if (id.startsWith('ps_cup_')) return 'COMMPASS';
+      if (id.startsWith('ps_ps_')) return 'PASSSTREN';
+      if (id.startsWith('ps_mfa_')) return 'MULTIFACT';
+      return 'UNKNOWN';
+    },
+  } satisfies LevelConfig,
+
+  // =========================
+  // LEVEL 3 — MALWARE
+  // =========================
+  M: {
+    sceneKey: 'm-level-scene',
+
+    topic: 'Malware',
+
+    mapKey: 'Mlevel',
+    tilesetName: 'm-tileset',
+
+    intro: {
+      title: 'Level 3 — Malware',
+      description:
+        'Discover the different types of malware and how infections spread.\n' +
+        'Collect knowledge and prove your skills against the Wards.',
+    },
+
+    next: {
+      sceneKey: 'se-level-scene',
+      topic: 'Social Engineering',
+    },
+
+    inferSubcat: (id: string) => {
+      if (id.startsWith('mal_types_')) return 'MALTYPE';
+      if (id.startsWith('mal_infect_')) return 'MALINFOSYM';
+      return 'UNKNOWN';
+    },
+  } satisfies LevelConfig,
+
+  // =========================
+  // LEVEL 4 — SOCIAL ENGINEERING
+  // =========================
+  SE: {
+    sceneKey: 'se-level-scene',
+
+    topic: 'Social Engineering',
+
+    mapKey: 'SElevel',
+    tilesetName: 'se-tileset',
+
+    intro: {
+      title: 'Level 4 — Social Engineering',
+      description:
+        'Learn how attackers manipulate human behavior to bypass security.\n' +
+        'Stay alert, collect knowledge, and challenge the Wards.',
+    },
+
+    next: {
+      sceneKey: 'ir-level-scene',
+      topic: 'Incident Response',
+    },
+
+    inferSubcat: (id: string) => {
+      if (id.includes('se_types_')) return 'SocEngType';
+      if (id.includes('se_defending_')) return 'SocEngDef';
+      return 'UNKNOWN';
+    },
+  } satisfies LevelConfig,
+};
