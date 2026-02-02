@@ -19,7 +19,8 @@ logger = get_logger("post-routes")
 def create_new_post(
     post_data: PostCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role("student"))
+    current_user: User = Depends(require_role(["student", "admin", "super-admin"]))
+
 ):
     logger.info(f"User {current_user.username} creating new post")
     return create_post(db, post_data, current_user.userid)

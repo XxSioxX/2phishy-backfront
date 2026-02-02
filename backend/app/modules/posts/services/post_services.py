@@ -28,7 +28,7 @@ def create_post(db: Session, post_data: PostCreate, created_by: UUID) -> PostRes
 
     # Determine display name
     if user:
-        if user.role in ['admin', 'super-admin']:
+        if user.role.value in ['admin', 'super-admin']:
             display_name = 'ADMIN'
         else:
             display_name = user.username
@@ -64,7 +64,7 @@ def get_post(db: Session, post_id: UUID) -> PostResponse | None:
 
     # Determine display name
     if user:
-        if user.role in ['admin', 'super-admin']:
+        if user.role.value in ['admin', 'super-admin']:
             display_name = 'ADMIN'
         else:
             display_name = user.username
@@ -100,7 +100,7 @@ def get_all_posts(db: Session) -> list[PostResponse]:
 
         # Determine display name
         if user:
-            if user.role in ['admin', 'super-admin']:
+            if user.role.value in ['admin', 'super-admin']:
                 display_name = 'ADMIN'
             else:
                 display_name = user.username
@@ -150,7 +150,7 @@ def update_post(db: Session, post_id: UUID, post_data: PostUpdate) -> PostRespon
 
     # Determine display name
     if user:
-        if user.role in ['admin', 'super-admin']:
+        if user.role.value in ['admin', 'super-admin']:
             display_name = 'ADMIN'
         else:
             display_name = user.username
