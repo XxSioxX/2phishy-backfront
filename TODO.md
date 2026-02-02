@@ -1,0 +1,3 @@
+- [x] Update fetchPosts to set created_by_role correctly based on created_by
+- [x] Fix select options for filterUserType
+- [x] Test the filtering functionality

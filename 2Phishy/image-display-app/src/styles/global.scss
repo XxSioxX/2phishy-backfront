@@ -11,6 +11,42 @@ a {
   color: inherit;
 }
 
+img {
+  filter: var(--icon-filter);
+}
+
+button {
+  background-color: var(--button-bg);
+  color: var(--button-color);
+  border: 1px solid var(--button-border);
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s, border-color 0.3s;
+
+  &:hover {
+    background-color: var(--soft-bg);
+    border-color: var(--main-color);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.logout-button {
+  background-color: #e74c3c;
+  color: white;
+  border: 1px solid #e74c3c;
+
+  &:hover {
+    background-color: #c0392b;
+    border-color: #c0392b;
+  }
+}
+
 .main {
   font-family: "Inter", sans-serif;
   background-color: $main-bg;
@@ -108,28 +144,7 @@ a {
       }
     }
     
-    .submit-button {
-      width: 100%;
-      padding: 10px;
-      background-color: $soft-bg;
-      color: $main-color;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-      position: relative;
-      z-index: 1;
-      
-      &:hover {
-        background-color: $soft-color;
-      }
-      
-      &:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-      }
-    }
+    // Submit button styles unified with global button styles
     
     .error-message {
       color: #ff4d4f;

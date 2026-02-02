@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TimezoneProvider } from "./contexts/TimezoneContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import RouteGuard from "./components/RouteGuard";
 import Footer from "./components/footer/Footer";
 import Menu from "./components/menu/Menu";
@@ -17,7 +18,7 @@ import "./styles/global.scss";
 import ReportPage from "./pages/report/ReportPage";
 import Settings from "./pages/settings/Settings";
 import QuizInsightsPage from "./pages/quizInsights/QuizInsightsPage";
-import PostsPage from "./pages/posts/PostsPage";
+import BulletinPage from "./pages/posts/PostsPage";
 import Users from "./pages/users/Users";
 import GamePage from "./pages/game/GamePage";
 import Profile from "./pages/profile/Profile";
@@ -79,8 +80,8 @@ const App: React.FC = () => {
           element: <RouteGuard allowedRoles={['admin', 'super-admin']}><QuizInsightsPage /></RouteGuard>
         },
         {
-          path: "/posts",
-          element: <RouteGuard allowedRoles={['admin', 'super-admin']}><PostsPage /></RouteGuard>
+          path: "/bulletin",
+          element: <RouteGuard allowedRoles={['student', 'admin', 'super-admin']}><BulletinPage /></RouteGuard>
         },
         {
           path: "/play-game",
@@ -119,11 +120,13 @@ const App: React.FC = () => {
   ]);
 
   return (
-    <AuthProvider>
-      <TimezoneProvider>
-        <RouterProvider router={router} />
-      </TimezoneProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <TimezoneProvider>
+          <RouterProvider router={router} />
+        </TimezoneProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

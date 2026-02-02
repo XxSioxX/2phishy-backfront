@@ -7,35 +7,35 @@ interface Announcement {
   title: string;
   content: string;
   date: string;
-  scheduledDate?: string;
-  isScheduled: boolean;
   isPublished: boolean;
+  lastEditedBy?: string; // store admin username here
+  lastEditedDate?: string;
 }
 
 const AnnouncementPage: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
-  const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [selectedAnnouncements, setSelectedAnnouncements] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-    scheduledDate: ''
+    isPublished: true
   });
+
+  // Placeholder current user. Replace with your auth context
+  const currentUser = { username: "JohnDoe" };
 
   useEffect(() => {
     loadAnnouncements();
   }, []);
 
   const loadAnnouncements = () => {
-    // Load from localStorage
     const stored = localStorage.getItem('adminAnnouncements');
     if (stored) {
       setAnnouncements(JSON.parse(stored));
     } else {
-      // Initialize with empty array
       setAnnouncements([]);
     }
   };
@@ -46,10 +46,9 @@ const AnnouncementPage: React.FC = () => {
   };
 
   const handleAdd = () => {
-    setFormData({ title: '', content: '', scheduledDate: '' });
+    setFormData({ title: '', content: '', isPublished: true });
     setShowAddForm(true);
     setShowEditForm(false);
-    setShowScheduleForm(false);
   };
 
   const handleEdit = () => {
@@ -60,11 +59,10 @@ const AnnouncementPage: React.FC = () => {
         setFormData({
           title: announcement.title,
           content: announcement.content,
-          scheduledDate: announcement.scheduledDate || ''
+          isPublished: announcement.isPublished
         });
         setShowEditForm(true);
         setShowAddForm(false);
-        setShowScheduleForm(false);
       }
     }
   };
@@ -79,14 +77,6 @@ const AnnouncementPage: React.FC = () => {
     }
   };
 
-  const handleSchedule = () => {
-    if (selectedAnnouncements.length > 0) {
-      setShowScheduleForm(true);
-      setShowAddForm(false);
-      setShowEditForm(false);
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -96,45 +86,31 @@ const AnnouncementPage: React.FC = () => {
         title: formData.title,
         content: formData.content,
         date: getCurrentDatePH(),
-        isScheduled: false,
-        isPublished: true
+        isPublished: formData.isPublished,
+        lastEditedBy: currentUser.username,
+        lastEditedDate: getCurrentDatePH()
       };
-      
-      const updatedAnnouncements = [newAnnouncement, ...announcements];
-      saveAnnouncements(updatedAnnouncements);
+      saveAnnouncements([newAnnouncement, ...announcements]);
       setShowAddForm(false);
     } else if (showEditForm && editingAnnouncement) {
       const updatedAnnouncements = announcements.map(a => 
         a.id === editingAnnouncement.id 
-          ? { ...a, title: formData.title, content: formData.content }
+          ? {
+              ...a,
+              title: formData.title,
+              content: formData.content,
+              isPublished: formData.isPublished,
+              lastEditedBy: currentUser.username,
+              lastEditedDate: getCurrentDatePH()
+            }
           : a
       );
       saveAnnouncements(updatedAnnouncements);
       setShowEditForm(false);
       setEditingAnnouncement(null);
     }
-    
-    setFormData({ title: '', content: '', scheduledDate: '' });
-  };
 
-  const handleScheduleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const updatedAnnouncements = announcements.map(a => 
-      selectedAnnouncements.includes(a.id)
-        ? { 
-            ...a, 
-            scheduledDate: formData.scheduledDate,
-            isScheduled: true,
-            isPublished: false
-          }
-        : a
-    );
-    
-    saveAnnouncements(updatedAnnouncements);
-    setShowScheduleForm(false);
-    setSelectedAnnouncements([]);
-    setFormData({ title: '', content: '', scheduledDate: '' });
+    setFormData({ title: '', content: '', isPublished: true });
   };
 
   const handleCheckboxChange = (id: string) => {
@@ -173,13 +149,6 @@ const AnnouncementPage: React.FC = () => {
           >
             Edit
           </button>
-          <button 
-            className="actionButton" 
-            onClick={handleSchedule}
-            disabled={selectedAnnouncements.length === 0}
-          >
-            Schedule
-          </button>
         </div>
       </div>
 
@@ -210,43 +179,27 @@ const AnnouncementPage: React.FC = () => {
                   required
                 />
               </div>
+              <div className="form-group">
+                <label>Status:</label>
+                <select
+                  value={formData.isPublished ? 'published' : 'draft'}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      isPublished: e.target.value === 'published'
+                    })
+                  }
+                >
+                  <option value="published">Publish</option>
+                  <option value="draft">Draft</option>
+                </select>
+              </div>
               <div className="form-actions">
                 <button type="button" onClick={() => { setShowAddForm(false); setShowEditForm(false); }}>
                   Cancel
                 </button>
                 <button type="submit">
                   {showAddForm ? 'Add Announcement' : 'Update Announcement'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Schedule Form */}
-      {showScheduleForm && (
-        <div className="modal-overlay" onClick={() => setShowScheduleForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Schedule Announcements</h3>
-              <button className="modal-close" onClick={() => setShowScheduleForm(false)}>×</button>
-            </div>
-            <form onSubmit={handleScheduleSubmit} className="announcement-form">
-              <div className="form-group">
-                <label>Scheduled Date:</label>
-                <input
-                  type="datetime-local"
-                  value={formData.scheduledDate}
-                  onChange={(e) => setFormData({...formData, scheduledDate: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="form-actions">
-                <button type="button" onClick={() => setShowScheduleForm(false)}>
-                  Cancel
-                </button>
-                <button type="submit">
-                  Schedule Announcements
                 </button>
               </div>
             </form>
@@ -291,12 +244,12 @@ const AnnouncementPage: React.FC = () => {
                       <h3>{announcement.title}</h3>
                       <div className="announcement-meta">
                         <span className="date">{announcement.date}</span>
-                        {announcement.isScheduled && (
-                          <span className="scheduled-badge">
-                            Scheduled: {announcement.scheduledDate}
+                        {announcement.lastEditedBy && (
+                          <span className="edited-badge">
+                            Edited by {announcement.lastEditedBy} on {announcement.lastEditedDate}
                           </span>
                         )}
-                        <span className="status-badge">
+                        <span className={`status-badge ${announcement.isPublished ? '' : 'draft'}`}>
                           {announcement.isPublished ? 'Published' : 'Draft'}
                         </span>
                       </div>

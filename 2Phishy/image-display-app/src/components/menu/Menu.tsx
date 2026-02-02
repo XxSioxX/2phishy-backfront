@@ -14,6 +14,10 @@ const Menu = () => {
                 <img src="/profile.svg" alt="" />
                 <span className="ListItemTitle">Profile</span>
                 </Link>
+                <Link to="/bulletin" className="listItem">
+                <img src="post2.svg" alt="" />
+                <span className="ListItemTitle">Bulletin</span>
+                </Link>
             </div>
             <div className="item" >
                 <span className="title">GAME MANAGEMENT</span>
@@ -24,10 +28,6 @@ const Menu = () => {
                 <Link to="/announcement" className="listItem">
                 <img src="/note.svg" alt="" />
                 <span className="ListItemTitle">Announcement</span>
-                </Link>
-                <Link to="/posts" className="listItem">
-                <img src="post2.svg" alt="" />
-                <span className="ListItemTitle">Posts</span>
                 </Link>
                 {/* Play Game entry */}
                 <Link to="/play-game" className="listItem">

@@ -217,57 +217,15 @@
 
           button {
             flex: 1;
-            padding: 0.75rem;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-
-            &:disabled {
-              cursor: not-allowed;
-              opacity: 0.6;
-            }
-          }
-
-          .cancel-button {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: $soft-color;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-
-            &:hover:not(:disabled) {
-              background-color: rgba(255, 255, 255, 0.2);
-            }
-          }
-
-          .save-button {
-            background-color: $soft-color;
-            color: $main-bg;
-
-            &:hover:not(:disabled) {
-              background-color: $main-color;
-            }
+            // Unified button styles applied globally
           }
         }
       }
 
       .edit-button {
         width: 100%;
-        padding: 0.75rem;
-        background-color: $soft-color;
-        color: $main-bg;
-        border: none;
-        border-radius: 4px;
-        font-size: 1rem;
-        font-weight: 500;
-        cursor: pointer;
         margin-top: 1rem;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background-color: $main-color;
-        }
+        // Unified button styles applied globally
       }
     }
   }

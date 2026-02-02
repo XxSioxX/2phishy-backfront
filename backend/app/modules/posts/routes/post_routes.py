@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.core.database_postgres import get_db
-from app.core.auth import require_admin_role
+from app.core.auth import require_admin_role, require_role, get_current_active_user
 from app.modules.user.models.user import User
 from app.modules.posts.schemas.post_schemas import PostCreate, PostUpdate, PostResponse
 from app.modules.posts.services.post_services import (
@@ -19,9 +19,9 @@ logger = get_logger("post-routes")
 def create_new_post(
     post_data: PostCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_role)
+    current_user: User = Depends(require_role("student"))
 ):
-    logger.info(f"Admin {current_user.username} creating new post")
+    logger.info(f"User {current_user.username} creating new post")
     return create_post(db, post_data, current_user.userid)
 
 
@@ -57,9 +57,18 @@ def update_existing_post(
 def delete_existing_post(
     post_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_role)
+    current_user: User = Depends(get_current_active_user)
 ):
-    logger.info(f"Admin {current_user.username} deleting post {post_id}")
+    # Get the post to check ownership
+    post = get_post(db, UUID(post_id))
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Allow if admin or if the post is created by the current user
+    if current_user.role.value not in ["admin", "super-admin"] and str(post.created_by) != str(current_user.userid):
+        raise HTTPException(status_code=403, detail="Access denied. You can only delete your own posts")
+    
+    logger.info(f"User {current_user.username} deleting post {post_id}")
     if not delete_post(db, UUID(post_id)):
         raise HTTPException(status_code=404, detail="Post not found")
     return {"message": "Post deleted successfully"}

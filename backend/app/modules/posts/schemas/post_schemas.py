@@ -5,7 +5,7 @@ from datetime import datetime
 
 class PostCreate(BaseModel):
     title: str
-    category: str
+    topic: str
     status: str = "draft"
     content: str = ""
     admin_notes: str = ""
@@ -13,7 +13,7 @@ class PostCreate(BaseModel):
 
 class PostUpdate(BaseModel):
     title: str | None = None
-    category: str | None = None
+    topic: str | None = None
     status: str | None = None
     content: str | None = None
     admin_notes: str | None = None
@@ -28,7 +28,8 @@ class PostResponse(BaseModel):
     admin_notes: str | None = None
     created_at: datetime
     updated_at: datetime
-    created_by: UUID
+    created_by: str  # Changed to string to hold username or "ADMIN"
+    created_by_role: str  # Role of the creator
 
     class Config:
         from_attributes = True

@@ -581,7 +581,7 @@ export const api = {
 
     // Posts endpoints
     async getPosts(): Promise<any[]> {
-        const response = await fetch(`${API_BASE_URL}/posts/`, {
+        const response = await fetch(`${API_BASE_URL}/posts`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) {
@@ -591,7 +591,7 @@ export const api = {
     },
 
     async createPost(postData: any): Promise<any> {
-        const response = await fetch(`${API_BASE_URL}/posts/`, {
+        const response = await fetch(`${API_BASE_URL}/posts`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(postData)

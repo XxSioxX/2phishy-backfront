@@ -1,49 +1,40 @@
 @use "../../styles/variables.scss" as *;
 
 .student-report {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 79.1vh;
+  padding: 20px;
   background-color: $soft-bg;
-  font-family: sans-serif;
+  min-height: 79.1vh;
   border-radius: 12px;
-  padding: 2rem 0;
 
   .student-report-container {
     width: 100%;
-    max-width: 1200px;
-    padding: 2rem;
-    background-color: $dark-bg;
+    padding: 0;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2rem;
+      margin-bottom: 20px;
 
       h1 {
-        font-size: 1.8rem;
         color: $main-color;
-        font-weight: bold;
         margin: 0;
       }
 
       .add-report-btn {
-        padding: 0.75rem 1.5rem;
-        background-color: $soft-color;
-        color: $main-bg;
-        border: none;
-        border-radius: 4px;
-        font-size: 1rem;
-        font-weight: 500;
+        padding: 10px 20px;
+        background-color: $dark-bg;
+        color: $main-color;
+        border: 1px solid $dark-bg;
+        border-radius: 5px;
+        font-size: 16px;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition: background-color 0.3s, border-color 0.3s;
 
         &:hover {
-          background-color: $main-color;
+          background-color: $soft-bg;
+          border-color: $main-color;
         }
       }
     }
@@ -52,13 +43,15 @@
       background: $soft-bg;
       border-radius: 8px;
       padding: 1.5rem;
-      margin-bottom: 2rem;
+      margin-bottom: 20px;
 
       h2 {
-        font-size: 1.2rem;
-        color: $soft-color;
-        margin-bottom: 1rem;
-        font-weight: 600;
+        color: $main-color;
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid $main-bg;
       }
 
       .error-message {
@@ -127,32 +120,7 @@
 
           button {
             flex: 1;
-            padding: 0.75rem;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-
-            &:first-child {
-              background-color: rgba(255, 255, 255, 0.1);
-              color: $soft-color;
-              border: 1px solid rgba(255, 255, 255, 0.2);
-
-              &:hover {
-                background-color: rgba(255, 255, 255, 0.2);
-              }
-            }
-
-            &:last-child {
-              background-color: $soft-color;
-              color: $main-bg;
-
-              &:hover {
-                background-color: $main-color;
-              }
-            }
+            // Unified button styles applied globally
           }
         }
       }
@@ -160,21 +128,22 @@
 
     .reports-list {
       .reports-section {
-        margin-bottom: 2rem;
+        margin-bottom: 40px;
 
         h2 {
-          font-size: 1.2rem;
-          color: $soft-color;
-          margin-bottom: 1rem;
-          font-weight: 600;
-          padding-bottom: 0.5rem;
+          color: $main-color;
+          font-size: 1.5rem;
+          font-weight: bold;
+          margin-bottom: 15px;
+          padding-bottom: 10px;
           border-bottom: 2px solid $main-bg;
         }
 
         .no-reports {
           text-align: center;
-          padding: 3rem;
+          padding: 40px;
           color: $soft-color;
+          font-size: 1.1rem;
 
           p {
             margin: 0.5rem 0;
@@ -183,31 +152,44 @@
 
         .reports-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 1rem;
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+          gap: 20px;
         }
 
         .report-card {
-          background: $soft-bg;
+          background-color: $dark-bg;
+          padding: 15px;
           border-radius: 8px;
-          padding: 1rem;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-          transition: transform 0.2s;
+          color: $main-color;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+          display: flex;
+          flex-direction: column;
 
           &:hover {
             transform: translateY(-2px);
           }
 
           &.resolved {
-            opacity: 0.8;
+            opacity: 0.7;
             border: 2px solid #52c41a;
+
+            .resolved-badge {
+              background-color: #52c41a;
+              color: white;
+              padding: 6px 12px;
+              border-radius: 4px;
+              text-align: center;
+              font-weight: bold;
+              font-size: 0.9rem;
+              margin-top: auto;
+            }
           }
 
           .report-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
+            margin-bottom: 10px;
 
             .report-meta {
               display: flex;
@@ -220,7 +202,29 @@
                 font-weight: 500;
                 text-transform: uppercase;
                 color: white;
+                margin-bottom: 10px;
+
+                &.high {
+                  color: #ff4d4f;
+                }
+                &.mid {
+                  color: #faad14;
+                }
+                &.low {
+                  color: #52c41a;
+                }
               }
+
+              .status-badge {
+                font-weight: bold;
+              }
+            }
+
+            .author {
+              color: $soft-color;
+              font-size: 0.9rem;
+              font-style: italic;
+              margin-bottom: 10px;
             }
 
             .delete-btn {
@@ -246,12 +250,12 @@
         }
 
         .report-content {
-          margin-bottom: 0.75rem;
+          margin-bottom: 10px;
 
           p {
             color: $main-color;
             line-height: 1.5;
-            margin: 0;
+            margin-bottom: 10px;
           }
         }
 
@@ -259,20 +263,23 @@
           display: flex;
           justify-content: space-between;
           align-items: center;
+          margin-bottom: 10px;
 
           .date {
             color: $soft-color;
             font-size: 0.8rem;
+            margin-bottom: 10px;
           }
 
           .resolved-badge {
             background-color: #52c41a;
             color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-top: auto;
           }
         }
       }

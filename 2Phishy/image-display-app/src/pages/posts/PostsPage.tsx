@@ -1,43 +1,60 @@
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 import "./PostsPage.scss";
 
 interface Post {
   post_id: string;
   title: string;
-  category: string;
+  topic: string;
   status: string;
   created_at: string;
   updated_at: string;
   content: string;
-  admin_notes?: string;
-  created_by: string;
+  created_by: string;       // username
+  created_by_role: string;  // role name: Admin, Super-Admin, Student, etc.
 }
 
-const PostsPage = () => {
+const BulletinPage = () => {
+  const { user } = useAuth();
+  const userRole = user?.role?.toLowerCase() || ''; // Safe access
+  const username = user?.username || '';           // Safe access
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  
+
+  const [filterDate, setFilterDate] = useState<string>('');
+  const [filterTopic, setFilterTopic] = useState<string>('');
+  const [filterUserType, setFilterUserType] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const postsPerPage = 20;
+
   const [formData, setFormData] = useState({
     title: '',
-    category: 'general',
-    status: 'draft',
-    content: '',
-    admin_notes: ''
+    topic: '',
+    content: ''
   });
 
+  // Fetch posts on mount
   useEffect(() => {
     fetchPosts();
   }, []);
 
   const fetchPosts = async () => {
     try {
+      setLoading(true);
       const data = await api.getPosts();
-      setPosts(data);
+
+      // Normalize role names to lowercase for filtering
+      const formattedPosts = data.map((post: any) => ({
+        ...post,
+        created_by_role: post.created_by_role?.toLowerCase() || 'student'
+      }));
+
+      setPosts(formattedPosts);
     } catch (error) {
       console.error("Failed to fetch posts:", error);
     } finally {
@@ -46,43 +63,24 @@ const PostsPage = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      category: 'general',
-      status: 'draft',
-      content: '',
-      admin_notes: ''
-    });
+    setFormData({ title: '', topic: '', content: '' });
   };
 
-  const handleDelete = async () => {
-    if (!selectedPost) return;
-    if (!window.confirm(`Delete post "${selectedPost.title}"?`)) return;
-    
-    try {
-      await api.deletePost(selectedPost.post_id);
-      fetchPosts();
-      setSelectedPost(null);
-    } catch (error) {
-      console.error("Failed to delete post:", error);
-      alert("Failed to delete post");
-    }
-  };
+  // Dynamic filtering
+  const filteredPosts = posts.filter(post => {
+    const matchesDate = !filterDate || new Date(post.created_at).toDateString() === new Date(filterDate).toDateString();
+    const matchesTopic = !filterTopic || post.topic === filterTopic;
 
-  const handleEdit = () => {
-    if (!selectedPost) {
-      alert("Please select a post to edit");
-      return;
-    }
-    setFormData({
-      title: selectedPost.title,
-      category: selectedPost.category,
-      status: selectedPost.status,
-      content: selectedPost.content,
-      admin_notes: selectedPost.admin_notes || ''
-    });
-    setShowEditModal(true);
-  };
+    const role = post.created_by_role.toLowerCase(); // dynamic role from post
+    const matchesUserType = filterUserType === 'all' || filterUserType.toLowerCase() === role;
+
+    return matchesDate && matchesTopic && matchesUserType && post.status === 'published';
+  });
+
+  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+  const startIndex = (currentPage - 1) * postsPerPage;
+  const paginatedPosts = filteredPosts.slice(startIndex, startIndex + postsPerPage);
+  const uniqueTopics = [...new Set(posts.map(p => p.topic))];
 
   const handleAdd = () => {
     resetForm();
@@ -91,7 +89,12 @@ const PostsPage = () => {
 
   const handleSaveAdd = async () => {
     try {
-      await api.createPost(formData);
+      await api.createPost({
+        ...formData,
+        status: 'published',
+        created_by: username,
+        created_by_role: userRole
+      });
       setShowAddModal(false);
       resetForm();
       fetchPosts();
@@ -101,104 +104,127 @@ const PostsPage = () => {
     }
   };
 
-  const handleSaveEdit = async () => {
-    if (!selectedPost) return;
-    try {
-      await api.updatePost(selectedPost.post_id, formData);
-      setShowEditModal(false);
-      setSelectedPost(null);
-      fetchPosts();
-    } catch (error) {
-      console.error("Failed to update post:", error);
-      alert("Failed to update post");
+  const handleDelete = async (postId: string) => {
+    if (window.confirm('Are you sure you want to delete this post?')) {
+      try {
+        await api.deletePost(postId);
+        fetchPosts();
+      } catch (error) {
+        console.error("Failed to delete post:", error);
+        alert("Failed to delete post");
+      }
     }
   };
 
-  const handleViewNotes = (post: Post) => {
-    setSelectedPost(post);
-    setShowNotesModal(true);
-  };
-
-  if (loading) return <div>Loading posts...</div>;
+  if (loading) return <div>Loading bulletin...</div>;
 
   return (
     <div className="posts-page">
       <div className="headerWithButton">
-        <h2>Posts</h2>
+        <h2>Bulletin Board</h2>
         <div className="action-buttons">
-          <button className="action-btn" onClick={handleAdd}>Add</button>
-          <button className="action-btn" onClick={handleDelete} disabled={!selectedPost}>
-            Delete
-          </button>
-          <button className="action-btn" onClick={handleEdit} disabled={!selectedPost}>
-            Edit
-          </button>
+          <button className="action-btn" onClick={handleAdd}>Post</button>
         </div>
       </div>
 
-      {posts.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-          No posts found. Click "Add" to create a new post.
-        </div>
-      ) : (
-        <table className="posts-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Category</th>
-              <th>Status</th>
-              <th>Date</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {posts.map((post) => (
-            <tr 
-              key={post.post_id} 
-              className={selectedPost?.post_id === post.post_id ? 'selected' : ''}
-              onClick={() => setSelectedPost(post)}
+      <div className="filters">
+        <input
+          type="date"
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+        />
+        <select
+          value={filterTopic}
+          onChange={(e) => setFilterTopic(e.target.value)}
+        >
+          <option value="">All Topics</option>
+          {uniqueTopics.map(t => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <select
+          value={filterUserType}
+          onChange={(e) => setFilterUserType(e.target.value)}
+        >
+          <option value="all">All Users</option>
+          <option value="admin">Admin</option>
+          <option value="student">Student</option>
+        </select>
+      </div>
+
+      <div className="bulletin-board">
+        {paginatedPosts.length === 0 ? (
+          <div className="no-posts">No bulletins found.</div>
+        ) : (
+          paginatedPosts.map(post => (
+            <div
+              key={post.post_id}
+              className="bulletin-item"
+              onClick={() => { setSelectedPost(post); setShowPostModal(true); }}
             >
-              <td>{post.title}</td>
-              <td>{post.category}</td>
-              <td>{post.status}</td>
-              <td>{new Date(post.created_at).toLocaleDateString()}</td>
-              <td>
-                {post.admin_notes && (
-                  <button 
-                    className="notes-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewNotes(post);
-                    }}
+              <div className="bulletin-header">
+                <span className="title">{post.title}</span>
+                <span className="date">{new Date(post.created_at).toLocaleDateString()}</span>
+              </div>
+              <div className="bulletin-footer">
+                <span className="bulletin-author">BY {post.created_by}</span>
+                {username && (post.created_by === username || ['admin','super-admin'].includes(userRole)) && (
+                  <button
+                    className="delete-btn"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(post.post_id); }}
                   >
-                    View Notes
+                    Delete
                   </button>
                 )}
-              </td>
-            </tr>
-            ))}
-          </tbody>
-        </table>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Previous</button>
+          <span>Page {currentPage} of {totalPages}</span>
+          <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Next</button>
+        </div>
+      )}
+
+      {showPostModal && selectedPost && (
+        <div className="modal-overlay" onClick={() => setShowPostModal(false)}>
+          <div className="modal-content post-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="post-header">
+              <span className="title">{selectedPost.title}</span>
+              <span className="date">{new Date(selectedPost.created_at).toLocaleDateString()}</span>
+            </div>
+            <div className="post-author">BY {selectedPost.created_by} ({selectedPost.created_by_role})</div>
+            <div className="post-content">{selectedPost.content}</div>
+            <button onClick={() => setShowPostModal(false)}>Close</button>
+          </div>
+        </div>
       )}
 
       {showAddModal && (
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
           <div className="modal-content form-modal" onClick={(e) => e.stopPropagation()}>
             <h3>Add New Post</h3>
-            <input type="text" placeholder="Title" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
-            <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})}>
-              <option value="general">General</option>
-              <option value="announcement">Announcement</option>
-              <option value="tutorial">Tutorial</option>
-              <option value="update">Update</option>
-            </select>
-            <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
-            <textarea placeholder="Content" value={formData.content} onChange={(e) => setFormData({...formData, content: e.target.value})}></textarea>
-            <textarea placeholder="Admin Notes (optional)" value={formData.admin_notes} onChange={(e) => setFormData({...formData, admin_notes: e.target.value})}></textarea>
+            <input
+              type="text"
+              placeholder="Title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            />
+            <input
+              type="text"
+              placeholder="Topic"
+              value={formData.topic}
+              onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+            />
+            <textarea
+              placeholder="Content"
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+            />
             <div className="modal-buttons">
               <button onClick={() => setShowAddModal(false)}>Cancel</button>
               <button onClick={handleSaveAdd}>Save</button>
@@ -206,44 +232,8 @@ const PostsPage = () => {
           </div>
         </div>
       )}
-
-      {showEditModal && (
-        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="modal-content form-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Edit Post</h3>
-            <input type="text" placeholder="Title" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
-            <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})}>
-              <option value="general">General</option>
-              <option value="announcement">Announcement</option>
-              <option value="tutorial">Tutorial</option>
-              <option value="update">Update</option>
-            </select>
-            <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
-            <textarea placeholder="Content" value={formData.content} onChange={(e) => setFormData({...formData, content: e.target.value})}></textarea>
-            <textarea placeholder="Admin Notes (optional)" value={formData.admin_notes} onChange={(e) => setFormData({...formData, admin_notes: e.target.value})}></textarea>
-            <div className="modal-buttons">
-              <button onClick={() => setShowEditModal(false)}>Cancel</button>
-              <button onClick={handleSaveEdit}>Save</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showNotesModal && selectedPost && (
-        <div className="modal-overlay" onClick={() => setShowNotesModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Admin Notes</h3>
-            <p>{selectedPost.admin_notes}</p>
-            <button onClick={() => setShowNotesModal(false)}>Close</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default PostsPage; 
+export default BulletinPage;

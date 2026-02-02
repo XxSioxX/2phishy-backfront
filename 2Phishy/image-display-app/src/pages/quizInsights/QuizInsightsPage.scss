@@ -23,14 +23,15 @@
     .refresh-btn {
       background-color: $dark-bg;
       color: $main-color;
-      border: none;
+      border: 1px solid $dark-bg;
       padding: 10px 20px;
       border-radius: 5px;
       cursor: pointer;
       font-size: 16px;
-      transition: background-color 0.3s;
+      transition: background-color 0.3s, border-color 0.3s;
       &:hover {
-        background-color: lighten($dark-bg, 10%);
+        background-color: $soft-bg;
+        border-color: $main-color;
       }
     }
   }
@@ -65,9 +66,9 @@
       border-bottom: 1px solid $main-bg;
       transition: background 0.2s, box-shadow 0.2s;
       &:hover td {
-        background: lighten($soft-bg, 8%);
+        background: var(--main-bg);
         box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-        outline: 2px solid $soft-color;
+        outline: 2px solid var(--soft-color);
         cursor: pointer;
       }
     }

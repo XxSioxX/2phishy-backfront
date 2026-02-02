@@ -2,147 +2,124 @@
 @use "sass:color";
 
 .student-announcement {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: auto;
+  padding: 20px;
   background-color: $soft-bg;
-  font-family: sans-serif;
+  min-height: auto;
+  color: $main-color;
   border-radius: 12px;
-  padding: 2rem 0;
 
-  .student-announcement-container {
-    width: 100%;
-    max-width: 1000px;
-    padding: 2rem;
-    background-color: $dark-bg;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  .headerWithButton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
 
-    .announcement-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 2rem;
+    h1 {
+      color: $main-color;
+      margin: 0;
+    }
 
-      h1 {
-        font-size: 1.8rem;
-        color: $main-color;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-        text-align: left;
-      }
+    .refresh-button {
+      background-color: $dark-bg;
+      color: $main-color;
+      border: 1px solid $dark-bg;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s, border-color 0.3s;
 
-      .subtitle {
-        color: $soft-color;
-        text-align: left;
-        margin-bottom: 0;
-        font-size: 1rem;
-      }
-
-      .refresh-button {
-        background-color: $dark-bg;
-        color: $main-color;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-        transition: background-color 0.3s;
-
-        &:hover {
-          background-color: lighten($dark-bg, 10%);
-        }
+      &:hover {
+        background-color: $soft-bg;
+        border-color: $main-color;
       }
     }
+  }
+
+  .announcementGrid {
+    background-color: $dark-bg;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    margin-top: 20px;
 
     .no-announcements {
       text-align: center;
-      padding: 3rem;
+      padding: 40px;
       color: $soft-color;
-
-      p {
-        font-size: 1.1rem;
-      }
+      font-size: 1.1rem;
     }
 
     .announcements-list {
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 15px;
     }
 
     .announcement-card {
-      background: $soft-bg;
+      display: flex;
+      gap: 15px;
+      padding: 15px;
+      background-color: $soft-bg;
       border-radius: 8px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      transition: transform 0.2s;
+      border: 1px solid transparent;
+      transition: all 0.3s ease;
 
       &:hover {
+        border-color: $main-color;
         transform: translateY(-2px);
-      }
-
-      .announcement-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-
-        .announcement-meta {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-
-          .priority-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            color: white;
-          }
-
-          .date {
-            color: $soft-color;
-            font-size: 0.9rem;
-          }
-        }
-
-        .author {
-          color: $soft-color;
-          font-size: 0.9rem;
-          font-style: italic;
-        }
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
 
       .announcement-content {
-        h3 {
-          color: $main-color;
-          font-size: 1.2rem;
-          font-weight: 600;
-          margin-bottom: 0.75rem;
-          line-height: 1.4;
+        flex: 1;
+
+        .announcement-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 10px;
+
+          h3 {
+            color: $main-color;
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+          }
+
+          .announcement-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+
+            .date {
+              color: $soft-color;
+              font-size: 0.9rem;
+            }
+
+            .status-badge {
+              background-color: #2ecc71;
+              color: white;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 0.8rem;
+              font-weight: 500;
+            }
+          }
         }
 
-        p {
+        .announcement-text {
           color: $soft-color;
-          line-height: 1.6;
+          line-height: 1.5;
           margin: 0;
-          font-size: 1rem;
         }
       }
     }
   }
-}
 
-@media (max-width: 768px) {
-  .student-announcement {
-    padding: 1rem 0;
-
-    .student-announcement-container {
+  @media (max-width: 768px) {
+    .announcementGrid {
       padding: 1rem;
 
       .announcement-card {
@@ -162,13 +139,10 @@
       }
     }
   }
-}
 
-@media (max-width: 480px) {
-  .student-announcement {
+  @media (max-width: 480px) {
     background-color: $main-bg;
-
-    .student-announcement-container {
+    .announcementGrid {
       box-shadow: none;
     }
   }

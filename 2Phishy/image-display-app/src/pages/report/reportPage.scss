@@ -21,19 +21,21 @@
     .button-group {
       display: flex;
       gap: 10px;
-    }
 
-    .clearButton {
-      background-color: $dark-bg;
-      color: $main-color;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
+      .clearButton {
+        background-color: $dark-bg;
+        color: $main-color;
+        border: 1px solid $dark-bg;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s, border-color 0.3s;
 
-      &:hover {
-        background-color: color.adjust($dark-bg, $lightness: 10%);
+        &:hover {
+          background-color: $soft-bg;
+          border-color: $main-color;
+        }
       }
     }
   }
@@ -107,7 +109,7 @@
       transition: background-color 0.3s;
 
       &:hover {
-        background-color: color.adjust($soft-bg, $lightness: -10%);
+        background-color: var(--main-bg);
       }
     }
 

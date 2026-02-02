@@ -8,7 +8,6 @@
   color: $main-color;
   border-radius: 12px;
 
-
   .headerWithButton {
     display: flex;
     align-items: center;
@@ -27,15 +26,21 @@
       .actionButton {
         background-color: $dark-bg;
         color: $main-color;
-        border: none;
+        border: 1px solid $dark-bg;
         padding: 10px 20px;
         border-radius: 5px;
         cursor: pointer;
         font-size: 16px;
-        transition: background-color 0.3s;
+        transition: background-color 0.3s, border-color 0.3s;
 
         &:hover {
-          background-color: lighten($dark-bg, 10%);
+          background-color: $soft-bg;
+          border-color: $main-color;
+        }
+
+        &:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
         }
       }
     }
@@ -140,15 +145,6 @@
               font-size: 0.9rem;
             }
 
-            .scheduled-badge {
-              background-color: #f39c12;
-              color: white;
-              padding: 2px 8px;
-              border-radius: 12px;
-              font-size: 0.8rem;
-              font-weight: 500;
-            }
-
             .status-badge {
               background-color: #2ecc71;
               color: white;
@@ -160,6 +156,15 @@
               &.draft {
                 background-color: #95a5a6;
               }
+            }
+
+            .edited-badge {
+              background-color: #3498db;
+              color: white;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 0.8rem;
+              font-weight: 500;
             }
           }
         }
@@ -242,7 +247,7 @@
           font-weight: 500;
         }
 
-        input, textarea {
+        input, textarea, select {
           width: 100%;
           padding: 12px;
           border: 1px solid $soft-bg;
@@ -274,32 +279,9 @@
         gap: 10px;
         justify-content: flex-end;
         margin-top: 30px;
-
-        button {
-          background-color: $dark-bg;
-          color: $main-color;
-          border: none;
-          padding: 10px 20px;
-          border-radius: 5px;
-          cursor: pointer;
-          font-size: 16px;
-          transition: background-color 0.3s;
-
-          &:hover {
-            background-color: lighten($dark-bg, 10%);
-          }
-        }
       }
     }
   }
 
-  // Button disabled state
-  .actionButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-
-    &:hover {
-      background-color: $dark-bg;
-    }
-  }
+  // Button disabled state handled globally
 }

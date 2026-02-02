@@ -1,21 +1,17 @@
-import React, { useState } from "react";
+import React from "react";
 import "./student-settings.scss";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import TimezoneModal from "../../components/TimezoneModal/TimezoneModal";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const StudentSettings: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const [showTimezoneModal, setShowTimezoneModal] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
     navigate("/login");
-  };
-
-  const handleTimezoneClick = () => {
-    setShowTimezoneModal(true);
   };
 
   return (
@@ -24,18 +20,13 @@ const StudentSettings: React.FC = () => {
         <h1>Settings</h1>
         <div className="settings-sections">
           <div className="settings-section">
-            <h2>System Settings</h2>
-            <div className="form-group">
-              <label>Language Selection</label>
-              <button className="settings-button">Change Language</button>
-            </div>
-            <div className="form-group">
-              <label>Timezone</label>
-              <button className="settings-button" onClick={handleTimezoneClick}>Set Timezone</button>
-            </div>
-          </div>
-          <div className="settings-section">
             <h2>Privacy & Security</h2>
+            <div className="form-group">
+              <label>Theme</label>
+              <button className="settings-button" onClick={toggleTheme}>
+                Switch to {theme === 'dark' ? 'Light' : 'Dark'} Theme
+              </button>
+            </div>
             <div className="form-group">
               <label>Privacy</label>
               <button className="settings-button">Privacy Policy</button>
@@ -49,11 +40,6 @@ const StudentSettings: React.FC = () => {
           </div>
         </div>
       </div>
-      
-      <TimezoneModal 
-        isOpen={showTimezoneModal} 
-        onClose={() => setShowTimezoneModal(false)} 
-      />
     </div>
   );
 };

@@ -14,6 +14,10 @@ const StudentMenu = () => {
                 <img src="/profile.svg" alt="" />
                 <span className="ListItemTitle">Profile</span>
                 </Link>
+                <Link to="/bulletin" className="listItem">
+                <img src="/post2.svg" alt="" />
+                <span className="ListItemTitle">Bulletin</span>
+                </Link>
             </div>
             <div className="item" >
                 <span className="title">INFORMATION</span>
