@@ -1,0 +1,874 @@
+{
+  "scenarios": [
+    {
+      "id": "se_phish_001",
+      "strategy": "phishing",
+      "description": "Impersonation using urgency and authority (IT support).",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Hey, quick heads-up. IT flagged your account for unusual activity and it needs to be verified today.",
+          "responses": [
+            {
+              "text": "What kind of verification?",
+              "next": "pressure"
+            },
+            {
+              "text": "I'll check with IT myself.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            },
+            {
+              "text": "Ignore and walk away.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        },
+        {
+          "id": "pressure",
+          "npc": "It's just a quick link they sent out. If you don't do it soon, your access might be locked.",
+          "responses": [
+            {
+              "text": "Okay, send it.",
+              "outcome": "fail",
+              "question_id": "se_types_001"
+            },
+            {
+              "text": "I don't click links like that. I'll verify this another way.",
+              "outcome": "success",
+              "question_id": "se_defending_004"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_phish_002",
+      "strategy": "phishing",
+      "description": "Email credential harvesting with fake password reset.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "I just got forwarded this from security. They're doing a mandatory password update for everyone in our department.",
+          "responses": [
+            {
+              "text": "I didn't receive anything. Are you sure it's legit?",
+              "next": "build_trust"
+            },
+            {
+              "text": "Send me the link, I'll do it now.",
+              "outcome": "fail",
+              "question_id": "se_types_001"
+            },
+            {
+              "text": "I'll go to the official portal myself.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            }
+          ]
+        },
+        {
+          "id": "build_trust",
+          "npc": "Yeah, they only sent it to department heads. I'm just helping spread the word since it's due by end of day.",
+          "responses": [
+            {
+              "text": "Okay, what do I need to do?",
+              "next": "credential_request"
+            },
+            {
+              "text": "I'm going to verify with my manager first.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            }
+          ]
+        },
+        {
+          "id": "credential_request",
+          "npc": "Just click this link and enter your current password to set a new one. Super quick.",
+          "responses": [
+            {
+              "text": "Alright, thanks for the help.",
+              "outcome": "fail",
+              "question_id": "se_types_004"
+            },
+            {
+              "text": "That doesn't sound right. I'll handle this through official channels.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_phish_003",
+      "strategy": "phishing",
+      "description": "Fake invoice payment scam with authority impersonation.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Hi there! I'm from accounting. We have an urgent invoice that needs your approval before we can process payment.",
+          "responses": [
+            {
+              "text": "What invoice? I wasn't expecting anything.",
+              "next": "invoice_details"
+            },
+            {
+              "text": "Can you send the details through the proper system?",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "Sure, show me.",
+              "next": "link_share"
+            }
+          ]
+        },
+        {
+          "id": "invoice_details",
+          "npc": "It's for that software licensing renewal. The vendor says payment is overdue and they'll suspend service today if we don't pay.",
+          "responses": [
+            {
+              "text": "I need to verify this with my supervisor.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            },
+            {
+              "text": "Oh no, we can't have service interrupted. What do I need to do?",
+              "next": "link_share"
+            }
+          ]
+        },
+        {
+          "id": "link_share",
+          "npc": "Just review this invoice PDF and reply with approval. Here's the secure link to download it.",
+          "responses": [
+            {
+              "text": "I'll click it and take a look.",
+              "outcome": "fail",
+              "question_id": "se_types_001"
+            },
+            {
+              "text": "I don't download files from unsolicited links. Send it through official channels.",
+              "outcome": "success",
+              "question_id": "se_defending_004"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_bait_001",
+      "strategy": "baiting",
+      "description": "USB drop with promise of valuable content.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Hey, I found this USB drive in the parking lot. It has a label that says 'Q4 Salary Data' on it. Want to see what's on it?",
+          "responses": [
+            {
+              "text": "Yeah, plug it in and let's check!",
+              "outcome": "fail",
+              "question_id": "se_types_002"
+            },
+            {
+              "text": "No way. That could be dangerous.",
+              "outcome": "success",
+              "question_id": "se_defending_003"
+            },
+            {
+              "text": "We should turn it in to security.",
+              "outcome": "success",
+              "question_id": "se_defending_003"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_bait_002",
+      "strategy": "baiting",
+      "description": "Free software download with malware.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Dude, I found this amazing site with free premium software. All the tools we use at work, completely free!",
+          "responses": [
+            {
+              "text": "That sounds too good to be true.",
+              "next": "convince"
+            },
+            {
+              "text": "Send me the link!",
+              "outcome": "fail",
+              "question_id": "se_types_005"
+            },
+            {
+              "text": "I only use licensed software from official sources.",
+              "outcome": "success",
+              "question_id": "se_defending_004"
+            }
+          ]
+        },
+        {
+          "id": "convince",
+          "npc": "No seriously, I already downloaded three programs. It's totally safe. You just need to disable your antivirus temporarily during install.",
+          "responses": [
+            {
+              "text": "Okay, I'll try it.",
+              "outcome": "fail",
+              "question_id": "se_types_005"
+            },
+            {
+              "text": "Disabling antivirus? That's a huge red flag. No thanks.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_bait_003",
+      "strategy": "baiting",
+      "description": "Fake prize notification with data collection.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Congratulations! You've been randomly selected to receive a free company gift card worth $500. Just need to confirm your details.",
+          "responses": [
+            {
+              "text": "I didn't enter any contest. How was I selected?",
+              "next": "explain"
+            },
+            {
+              "text": "Great! What details do you need?",
+              "outcome": "fail",
+              "question_id": "se_types_005"
+            },
+            {
+              "text": "This sounds like a scam.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        },
+        {
+          "id": "explain",
+          "npc": "It's part of our employee appreciation program. Totally random selection. I just need your employee ID and personal email to send the card.",
+          "responses": [
+            {
+              "text": "Sure, here's my info.",
+              "outcome": "fail",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "I'll verify this with HR first.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_imp_001",
+      "strategy": "impersonation",
+      "description": "CEO fraud with urgent wire transfer request.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "This is Sarah from the CEO's office. She needs you to process an urgent wire transfer for a confidential acquisition. Can you help?",
+          "responses": [
+            {
+              "text": "Of course! What are the details?",
+              "next": "transfer_details"
+            },
+            {
+              "text": "I need to follow our standard approval process.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "I'll need to verify this request through official channels.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        },
+        {
+          "id": "transfer_details",
+          "npc": "Great. The CEO is in meetings all day, so she asked me to handle this. We need $50,000 wired to this account by 3 PM. It's time-sensitive.",
+          "responses": [
+            {
+              "text": "Understood. I'll process it now.",
+              "outcome": "fail",
+              "question_id": "se_types_004"
+            },
+            {
+              "text": "This violates our financial protocols. I need direct authorization.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_imp_002",
+      "strategy": "impersonation",
+      "description": "Help desk impersonation for remote access.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Hi, this is Marcus from IT support. We're doing security updates and need to remotely access your computer. Are you available now?",
+          "responses": [
+            {
+              "text": "Sure, what do I need to do?",
+              "next": "software_install"
+            },
+            {
+              "text": "I didn't receive any notification about this.",
+              "next": "pressure_tactic"
+            },
+            {
+              "text": "I'll contact IT through the official helpdesk.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            }
+          ]
+        },
+        {
+          "id": "software_install",
+          "npc": "Just download this remote access tool from the link I'll send you. It'll only take 5 minutes.",
+          "responses": [
+            {
+              "text": "Okay, downloading now.",
+              "outcome": "fail",
+              "question_id": "se_types_001"
+            },
+            {
+              "text": "IT normally uses approved software. I'm going to verify this first.",
+              "outcome": "success",
+              "question_id": "se_defending_004"
+            }
+          ]
+        },
+        {
+          "id": "pressure_tactic",
+          "npc": "The notification went out last week. If we don't complete this update, your system will be vulnerable and could be locked out tomorrow.",
+          "responses": [
+            {
+              "text": "Oh no! Okay, let's do it now.",
+              "next": "software_install"
+            },
+            {
+              "text": "I need to confirm this through proper channels before proceeding.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_imp_003",
+      "strategy": "impersonation",
+      "description": "Vendor impersonation for data access.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Hello, I'm calling from your cloud storage provider. We've detected unusual activity on your company account and need to verify some information.",
+          "responses": [
+            {
+              "text": "What kind of unusual activity?",
+              "next": "create_urgency"
+            },
+            {
+              "text": "I'll have our IT team contact you directly.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "What information do you need?",
+              "next": "info_request"
+            }
+          ]
+        },
+        {
+          "id": "create_urgency",
+          "npc": "Multiple failed login attempts from overseas IP addresses. We need to secure your account immediately or we may have to suspend it.",
+          "responses": [
+            {
+              "text": "That's concerning. What should I do?",
+              "next": "info_request"
+            },
+            {
+              "text": "I'll verify this by contacting support through your official website.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        },
+        {
+          "id": "info_request",
+          "npc": "I just need to confirm your account admin credentials to reset the security settings and block those suspicious IPs.",
+          "responses": [
+            {
+              "text": "Here's my login information.",
+              "outcome": "fail",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "No legitimate vendor would ask for my credentials. I'm reporting this.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_urg_001",
+      "strategy": "urgency",
+      "description": "Fake security alert with immediate action required.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "ALERT! Your computer has been infected with a virus! Click here immediately to run a security scan or your data will be compromised!",
+          "responses": [
+            {
+              "text": "Oh no! *clicks the link*",
+              "outcome": "fail",
+              "question_id": "se_types_003"
+            },
+            {
+              "text": "This looks like a fake warning. I'll run my legitimate antivirus.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            },
+            {
+              "text": "I'll contact IT support about this.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_urg_002",
+      "strategy": "urgency",
+      "description": "Account suspension threat with immediate payment.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "URGENT: Your account will be suspended in 24 hours due to unpaid fees. Pay $99 now to avoid service interruption!",
+          "responses": [
+            {
+              "text": "I'll pay right away!",
+              "outcome": "fail",
+              "question_id": "se_types_004"
+            },
+            {
+              "text": "Let me check my account status through the official website.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            },
+            {
+              "text": "This seems suspicious. I'll contact customer service.",
+              "next": "escalate_pressure"
+            }
+          ]
+        },
+        {
+          "id": "escalate_pressure",
+          "npc": "There's no time! By the time you reach customer service, your account will be locked and you'll lose all your data! Act now!",
+          "responses": [
+            {
+              "text": "Okay, okay! I'll pay now!",
+              "outcome": "fail",
+              "question_id": "se_types_004"
+            },
+            {
+              "text": "High pressure tactics are a red flag. I'm ignoring this.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_urg_003",
+      "strategy": "urgency",
+      "description": "Prize expiration with immediate action required.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "You've won a $1000 gift card! Claim within the next 30 minutes or it expires! Click here to verify your identity.",
+          "responses": [
+            {
+              "text": "Amazing! Let me claim it now!",
+              "outcome": "fail",
+              "question_id": "se_types_005"
+            },
+            {
+              "text": "I didn't enter any contest. This is a scam.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            },
+            {
+              "text": "Why only 30 minutes?",
+              "next": "justify_urgency"
+            }
+          ]
+        },
+        {
+          "id": "justify_urgency",
+          "npc": "Our system automatically reassigns unclaimed prizes to the next person in line. You're lucky number 1000! Just verify your email and phone number now!",
+          "responses": [
+            {
+              "text": "Okay, here's my information!",
+              "outcome": "fail",
+              "question_id": "se_types_005"
+            },
+            {
+              "text": "Creating false urgency is a classic social engineering tactic. Nice try.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_phish_004",
+      "strategy": "phishing",
+      "description": "Fake shipping notification with malicious link.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "You have a package waiting for pickup. Due to incorrect address, delivery failed. Click here to update your shipping details within 48 hours.",
+          "responses": [
+            {
+              "text": "I wasn't expecting anything. What package?",
+              "next": "vague_details"
+            },
+            {
+              "text": "Let me click and see what it is.",
+              "outcome": "fail",
+              "question_id": "se_types_001"
+            },
+            {
+              "text": "I'll check my actual shipping notifications from retailers I've ordered from.",
+              "outcome": "success",
+              "question_id": "se_defending_004"
+            }
+          ]
+        },
+        {
+          "id": "vague_details",
+          "npc": "The sender information is in the tracking system. Just click the link to view full details and reschedule delivery. It's being held at the warehouse.",
+          "responses": [
+            {
+              "text": "Alright, I'll check it out.",
+              "outcome": "fail",
+              "question_id": "se_types_004"
+            },
+            {
+              "text": "Legitimate shipping companies include tracking numbers. This is suspicious.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_phish_005",
+      "strategy": "phishing",
+      "description": "Fake tax refund notification.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Good news! You're eligible for a tax refund of $847. Click here to claim your refund by submitting your banking details for direct deposit.",
+          "responses": [
+            {
+              "text": "Great! Let me claim it!",
+              "outcome": "fail",
+              "question_id": "se_types_001"
+            },
+            {
+              "text": "The tax authority doesn't send refund notifications this way.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "I'll verify through the official tax website.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_bait_004",
+      "strategy": "baiting",
+      "description": "Fake job offer with credential theft.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Congrats! You've been selected for a high-paying remote position. No interview needed! Just fill out this form with your personal details to start.",
+          "responses": [
+            {
+              "text": "This seems too easy. What's the company?",
+              "next": "evasive_answer"
+            },
+            {
+              "text": "Awesome! Let me fill it out!",
+              "outcome": "fail",
+              "question_id": "se_types_005"
+            },
+            {
+              "text": "Legitimate jobs require proper interviews and vetting. This is a scam.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        },
+        {
+          "id": "evasive_answer",
+          "npc": "It's a confidential startup in stealth mode. They're looking for people fast. Just need your SSN, bank info for direct deposit, and a copy of your ID to get started ASAP.",
+          "responses": [
+            {
+              "text": "Okay, here's everything!",
+              "outcome": "fail",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "No legitimate employer asks for SSN and bank info upfront. This is identity theft.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_imp_004",
+      "strategy": "impersonation",
+      "description": "Fake colleague requesting access credentials.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Hey! It's Jennifer from marketing. I'm working from home and locked out of the shared drive. Can you give me your login so I can grab those files real quick?",
+          "responses": [
+            {
+              "text": "Sure, my password is...",
+              "outcome": "fail",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "Why don't you reset your own password through IT?",
+              "next": "excuse"
+            },
+            {
+              "text": "We're not supposed to share credentials. Contact IT support.",
+              "outcome": "success",
+              "question_id": "se_defending_004"
+            }
+          ]
+        },
+        {
+          "id": "excuse",
+          "npc": "IT takes forever and I need these files in 10 minutes for a client meeting. I'll change the password right after, I promise!",
+          "responses": [
+            {
+              "text": "Okay, just this once...",
+              "outcome": "fail",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "Security policies exist for a reason. I can't help you with this.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_urg_004",
+      "strategy": "urgency",
+      "description": "Fake security breach notification.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "CRITICAL SECURITY BREACH DETECTED! Your personal data has been exposed! Download our security tool NOW to protect yourself!",
+          "responses": [
+            {
+              "text": "Oh no! *downloads the tool*",
+              "outcome": "fail",
+              "question_id": "se_types_003"
+            },
+            {
+              "text": "Fear-based messaging is a common social engineering tactic.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            },
+            {
+              "text": "I'll check with official security sources.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_phish_006",
+      "strategy": "phishing",
+      "description": "Fake subscription renewal with payment update.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Your premium subscription is expiring today. Update your payment method now to avoid losing access to all your saved data.",
+          "responses": [
+            {
+              "text": "Which subscription is this for?",
+              "next": "vague_service"
+            },
+            {
+              "text": "Let me update it right away!",
+              "outcome": "fail",
+              "question_id": "se_types_001"
+            },
+            {
+              "text": "I'll log into my account directly to check subscription status.",
+              "outcome": "success",
+              "question_id": "se_defending_004"
+            }
+          ]
+        },
+        {
+          "id": "vague_service",
+          "npc": "Your cloud storage service. Click this link to view your account and update payment information. Hurry, only 2 hours left!",
+          "responses": [
+            {
+              "text": "Okay, clicking now.",
+              "outcome": "fail",
+              "question_id": "se_types_004"
+            },
+            {
+              "text": "Legitimate services name themselves specifically and don't create false urgency.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_bait_005",
+      "strategy": "baiting",
+      "description": "Infected document with enticing file name.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Someone left this document on the printer called 'Confidential_Salary_Increases_2024.pdf'. Want me to email it to you?",
+          "responses": [
+            {
+              "text": "Yes! Send it over!",
+              "outcome": "fail",
+              "question_id": "se_types_002"
+            },
+            {
+              "text": "That sounds like bait. We should report it to security.",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            },
+            {
+              "text": "I don't open unknown documents.",
+              "outcome": "success",
+              "question_id": "se_defending_003"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_imp_005",
+      "strategy": "impersonation",
+      "description": "Fake manager requesting policy violation.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "Hi, this is your manager. I'm stuck in meetings all day but need you to purchase some gift cards for a client appreciation event. Can you handle this?",
+          "responses": [
+            {
+              "text": "Sure! How many and what amount?",
+              "next": "gift_card_scam"
+            },
+            {
+              "text": "This doesn't seem like normal procedure. I'll wait to confirm with you directly.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "Can you submit a proper purchase request?",
+              "outcome": "success",
+              "question_id": "se_defending_005"
+            }
+          ]
+        },
+        {
+          "id": "gift_card_scam",
+          "npc": "Get 10 cards worth $500 each. Once you buy them, just scratch off the codes and email me photos. I'll reimburse you right after the meeting.",
+          "responses": [
+            {
+              "text": "Got it! I'll do it now!",
+              "outcome": "fail",
+              "question_id": "se_types_004"
+            },
+            {
+              "text": "Gift card scams are common. I'm verifying this through another channel.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "se_urg_005",
+      "strategy": "urgency",
+      "description": "Fake compliance deadline with data request.",
+      "nodes": [
+        {
+          "id": "start",
+          "npc": "FINAL NOTICE: You have 24 hours to complete mandatory compliance training or face account suspension. Click here to complete now!",
+          "responses": [
+            {
+              "text": "I better do this right away!",
+              "outcome": "fail",
+              "question_id": "se_types_004"
+            },
+            {
+              "text": "I'll check with HR or compliance department about this requirement.",
+              "outcome": "success",
+              "question_id": "se_defending_001"
+            },
+            {
+              "text": "Urgent deadlines without prior notice are suspicious.",
+              "outcome": "success",
+              "question_id": "se_defending_002"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

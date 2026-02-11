@@ -1,6 +1,10 @@
 import Phaser, { Game, Types } from 'phaser';
 import { LoadingScene, AssessmentLevel, UIScene, SFBLevel, MainMenuScene } from './scenes';
 import { WIN_SCORE } from './consts';
+import {PSLevel} from "./scenes/level-2-PS";
+import {MLevel} from "./scenes/level-3-M";
+import {SELevel} from "./scenes/level-4-SE";
+import {IRLevel} from "./scenes/level-5-IR";
 
 type GameConfigExtended = Types.Core.GameConfig & {
   winScore: number;
@@ -37,13 +41,16 @@ const gameConfig: GameConfigExtended = {
     disableWebAudio: false,
   },
 scene: [
-  MainMenuScene,
   LoadingScene,
+  MainMenuScene,
   UIScene,
   AssessmentLevel,
-  SFBLevel
+  SFBLevel,
+  PSLevel,
+  MLevel,
+  SELevel,
+  IRLevel,
 ],
-
   winScore: WIN_SCORE,
 };
 

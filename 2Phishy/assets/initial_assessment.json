@@ -284,7 +284,7 @@
       "answer": "Disconnect the affected device from the internet"
     },
     {
-      "assessment_Id": "incidentresponse-initassess-002",
+      "assessment_id": "incidentresponse-initassess-002",
       "question_id": "ir_steps_002",
       "subcat": "IRSteps",
       "question": "Which of the following is considered a good preparation step before a cyber incident?",

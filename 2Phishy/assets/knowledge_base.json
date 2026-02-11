@@ -267,6 +267,7 @@
     "subtopics": [
        {
         "name": "Types of Social Engineering Attacks",
+        "key": "SOCENGTYPE",
         "knowledge_points": [
           {
             "knowledge_id": "kb_se_types_001",
@@ -297,6 +298,7 @@
       },
       {
         "name": "Defending Against Social Engineering",
+        "key": "SOCENGDEF",
         "knowledge_points": [
           {
             "knowledge_id": "kb_se_defending_001",
@@ -332,6 +334,7 @@
     "subtopics": [
       {
         "name": "Steps in Incident Response",
+        "key": "IRSTEPS",
         "knowledge_points": [
           {
             "knowledge_id": "kb_ir_steps_001",
@@ -362,6 +365,7 @@
       },
       {
         "name": "Personal and Enterprise Incident Response Plans",
+        "key": "IRRESPONSE",
         "knowledge_points": [
           {
             "knowledge_id": "kb_ir_response_001",

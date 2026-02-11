@@ -472,7 +472,7 @@
     "subtopics": [
       {
         "name": "Types of Social Engineering Attacks",
-        "key": "SocEngType",
+        "key": "SOCENGTYPE",
         "questions": [
           {
             "question_id": "se_types_001",
@@ -533,7 +533,7 @@
       },
       {
         "name": "Defending Against Social Engineering",
-        "key": "SocEngDef",
+        "key": "SOCENGDEF",
         "questions": [
           {
             "question_id": "se_defending_001",
@@ -604,7 +604,7 @@
     "subtopics": [
       {
         "name": "Steps in Incident Response",
-        "key": "IRSteps",
+        "key": "IRSTEPS",
         "questions": [
           {
             "question_id": "ir_steps_001",
@@ -670,7 +670,7 @@
       },
       {
         "name": "Personal and Enterprise Incident Response Plans",
-        "key":"IRResponse",
+        "key":"IRRESPONSE",
         "questions": [
           {
             "question_id": "ir_response_001",
