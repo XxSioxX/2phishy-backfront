@@ -33,7 +33,5 @@ class Subtopic(Enum):
     SOCENGDEF = "SOCENGDEF"
 
     # IR_T
-    IRPROC = "IRPROC"
-    IRPREP = "IRPREP"
-    IRPOST = "IRPOST"
-    PIRPLAN = "PIRPLAN"
+    IRSTEPS = "IRSTEPS"
+    IRRESPONSE = "IRRESPONSE"
