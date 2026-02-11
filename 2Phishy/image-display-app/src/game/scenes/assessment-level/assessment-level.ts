@@ -188,10 +188,9 @@ export class AssessmentLevel extends Scene {
     });
   }
 
-  private initCamera(): void {
-    this.cameras.main.setSize(this.game.scale.width, this.game.scale.height);
-    this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
-    this.cameras.main.setZoom(1.5);
-    this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-  }
+    private initCamera(): void {
+        this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
+        this.cameras.main.setZoom(2);
+        this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+    }
 }

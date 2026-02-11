@@ -8,7 +8,6 @@ export class Player extends Actor {
   private keyA: Phaser.Input.Keyboard.Key;
   private keyS: Phaser.Input.Keyboard.Key;
   private keyD: Phaser.Input.Keyboard.Key;
-  private hpValue: Text;
   private keySpace!: Input.Keyboard.Key;
   private frozen = false;
   private questionValue!: Text;
@@ -125,18 +124,24 @@ export class Player extends Actor {
 
   public getDamage(value?: number): void {
     super.getDamage(value);
-    this.hpValue.setText(this.hp.toString());
+
     if (this.hp <= 0) {
       this.scene.game.events.emit(EVENTS_NAME.gameEnd, GameStatus.LOSE);
     }
   }
   public freeze(): void {
     this.frozen = true;
-    this.getBody().setVelocity(0); // stop immediately
+    const body = this.getBody();
+    body.setVelocity(0);
+    body.setAcceleration(0);
+    body.stop();
+
+    body.moves = false;
   }
 
   public unfreeze(): void {
     this.frozen = false;
+    this.getBody().moves = true;
   }
 
   private initAnimations(): void {

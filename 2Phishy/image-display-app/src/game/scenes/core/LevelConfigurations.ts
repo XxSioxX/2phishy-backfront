@@ -43,7 +43,7 @@ export const LEVEL_CONFIGS = {
     topic: 'Password Security',
 
     mapKey: 'PSlevel',
-    tilesetName: 'ps-tileset',
+    tilesetName: 'sfb-tileset',
 
     intro: {
       title: 'Level 2 — Password Security',
@@ -74,7 +74,7 @@ export const LEVEL_CONFIGS = {
     topic: 'Malware',
 
     mapKey: 'Mlevel',
-    tilesetName: 'm-tileset',
+    tilesetName: 'sfb-tileset',
 
     intro: {
       title: 'Level 3 — Malware',
@@ -104,7 +104,7 @@ export const LEVEL_CONFIGS = {
     topic: 'Social Engineering',
 
     mapKey: 'SElevel',
-    tilesetName: 'se-tileset',
+    tilesetName: 'sfb-tileset',
 
     intro: {
       title: 'Level 4 — Social Engineering',
@@ -124,4 +124,34 @@ export const LEVEL_CONFIGS = {
       return 'UNKNOWN';
     },
   } satisfies LevelConfig,
+
+  // =========================
+  // LEVEL 5 — INCIDENT RESPONSE
+  // =========================
+  IR: {
+  sceneKey: 'ir-level-scene',
+
+  topic: 'Incident Response',
+
+  mapKey: 'IRlevel',
+  tilesetName: 'sfb-tileset',
+
+  intro: {
+    title: 'Level 5 — Incident Response',
+    description:
+      'Learn how to response in the event of an attack or a crash.\n' +
+      'Stay alert, collect knowledge, and challenge the Wards.',
+  },
+
+  next: {
+    sceneKey: 'ir-level-scene',
+    topic: 'Incident Response',
+  },
+
+  inferSubcat: (id: string) => {
+    if (id.includes('ir_steps_')) return 'IRSteps';
+    if (id.includes('ir_response_')) return 'IRResponse';
+    return 'UNKNOWN';
+  },
+} satisfies LevelConfig,
 };

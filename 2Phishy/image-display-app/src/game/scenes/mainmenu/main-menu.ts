@@ -14,14 +14,17 @@ export class MainMenuScene extends Scene {
   }
 
   create(): void {
+    const centerX = this.cameras.main.width / 2;
+    const centerY = this.cameras.main.height / 2;
+
     this.popup = new AssessmentPopup(this);
 
     this.add
-      .text(400, 150, '2Phishy', { fontSize: '48px', color: '#00ffcc' })
+      .text(centerX, centerY - 150, '2Phishy', { fontSize: '48px', color: '#00ffcc' })
       .setOrigin(0.5);
 
     this.playButton = this.add
-      .text(400, 300, '▶ Play Game', {
+      .text(centerX, centerY, '▶ Play Game', {
         fontSize: '32px',
         color: '#ffffff',
         backgroundColor: '#0077aa',
@@ -32,7 +35,7 @@ export class MainMenuScene extends Scene {
       .on('pointerdown', () => this.handlePlayClick());
 
     this.loadingText = this.add
-      .text(400, 400, '', { fontSize: '16px', color: '#cccccc' })
+      .text(centerX, centerY + 100, '', { fontSize: '16px', color: '#cccccc' })
       .setOrigin(0.5);
   }
 

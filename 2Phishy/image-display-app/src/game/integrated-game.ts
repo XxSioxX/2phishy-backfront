@@ -36,9 +36,10 @@ export const createPhaserGame = (parentElement: HTMLElement, userData?: any): Ga
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
-      width: 800,   // base width
-      height: 600,  // base height
+      width: 1152,
+      height: 864,
     },
+
     physics: {
       default: 'arcade',
       arcade: {
@@ -47,6 +48,9 @@ export const createPhaserGame = (parentElement: HTMLElement, userData?: any): Ga
     },
     render: {
       pixelArt: true,
+      antialias: false,
+      antialiasGL: false,
+      roundPixels: true,
     },
     canvasStyle: `display: block; margin: auto;`,
     autoFocus: true,

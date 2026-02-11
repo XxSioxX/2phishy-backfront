@@ -26,13 +26,14 @@ export default class AssessmentPopup {
       .setOrigin(0.5);
 
     const panel = this.scene.add
-      .rectangle(cx, cy, panelWidth, panelHeight, 0xffffff, 1)
-      .setStrokeStyle(2, 0x000000);
+      .rectangle(cx, cy, panelWidth, panelHeight, 0x000000, 0.9)
+      .setStrokeStyle(2, 0xffffff);
+
 
     const questionText = this.scene.add
       .text(cx, cy - 140, question, {
-        fontSize: '14px',
-        color: '#000',
+        fontSize: '16px',
+        color: '#ffffff',
         wordWrap: { width: panelWidth - 20 },
         align: 'center',
       })
@@ -45,25 +46,40 @@ export default class AssessmentPopup {
       value: string;
     }[] = [];
 
-    choices.forEach((choice, i) => {
-      const y = cy - 60 + i * 60;
+    let currentY = cy - 60;
+
+    choices.forEach((choice) => {
 
       const btn = this.scene.add
-        .rectangle(cx, y, 220, 40, 0xdddddd)
-        .setStrokeStyle(1, 0x000000)
+        .rectangle(cx, currentY, 220, 40, 0x111111, 1)
+        .setStrokeStyle(1, 0xffffff)
         .setInteractive({ useHandCursor: true });
 
       const label = this.scene.add
-        .text(btn.x, btn.y, choice, {
+        .text(cx, currentY, choice, {
           fontSize: '12px',
-          color: '#000',
-          wordWrap: { width: 200 },
+          color: '#00ffcc',
+          wordWrap: { width: 200, useAdvancedWrap: true },
           align: 'center',
         })
         .setOrigin(0.5)
         .setResolution(window.devicePixelRatio || 2);
 
-      btn.height = label.height + 10;
+      // 🔥 NOW attach hover events (after label exists)
+      btn.on('pointerover', () => {
+        label.setColor('#ffffff');
+      });
+
+      btn.on('pointerout', () => {
+        label.setColor('#00ffcc');
+      });
+
+
+      // Make button resize based on text height
+      btn.height = label.height + 16;
+
+      // Keep text centered after resizing
+      label.setY(btn.y);
 
       // --- Button click logic ---
       btn.on('pointerdown', () => {
@@ -99,6 +115,8 @@ export default class AssessmentPopup {
       });
 
       buttonObjects.push({ btn, label, value: choice });
+      currentY += label.height + 25;
+
     });
 
     this.container = this.scene.add.container(0, 0, [
@@ -110,6 +128,15 @@ export default class AssessmentPopup {
     ]);
 
     this.container.setDepth(1000);
+    this.container.setAlpha(0);
+
+    this.scene.tweens.add({
+      targets: this.container,
+      alpha: 1,
+      duration: 150,
+      ease: 'Power2'
+    });
+
   }
 
   destroy(): void {
@@ -134,13 +161,14 @@ export default class AssessmentPopup {
       .setOrigin(0.5);
 
     const panel = this.scene.add
-      .rectangle(cx, cy, panelWidth, panelHeight, 0xffffff)
-      .setStrokeStyle(2, 0x000000);
+      .rectangle(cx, cy, panelWidth, panelHeight, 0x000000, 0.9)
+      .setStrokeStyle(2, 0xffffff);
+
 
     const titleText = this.scene.add
       .text(cx, cy - 120, title, {
         fontSize: '16px',
-        color: '#000',
+        color: '#ffffff',
         fontStyle: 'bold',
         align: 'center',
       })
@@ -150,7 +178,7 @@ export default class AssessmentPopup {
     const bodyText = this.scene.add
       .text(cx, cy - 20, content, {
         fontSize: '13px',
-        color: '#000',
+        color: '#ffffff',
         wordWrap: { width: panelWidth - 30 },
         align: 'center',
       })
@@ -158,21 +186,31 @@ export default class AssessmentPopup {
       .setResolution(window.devicePixelRatio || 2);
 
     const okBtn = this.scene.add
-      .rectangle(cx, cy + 110, 120, 36, 0xdddddd)
-      .setStrokeStyle(1, 0x000000)
+      .rectangle(cx, cy + 110, 120, 36, 0x111111)
+      .setStrokeStyle(1, 0xffffff)
       .setInteractive({ useHandCursor: true });
 
     const okText = this.scene.add
       .text(okBtn.x, okBtn.y, 'OK', {
         fontSize: '14px',
-        color: '#000',
+        color: '#00ffcc',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setResolution(window.devicePixelRatio || 2);
+
 
     okBtn.on('pointerdown', () => {
       this.destroy();
       onClose?.();
     });
+    okBtn.on('pointerover', () => {
+      okText.setColor('#ffffff');
+    });
+
+    okBtn.on('pointerout', () => {
+      okText.setColor('#00ffcc');
+    });
+
 
     this.container = this.scene.add.container(0, 0, [
       overlay,
@@ -184,6 +222,15 @@ export default class AssessmentPopup {
     ]);
 
     this.container.setDepth(1000);
+    this.container.setAlpha(0);
+
+    this.scene.tweens.add({
+      targets: this.container,
+      alpha: 1,
+      duration: 150,
+      ease: 'Power2'
+    });
+
   }
 
 }

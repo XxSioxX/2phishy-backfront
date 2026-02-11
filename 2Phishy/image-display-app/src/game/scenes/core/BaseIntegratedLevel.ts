@@ -29,10 +29,6 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
     protected readonly config: LevelConfig;
 
-
-
-
-
     constructor(config: LevelConfig) {
         super(config.sceneKey);
         this.config = config;
@@ -91,7 +87,11 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
 
     update(): void {
-        this.player.update();
+        if (!this.inAssessment) {
+            this.player.update();
+        } else {
+            this.player.bodyRef().setVelocity(0);
+        }
 
         this.knowledgePoints.forEach((point: any) => {
           const sprite = point[0];
@@ -151,7 +151,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
       }
     private initCamera(): void {
         this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
-        this.cameras.main.setZoom(1.5);
+        this.cameras.main.setZoom(2);
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
     }
 
@@ -221,7 +221,6 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         qIndex: number
       ): Promise<void> {
         this.inAssessment = true;
-        this.player.freeze();
 
         const q = this.questions[qIndex];
 
@@ -267,7 +266,6 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
           );
 
           this.inAssessment = false;
-          this.player.unfreeze();
 
 
           if (this.assessmentResults.length >= this.questions.length) {
@@ -399,46 +397,52 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     }
     private setupKnowledgeCollision(): void {
         this.knowledgePoints.forEach((point: any) => {
-        const sprite = point[0];
 
-        this.physics.add.overlap(this.player, sprite, () => {
-        // 🚫 already open or animating
-        if (point.isOpen || point.isAnimating) return;
+            const sprite = point[0];
 
-        point.isAnimating = true;
+            this.physics.add.overlap(this.player, sprite, () => {
 
-        // ✨ feedback
-        this.tweens.add({
-          targets: sprite,
-          scale: 1.65,
-          duration: 90,
-          yoyo: true,
-          ease: 'Sine.easeOut',
-        });
+            if (point.isOpen || point.isAnimating) return;
 
-        this.tweens.add({
-          targets: sprite,
-          y: sprite.y - 4,
-          duration: 120,
-          yoyo: true,
-          ease: 'Quad.easeOut',
-        });
+            this.inAssessment = true;
 
-        sprite.play('knowledge_open');
+            point.isAnimating = true;
 
-        sprite.once('animationcomplete-knowledge_open', () => {
-          sprite.setFrame(629);
-          point.isOpen = true;
-          point.isAnimating = false;
+            // ✨ feedback
+            this.tweens.add({
+              targets: sprite,
+              scale: 1.65,
+              duration: 90,
+              yoyo: true,
+              ease: 'Sine.easeOut',
+            });
 
-          this.popup.showInfo(
-            "Knowledge",
-            point.knowledge.knowledge_content
-          );
+            this.tweens.add({
+              targets: sprite,
+              y: sprite.y - 4,
+              duration: 120,
+              yoyo: true,
+              ease: 'Quad.easeOut',
+            });
 
-        });
+            sprite.play('knowledge_open');
 
-        });
+            sprite.once('animationcomplete-knowledge_open', () => {
+              sprite.setFrame(629);
+              point.isOpen = true;
+              point.isAnimating = false;
+
+              this.popup.showInfo(
+                "Knowledge",
+                point.knowledge.knowledge_content,
+                () => {
+                      this.inAssessment = false;
+                    }
+                );
+
+            });
+
+            });
         });
 
     }
@@ -450,9 +454,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         description: string
     ): void {
 
-
-        this.player.freeze();
-
+        this.inAssessment = true;
 
         const cam = this.cameras.main;
         const centerX = cam.width / 2;
@@ -529,12 +531,13 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
               container.destroy();
               overlay.destroy();
 
-              this.player.unfreeze();
+              this.inAssessment = false;
             },
           });
         };
 
         spaceKey?.once('down', closeBanner);
+
     }
 
     protected inferSubcat(questionId: string): string {

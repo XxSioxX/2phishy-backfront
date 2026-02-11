@@ -1,8 +1,10 @@
 import { Scene } from 'phaser';
 import {MainMenuScene} from "../mainmenu";
 import {SFBLevel} from "../level-1-SFB";
-import {PSLevel} from "../level-2-PS/integrated-level2-ps";
-import {MLevel} from "../level-3-M/integrated-level3-M";
+import {PSLevel} from "../level-2-PS";
+import {MLevel} from "../level-3-M";
+import {SELevel} from "../level-4-SE";
+import {IRLevel} from "../level-5-IR";
 
 export class LoadingScene extends Scene {
   constructor() {
@@ -11,6 +13,8 @@ export class LoadingScene extends Scene {
   preload(): void {
     this.load.baseURL = 'phaser-assets/';
     this.load.json('assessmentData', 'initial_assessment.json');
+    this.load.json('se-dialogues', 'dialogues.json')
+
     this.load.image('king', 'sprites/king.png');
     this.load.atlas('a-king', 'spritesheets/a-king.png', 'spritesheets/a-king_atlas.json');
 
@@ -22,6 +26,8 @@ export class LoadingScene extends Scene {
     this.load.tilemapTiledJSON('SFBlevel', 'tilemaps/tilesets/SFB-level-1-ver3.tmj');
     this.load.tilemapTiledJSON('PSlevel', 'tilemaps/tilesets/PS-level-2-ver1.tmj');
     this.load.tilemapTiledJSON('Mlevel', 'tilemaps/tilesets/M-level-3-ver1.tmj');
+    this.load.tilemapTiledJSON('SElevel', 'tilemaps/tilesets/SE-level-4-ver1.tmj');
+    this.load.tilemapTiledJSON('IRlevel', 'tilemaps/tilesets/IR-level-5-ver1.tmj');
 
     this.load.spritesheet('tiles_spr', 'tilemaps/tiles/dungeon-16-16.png', {
       frameWidth: 16,
@@ -36,6 +42,9 @@ export class LoadingScene extends Scene {
     this.load.on('complete', () => {
       console.log('All assets loaded successfully');
     });
+
+
+
   }
   create(): void {
     console.log('Loading scene was created');
@@ -43,6 +52,8 @@ export class LoadingScene extends Scene {
     this.scene.add('sfb-level-scene', SFBLevel);
     this.scene.add('ps-level-scene', PSLevel);
     this.scene.add('m-level-scene', MLevel);
+    this.scene.add('se-level-scene', SELevel);
+    this.scene.add('ir-level-scene', IRLevel);
 
     this.scene.start('main-menu-scene');
     console.log('loading/index.ts (create)', this.textures.exists('tiles'));
