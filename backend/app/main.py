@@ -19,7 +19,7 @@ async def lifespan(app:FastAPI):
         verify_mongo_connection()
     except Exception as e:
         logger.warning(f"MongoDB connection failed: {e}")
-    
+
     try:
         init_db()
     except Exception as e:
@@ -28,7 +28,7 @@ async def lifespan(app:FastAPI):
     logger.info("Finished establishing database connections")
     yield
 
-app = FastAPI(title="Phishy Game Backend API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Phishy Game Backend API", version="6.2.0", lifespan=lifespan)
 
 # Add CORS middleware with explicit configuration
 origins = [
@@ -50,15 +50,16 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(user_router)
-app.include_router(admin_router)  # Admin routes with /admin prefix
-app.include_router(game_router)
-app.include_router(post_router)
+app.include_router(user_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+app.include_router(game_router, prefix="/api")
+app.include_router(post_router, prefix="/api")
 
-@app.get("/")
+
+@app.get("/api")
 async def root():
     return {"message": "Phishy Game Backend API is running", "version": "1.0.0"}
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "message": "Backend is running properly"}

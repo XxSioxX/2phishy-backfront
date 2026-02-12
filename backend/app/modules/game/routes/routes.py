@@ -10,7 +10,8 @@ from app.modules.game.schemas.gameschemas import (
     GetUser,
     GetUserTopic,
     SingleResponseItem,
-    TopicCompletionRequest
+    TopicCompletionRequest,
+    SocEngineeringSubmit
 )
 from app.modules.game.services.services import (
     evaluate_assessment,
@@ -22,7 +23,9 @@ from app.modules.game.services.services import (
     save_assessment_question_result,
     ensure_initial_assessment_doc,
     filter_unanswered_questions,
-    fetch_knowledge_list
+    fetch_knowledge_list,
+    update_soc_engineering_grade,
+    interpret_trust
 )
 from app.modules.learning_path.services.learn_path_service import DefaultLearningEvaluator
 
@@ -335,5 +338,40 @@ async def generate_user_question_list(
         return StandardResponse(
             success=False,
             message="Failed to generate question list",
+            data=None
+        )
+
+@router.post(
+    "/submit/se-submit/",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_201_CREATED
+)
+async def submit_soc_engineering_grade(
+    request: SocEngineeringSubmit,
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    response: Response = Response(),
+):
+    try:
+        updated_grade = await update_soc_engineering_grade(
+            db=db,
+            user_id=request.user_id,
+            is_success=request.is_success
+        )
+
+        return StandardResponse(
+            success=True,
+            message="SE response recorded successfully.",
+            data={
+                "updated_grade": updated_grade,
+                "trust_level": interpret_trust(updated_grade)
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in generating user question list: {e}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message="Failed to submit soceng grade",
             data=None
         )

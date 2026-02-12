@@ -3,6 +3,7 @@ import { LEVEL_CONFIGS } from '../core/LevelConfigurations';
 import { DialogueManager } from '../../helpers/DialogueManager';
 import { DialogueUI } from '../ui/DialogueUI';
 import { SocialEngineer } from '../../classes/socialEngineer';
+import {gameAPI} from "../../helpers/game-api";
 
 export class SELevel extends BaseIntegratedLevel {
   private socialEngineers!: Phaser.Physics.Arcade.Group;
@@ -52,15 +53,51 @@ export class SELevel extends BaseIntegratedLevel {
       console.log('npc: ', npc, 'strategy: ', strategy);
       const scenario = this.dialogueManager.getScenario(strategy);
 
-      this.dialogueUI.start(scenario, () => {
+      this.dialogueUI.start(scenario, async (result) => {
         npc.finishInteraction();
         this.inAssessment = false;
+
+        await this.processOutcome(result);
       });
+
+
     });
-
-
-
   }
+
+  private async processOutcome(result?: any): Promise<void> {
+    if (!result) return;
+
+    const isSuccess = result.outcome === 'success';
+
+    try {
+      gameAPI.setToken(this.userData.token);
+
+      const response = await gameAPI.submitSocialEngineering({
+        user_id: this.userData.userId,
+        topic: this.config.topic,
+        is_success: isSuccess,
+      });
+
+      console.log("SE grade updated:", response);
+
+      const updatedGrade = response.data?.updated_grade;
+      const trustLevel = response.data?.trust_level;
+
+      console.log("Updated Grade:", updatedGrade);
+      console.log("Trust Level:", trustLevel);
+
+    } catch (err) {
+      console.error(" Failed to submit SE result:", err);
+    }
+
+    if (result.question_id) {
+      console.log("Trigger follow-up question:", result.question_id);
+    }
+  }
+
+
+
+
 
   private initNPCLayer(): void {
     const npcLayer = this.map.getObjectLayer('NPCPoints');

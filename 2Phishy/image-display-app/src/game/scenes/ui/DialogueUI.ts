@@ -9,13 +9,13 @@ export class DialogueUI {
   private container!: Phaser.GameObjects.Container;
   private currentNode!: DialogueNode;
   private scenario!: DialogueScenario;
-  private onComplete!: () => void;
+  private onComplete!: (result?: any) => void;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
   }
 
-  start(scenario: DialogueScenario, onComplete: () => void): void {
+  start(scenario: DialogueScenario, onComplete: (result?: any) => void): void {
     this.scenario = scenario;
     this.onComplete = onComplete;
 
@@ -28,7 +28,12 @@ export class DialogueUI {
   private showNode(nodeId: string): void {
     this.container.removeAll(true);
 
-    this.currentNode = this.scenario.nodes.find(n => n.id === nodeId)!;
+    const node = this.scenario.nodes.find(n => n.id === nodeId);
+    if (!node) {
+      console.error(`Node ${nodeId} not found`);
+      return;
+    }
+    this.currentNode = node;
 
     this.showMessagePanel();
   }
@@ -146,13 +151,18 @@ export class DialogueUI {
     });
   }
 
+
   // =============================
   // BRANCHING LOGIC
   // =============================
   private handleResponse(res: DialogueResponse): void {
     if (res.outcome) {
-      this.applyOutcome(res);
-      this.finish();
+      this.showConsequence(res);
+      const result = {
+        outcome: res.outcome,
+        question_id: res.question_id
+      };
+
       return;
     }
 
@@ -161,15 +171,89 @@ export class DialogueUI {
     }
   }
 
-  private applyOutcome(res: DialogueResponse): void {
-    this.scene.events.emit('SE_OUTCOME', {
-      outcome: res.outcome,
-      question_id: res.question_id
+  private finish(result?: any): void {
+    this.container.destroy();
+    this.onComplete(result);
+  }
+
+  // =============================
+  // PHASE 3 – CONSEQUENCE PANEL
+  // =============================
+  private showConsequence(res: DialogueResponse): void {
+    this.container.removeAll(true);
+
+    const cam = this.scene.cameras.main;
+
+    const panelWidth = cam.worldView.width - 40;
+    const panelHeight = cam.worldView.height * 0.35;
+
+    const panelX = cam.worldView.left + 20 + panelWidth / 2;
+    const panelY = cam.worldView.bottom - panelHeight / 2 - 10;
+
+    const padding = 20;
+
+    const isSuccess = res.outcome === 'success';
+
+    const panel = this.scene.add
+      .rectangle(panelX, panelY, panelWidth, panelHeight, 0x000000, 0.95)
+      .setStrokeStyle(3, isSuccess ? 0x00cc66 : 0xcc3333)
+      .setOrigin(0.5);
+
+    const consequence = this.scenario.consequences?.[res.outcome];
+
+    const message = consequence?.message ?? 'Result recorded.';
+    const explanation = consequence?.explanation ?? '';
+
+    const textStartX = panelX - panelWidth / 2 + padding;
+    let currentY = panelY - panelHeight / 2 + padding;
+
+    const messageText = this.scene.add.text(
+      textStartX,
+      currentY,
+      message,
+      {
+        fontSize: '18px',
+        color: '#ffffff',
+        wordWrap: { width: panelWidth - padding * 2 }
+      }
+    ).setOrigin(0, 0);
+
+    currentY += messageText.height + 15;
+
+    const explanationText = this.scene.add.text(
+      textStartX,
+      currentY,
+      explanation,
+      {
+        fontSize: '14px',
+        color: '#cccccc',
+        wordWrap: { width: panelWidth - padding * 2 }
+      }
+    ).setOrigin(0, 0);
+
+    this.container.add([panel, messageText, explanationText]);
+
+    const continueText = this.scene.add.text(
+      panelX + panelWidth / 2 - 140,
+      panelY + panelHeight / 2 - 25,
+      '▼ Press SPACE',
+      {
+        fontSize: '14px',
+        color: '#aaaaaa'
+      }
+    ).setOrigin(0, 0);
+
+    this.container.add(continueText);
+
+    this.scene.input.keyboard.once('keydown-SPACE', () => {
+      const result = {
+        outcome: res.outcome,
+        question_id: res.question_id,
+        strategy: this.scenario.strategy
+      };
+
+      this.finish(result);
     });
   }
 
-  private finish(): void {
-    this.container.destroy();
-    this.onComplete();
-  }
 }

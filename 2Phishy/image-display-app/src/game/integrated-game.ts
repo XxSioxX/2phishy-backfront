@@ -67,16 +67,13 @@ export const createPhaserGame = (parentElement: HTMLElement, userData?: any): Ga
     userData: userData,
   };
 
-  // Store user data globally for access by scenes
   if (userData) {
     window.userData = userData;
   }
 
-  // Simplified resize handler
   window.sizeChanged = () => {
     if (window.game && window.game.isBooted) {
-      // With FIT mode, Phaser handles the scaling automatically
-      // Just ensure the canvas stays centered
+
       if (window.game.canvas) {
         window.game.canvas.style.display = 'block';
         window.game.canvas.style.margin = 'auto';

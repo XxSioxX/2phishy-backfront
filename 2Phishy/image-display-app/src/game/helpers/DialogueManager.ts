@@ -1,8 +1,16 @@
 export interface DialogueScenario {
   id: string;
   strategy: string;
+  description?: string;
   nodes: DialogueNode[];
+  consequences: {
+    [key: string]: {
+      message: string;
+      explanation: string;
+    };
+  };
 }
+
 
 export interface DialogueNode {
   id: string;

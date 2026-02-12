@@ -1,5 +1,5 @@
 // src/services/game-api.ts
-import {User} from "../../types";
+
 
 export interface AssessmentResult {
   assessment_id: string;
@@ -14,7 +14,8 @@ export interface AssessmentResult {
 
 class GameAPI {
   private token: string | null = null;
-  private readonly baseUrl = 'http://localhost:8000/game'; // ✅ space removed
+  private readonly baseUrl = `${process.env.REACT_APP_API_BASE_URL}/game`;
+
 
   setToken(token: string) {
     this.token = token;
@@ -245,7 +246,10 @@ class GameAPI {
       method: 'POST',
       mode: 'cors',
       headers: this.getHeaders(),
-      body: JSON.stringify({ userid, topic, collectionName }),
+      body: JSON.stringify({
+        userid,
+        topic,
+        collectionName }),
     })
 
     if(!response.ok) {
@@ -256,6 +260,37 @@ class GameAPI {
 
    return await response.json();
   }
+
+  async submitSocialEngineering(payload: {
+    user_id: string;
+    topic: string;
+    is_success: boolean;
+  }) {
+    console.log('Sending to /game/submit/se-submit/:', payload);
+
+    const response = await fetch(`${this.baseUrl}/submit/se-submit/`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        user_id: payload.user_id,
+        topic: payload.topic,
+        is_success: payload.is_success,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('❌ submitSocialEngineering error:', err);
+      throw new Error(`Failed to submit SE result: ${err}`);
+    }
+
+    return await response.json();
+  }
+
+
+
 
 }
 

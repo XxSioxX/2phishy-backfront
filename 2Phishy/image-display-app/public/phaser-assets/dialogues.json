@@ -41,8 +41,18 @@
             }
           ]
         }
-      ]
-    },
+      ],
+      "consequences": {
+        "success": {
+          "message": "Smart move. You didn't let the 'urgency' rattle you.",
+          "explanation": "Verifying a request through a known, trusted channel (like calling IT directly) is the best way to defeat social engineering. Attackers rely on you acting quickly before you think."
+        },
+        "fail": {
+          "message": "Access Denied. You just handed over your credentials to a fake portal.",
+          "explanation": "This is a classic 'Urgency' tactic. By threatening to lock your account, the attacker pressured you into clicking a malicious link without verifying the source."
+        }
+      }
+    } ,
     {
       "id": "se_phish_002",
       "strategy": "phishing",
@@ -99,7 +109,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Great intuition. You spotted the red flags in the 'unofficial' request.",
+          "explanation": "Legitimate security updates are almost never handled through informal chat or forwarded links. Using official portals ensures you aren't entering data into a clone site."
+        },
+        "fail": {
+          "message": "Security Breach! Your current password was just logged by an attacker.",
+          "explanation": "The attacker used 'Social Proof'—pretending to be a helpful coworker—to lower your guard. Entering your 'current' password on a site they provide is a common way to steal credentials."
+        }
+      }
     },
     {
       "id": "se_phish_003",
@@ -156,8 +176,18 @@
             }
           ]
         }
-      ]
-    },
+      ],
+      "consequences": {
+          "success": {
+            "message": "Excellent. You stayed professional and followed protocol.",
+            "explanation": "By insisting on official channels, you prevent malware execution. Attackers use the 'Authority' of a department like Accounting to bypass standard safety procedures."
+          },
+          "fail": {
+            "message": "System Compromised. That 'PDF' was actually an executable file.",
+            "explanation": "This is a Business Email Compromise (BEC) tactic. Attackers use 'Authority' and the threat of 'Service Interruption' to trick you into downloading malicious attachments."
+          }
+        }
+      },
     {
       "id": "se_bait_001",
       "strategy": "baiting",
@@ -184,7 +214,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Crisis averted. You didn't take the bait.",
+          "explanation": "Curiosity is a powerful tool for attackers. 'Found' USB drives often contain Rubber Ducky scripts or malware that executes the second they are plugged in. Turning it into security is the only safe play."
+        },
+        "fail": {
+          "message": "System Infection! A hidden script just installed a keylogger on your machine.",
+          "explanation": "This is classic 'Baiting.' The attacker used a tempting label ('Salary Data') to bypass your common sense. Never plug an unknown device into a workstation."
+        }
+      }
     },
     {
       "id": "se_bait_002",
@@ -227,7 +267,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Well spotted. You saw through the 'free' trap.",
+          "explanation": "If a site asks you to disable security features like an antivirus to install software, it is almost certainly delivering a payload. 'Free' software is a common bait used to get users to lower their defenses."
+        },
+        "fail": {
+          "message": "Ransomware Detected. By disabling your antivirus, you gave the malware full control.",
+          "explanation": "Pirated or 'cracked' software is one of the most common delivery methods for trojans. The 'friend' recommending it might already be compromised without knowing it."
+        }
+      }
     },
     {
       "id": "se_bait_003",
@@ -270,7 +320,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Safe and sound. Verifying with HR was the right call.",
+          "explanation": "Attackers use 'Greed' as bait. By offering a high-value reward for low-value information (like an ID), they build a profile to execute more targeted attacks against the company later."
+        },
+        "fail": {
+          "message": "Identity Compromised. Your employee ID was used to bypass a password reset on your internal account.",
+          "explanation": "Giving away 'minor' details like employee IDs or personal emails allows attackers to impersonate you to IT support. There is no such thing as a free lunch—or gift card."
+        }
+      }
     },
     {
       "id": "se_imp_001",
@@ -313,7 +373,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Protocol maintained. You protected the company's capital.",
+          "explanation": "CEO Fraud (or Whale Phishing) relies on employees being too intimidated to question an executive. By sticking to financial protocols, you stopped a major unauthorized transfer."
+        },
+        "fail": {
+          "message": "Financial Disaster. You just wired $50,000 to a criminal's account.",
+          "explanation": "Attackers use the 'Authority' of a high-level executive and 'Urgency' to make you skip standard verification. Once a wire transfer is sent, the money is almost impossible to recover."
+        }
+      }
     },
     {
       "id": "se_imp_002",
@@ -370,7 +440,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "System secured. You kept the gates locked.",
+          "explanation": "Help Desk impersonation is a common way to gain a foothold in a network. Verifying through a known internal directory ensures you aren't handing the keys to an intruder."
+        },
+        "fail": {
+          "message": "Total Compromise. The attacker now has full remote control of your workstation.",
+          "explanation": "By downloading their 'tool,' you bypassed the company firewall. The attacker can now steal files, record your screen, and spread malware to the rest of the network."
+        }
+      }
     },
     {
       "id": "se_imp_003",
@@ -427,7 +507,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Data breach averted. You identified the credential harvesting attempt.",
+          "explanation": "Legitimate vendors will never ask for your password over the phone. Reporting the incident helps your actual security team block the attacker's origin."
+        },
+        "fail": {
+          "message": "Account Hijacked. The attacker has changed your admin password and is downloading your cloud data.",
+          "explanation": "This 'vishing' (voice phishing) attack used a fake security scare to trick you into giving up admin rights. This often leads to massive data leaks and corporate espionage."
+        }
+      }
     },
     {
       "id": "se_urg_001",
@@ -455,7 +545,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Cool under pressure. You didn't fall for the 'Scareware' trap.",
+          "explanation": "Fake security alerts use panic to make you bypass your critical thinking. Real antivirus software doesn't usually demand you click external links to fix an immediate infection."
+        },
+        "fail": {
+          "message": "Malware Installed. By clicking that link, you actually downloaded the virus you were trying to avoid.",
+          "explanation": "This is a classic 'Scareware' tactic. The attacker creates a false sense of panic to trick you into installing malicious software or giving away remote access."
+        }
+      }
     },
     {
       "id": "se_urg_002",
@@ -498,7 +598,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Excellent catch. You recognized the high-pressure sales pitch.",
+          "explanation": "Legitimate companies provide a grace period and multiple notifications before suspension. Any request that threatens immediate data loss unless you pay *right now* is almost always a scam."
+        },
+        "fail": {
+          "message": "Fraudulent Transaction. You just sent money—and your credit card details—to a scammer.",
+          "explanation": "Extreme pressure is used to stop you from checking your actual account status. Once they have your payment info, they often sell it on the dark web or make additional unauthorized charges."
+        }
+      }
     },
     {
       "id": "se_urg_003",
@@ -541,7 +651,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Logical thinking wins! You avoided the 'Fear of Missing Out' trap.",
+          "explanation": "Artificial countdowns are designed to trigger an impulsive emotional response. By questioning the 'why' behind the 30-minute window, you broke the attacker's psychological hold."
+        },
+        "fail": {
+          "message": "Data Harvested. You just provided the building blocks for an identity theft attempt.",
+          "explanation": "The 'Prize' is just a hook. Attackers use these short windows to rush you into handing over personal data that can be used to bypass security questions on your real bank or email accounts."
+        }
+      }
     },
     {
       "id": "se_phish_004",
@@ -584,7 +704,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Nice catch. You didn't let curiosity compromise your security.",
+          "explanation": "Smishing and phishing via delivery alerts are incredibly common. By verifying through your actual orders or checking for a tracking number, you avoided a site designed to steal your address and payment info."
+        },
+        "fail": {
+          "message": "Information Leaked. You just entered your personal data into a 'phishing' site.",
+          "explanation": "Attackers use 'Expected Behavior'—like receiving packages—to make their lures feel normal. Clicking 'update details' usually leads to a form that collects your full identity for future fraud."
+        }
+      }
     },
     {
       "id": "se_phish_005",
@@ -612,7 +742,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Perfect. You knew exactly how official agencies actually operate.",
+          "explanation": "Government and tax authorities almost never initiate contact via email or text to ask for banking information. Your knowledge of official communication protocols is your best defense."
+        },
+        "fail": {
+          "message": "Bank Account Compromised. You just handed over your direct deposit details to a criminal.",
+          "explanation": "The promise of 'Free Money' is one of the strongest emotional triggers. Once an attacker has your routing and account numbers, they can initiate unauthorized transfers or sell your financial profile."
+        }
+      }
     },
     {
       "id": "se_bait_004",
@@ -655,7 +795,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Excellent skepticism. You didn't let the dream salary blind you.",
+          "explanation": "If a job offer requires no interview and immediately asks for sensitive PII (Personally Identifiable Information) like an SSN or bank details, it is a data-harvesting scam. Legitimate onboarding happens through secure, verified HR portals."
+        },
+        "fail": {
+          "message": "Identity Stolen. You just gave a criminal everything they need to open credit lines in your name.",
+          "explanation": "This 'Baiting' tactic uses the allure of a high-paying job to rush you into sharing sensitive data. Stealth startups still follow legal hiring practices; 'immediate' requests for an SSN are a massive red flag."
+        }
+      }
     },
     {
       "id": "se_imp_004",
@@ -698,7 +848,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Strong work. You protected the network perimeter.",
+          "explanation": "Credential sharing is a major policy violation. By directing 'Jennifer' to IT, you ensured that even if she were a real colleague, the process remains secure. Attackers often pose as stressed coworkers to bypass rules."
+        },
+        "fail": {
+          "message": "Account Compromised. Your credentials are now being used to exfiltrate company data.",
+          "explanation": "This is 'Social Proof' and 'Likability' at work. By pretending to be a colleague in a bind, the attacker exploited your desire to be helpful. Never share passwords, even with people you think you know."
+        }
+      }
     },
     {
       "id": "se_urg_004",
@@ -726,7 +886,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Panic averted. You recognized the 'Scareware' tactic.",
+          "explanation": "Real security breaches are handled by internal IT and usually involve locking accounts or forced password resets, not pop-ups demanding you download unverified 'security tools.'"
+        },
+        "fail": {
+          "message": "Infection Successful. That 'security tool' was actually a Trojan horse.",
+          "explanation": "Urgency is designed to shut down the logical part of your brain. By clicking out of fear, you bypass the very security measures (like your firewall) that the fake alert claimed were broken."
+        }
+      }
     },
     {
       "id": "se_phish_006",
@@ -769,7 +939,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Smart move. You bypassed the link and went straight to the source.",
+          "explanation": "Navigating directly to a service's official website (bookmarking or typing the URL) is the only way to ensure you aren't on a clone site designed to steal credit card info."
+        },
+        "fail": {
+          "message": "Financial Theft. Your credit card details have been captured by a fraudulent billing site.",
+          "explanation": "This tactic relies on the 'Subscription Economy.' Since most people have multiple services, a vague 'renewal' alert often hits a mark. The short 2-hour window was a psychological trick to prevent verification."
+        }
+      }
     },
     {
       "id": "se_bait_005",
@@ -797,7 +977,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Integrity intact. You didn't let curiosity kill the cat (or the network).",
+          "explanation": "Files with enticing names like 'Salary' or 'Layoffs' are common bait. Opening them often triggers macros that install malware. Reporting the physical 'find' helps Security track the source."
+        },
+        "fail": {
+          "message": "Malware Triggered. Opening that document executed a hidden script in the background.",
+          "explanation": "This is a digital version of the USB drop. The attacker used 'Information Curiosity' to trick you into running malicious code hidden within a seemingly harmless PDF or Excel file."
+        }
+      }
     },
     {
       "id": "se_imp_005",
@@ -840,7 +1030,17 @@
             }
           ]
         }
-      ]
+      ],
+      "consequences": {
+        "success": {
+          "message": "Fraud stopped. You correctly identified a classic 'Business Email Compromise' (BEC) pattern.",
+          "explanation": "Managers will almost never ask employees to use personal funds for gift cards via text or chat. Sticking to the 'Proper Purchase Request' system is the best defense against executive impersonation."
+        },
+        "fail": {
+          "message": "Money Gone. You just sent $5,000 to a scammer with no way to get it back.",
+          "explanation": "Gift card scams are popular because the 'money' is untraceable once the code is shared. The attacker used the 'Manager's' authority to pressure you into a high-speed, high-value theft."
+        }
+      }
     },
     {
       "id": "se_urg_005",
@@ -868,7 +1068,17 @@
             }
           ]
         }
-      ]
-    }
+      ],
+      "consequences": {
+          "success": {
+            "message": "Compliance verified. You followed the correct reporting chain.",
+            "explanation": "Social engineers use 'Compliance' because it sounds official and scary. Real mandatory training usually gives weeks of notice and is hosted on a known internal Learning Management System (LMS)."
+          },
+          "fail": {
+            "message": "Security Incident. You entered your corporate credentials into a fake training portal.",
+            "explanation": "By using a 24-hour 'Final Notice,' the attacker forced an impulsive login. These fake portals are perfect for harvesting 'Single Sign-On' (SSO) credentials to access the entire company network."
+          }
+        }
+      }
   ]
 }

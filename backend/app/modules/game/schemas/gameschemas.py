@@ -42,6 +42,7 @@ class GetUserTopic(GetUser):
 class TopicRequest(BaseModel):
     topic: Topics
 
+
 # Assessment session schemas
 class AssessmentSessionCreate(BaseModel):
     topic: str
@@ -72,4 +73,10 @@ class AssessmentSessionResponse(BaseModel):
     total_questions: int
     completed: bool
     created_at: str
+    updated_at: str
+
+class SocEngineeringSubmit(BaseModel):
+    user_id: str
+    topic: str
+    is_success: bool
     updated_at: str

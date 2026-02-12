@@ -448,97 +448,119 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     }
 
     // UI Helper
-
     private showLevelIntroBanner(
-        title: string,
-        description: string
+      title: string,
+      description: string
     ): void {
 
-        this.inAssessment = true;
+      this.inAssessment = true;
 
-        const cam = this.cameras.main;
-        const centerX = cam.width / 2;
-        const centerY = cam.height / 2;
+      const cam = this.cameras.main;
+      const centerX = cam.width / 2;
+      const centerY = cam.height / 2;
+      const zoom = cam.zoom;
 
-        const overlay = this.add.rectangle(
-          centerX,
-          centerY,
-          cam.width,
-          cam.height,
-          0x000000,
-          0.65
-        )
-          .setScrollFactor(0)
-          .setDepth(1000);
+      const overlay = this.add.rectangle(
+        centerX,
+        centerY,
+        cam.width,
+        cam.height,
+        0x000000,
+        0.65
+      )
+      .setScrollFactor(0)
+      .setDepth(1000)
+      .setScale(1 / zoom);
 
-        const container = this.add.container(centerX, centerY - 40)
-          .setScrollFactor(0)
-          .setDepth(1001)
-          .setAlpha(0);
+      const bannerWidth = 760; // slightly bigger
+      const padding = 80;
 
-        const titleText = this.add.text(0, -40, title, {
-          fontSize: '26px',
-          color: '#ffffff',
-          fontStyle: 'bold',
-          align: 'center',
-        }).setOrigin(0.5);
+      const container = this.add.container(centerX, centerY)
+        .setScrollFactor(0)
+        .setDepth(1001)
+        .setAlpha(0)
+        .setScale(1 / zoom);
 
-        const descText = this.add.text(0, 10, description, {
-          fontSize: '14px',
-          color: '#dddddd',
-          align: 'center',
-          wordWrap: { width: cam.width * 0.7 },
-        }).setOrigin(0.5);
+      const titleText = this.add.text(0, -70, title, {
+        fontSize: '32px',   // compensate for zoom
+        color: '#ffffff',
+        fontStyle: 'bold',
+        align: 'center',
+        wordWrap: { width: bannerWidth - padding }
+      }).setOrigin(0.5);
 
-        const continueText = this.add.text(0, 60, 'Press SPACE to continue', {
-          fontSize: '12px',
-          color: '#aaaaaa',
-          align: 'center',
-        }).setOrigin(0.5);
+      const descText = this.add.text(0, 0, description, {
+        fontSize: '22px',   // compensate
+        color: '#dddddd',
+        align: 'center',
+        wordWrap: { width: bannerWidth - padding }
+      }).setOrigin(0.5);
 
-        container.add([titleText, descText, continueText]);
+      const continueText = this.add.text(0, 110, 'Press SPACE to continue', {
+        fontSize: '18px',
+        color: '#aaaaaa',
+        align: 'center',
+      }).setOrigin(0.5);
 
-        // entrance animation
+      const top = titleText.y - titleText.height / 2;
+      const bottom = continueText.y + continueText.height / 2;
+      const panelHeight = bottom - top + 80;
+
+      const panel = this.add.rectangle(
+        0,
+        (top + bottom) / 2,
+        bannerWidth,
+        panelHeight,
+        0x111111,
+        0.95
+      )
+      .setStrokeStyle(4, 0xffffff)
+      .setOrigin(0.5);
+
+      container.add([panel, titleText, descText, continueText]);
+
+      container.y -= 40;
+
+      this.tweens.add({
+        targets: container,
+        y: centerY,
+        alpha: 1,
+        duration: 400,
+        ease: 'Back.Out',
+      });
+
+      this.tweens.add({
+        targets: continueText,
+        alpha: 0.3,
+        duration: 700,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+
+      const spaceKey = this.input.keyboard?.addKey(
+        Phaser.Input.Keyboard.KeyCodes.SPACE
+      );
+
+      const closeBanner = () => {
+        spaceKey?.removeAllListeners();
+
         this.tweens.add({
-          targets: container,
-          y: centerY,
-          alpha: 1,
-          duration: 400,
-          ease: 'Back.Out',
+          targets: [container, overlay],
+          alpha: 0,
+          duration: 300,
+          onComplete: () => {
+            container.destroy();
+            overlay.destroy();
+            this.inAssessment = false;
+          },
         });
+      };
 
-        this.tweens.add({
-          targets: continueText,
-          alpha: 0.3,
-          duration: 700,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-
-        const spaceKey = this.input.keyboard?.addKey(
-          Phaser.Input.Keyboard.KeyCodes.SPACE
-        );
-
-        const closeBanner = () => {
-          spaceKey?.removeAllListeners();
-
-          this.tweens.add({
-            targets: [container, overlay],
-            alpha: 0,
-            duration: 300,
-            onComplete: () => {
-              container.destroy();
-              overlay.destroy();
-
-              this.inAssessment = false;
-            },
-          });
-        };
-
-        spaceKey?.once('down', closeBanner);
-
+      spaceKey?.once('down', closeBanner);
     }
+
+
 
     protected inferSubcat(questionId: string): string {
       return this.config.inferSubcat(questionId);

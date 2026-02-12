@@ -15,8 +15,9 @@ from app.modules.game.schemas.gameschemas import SingleResponseItem
 
 logger = get_logger()
 
-REPO_ROOT = Path(__file__).resolve().parents[6]
-ASSETS_DIR = REPO_ROOT / "2phishy-backfront"  / "2Phishy" / "assets"
+BASE_DIR = Path(__file__).resolve().parents[3]
+ASSETS_DIR = BASE_DIR / "backend-assets"
+
 
 def map_subtopic_to_enum(subtopic_str: str) -> Subtopic:
     try:
@@ -611,3 +612,101 @@ async def mark_level_completed(
             }
         }
     )
+
+async def get_soc_engineering_grade(
+    db: AsyncIOMotorDatabase,
+    user_id: UUID,
+):
+    try:
+        topic_key = Topics.SE_T.value
+
+        document = await db["progress"].find_one(
+            {"user_id": str(user_id)},
+            {
+                f"progress.{topic_key}.trust": 1
+            }
+        )
+
+        return document
+
+    except Exception as e:
+        logger.error(f"Error fetching SE grade: {e}")
+        raise
+
+
+async def create_soc_engineering_progress(
+    db: AsyncIOMotorDatabase,
+    user_id: UUID,
+):
+    try:
+        topic_key = Topics.SE_T.value
+
+        await db["progress"].update_one(
+            {"user_id": str(user_id)},
+            {
+                "$set": {
+                    f"progress.{topic_key}.trust": {
+                        "grade": 100,
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            },
+            upsert=True
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating SE progress: {e}")
+        raise
+
+async def update_soc_engineering_grade(
+    db: AsyncIOMotorDatabase,
+    user_id: UUID,
+    is_success: bool,
+):
+    topic_key = Topics.SE_T.value
+
+    document = await db["progress"].find_one(
+        {"user_id": str(user_id)}
+    )
+
+    if document is None:
+        await create_soc_engineering_progress(db, user_id)
+        document = await db["progress"].find_one(
+            {"user_id": str(user_id)}
+        )
+
+    current_grade = (
+        document.get("progress", {})
+        .get(topic_key, {})
+        .get("trust", {})
+        .get("grade", 100)
+    )
+
+    if is_success:
+        updated_grade = current_grade
+    else:
+        updated_grade = current_grade - 20
+
+    updated_grade = max(0, updated_grade)
+
+    await db["progress"].update_one(
+        {"user_id": str(user_id)},
+        {
+            "$set": {
+                f"progress.{topic_key}.trust.grade": updated_grade,
+                f"progress.{topic_key}.trust.updated_at": datetime.utcnow(),
+            }
+        }
+    )
+
+    return updated_grade
+
+
+
+def interpret_trust(grade: int) -> str:
+    if grade >= 80:
+        return "Secure"
+    elif grade >= 50:
+        return "At Risk"
+    else:
+        return "Compromised"
