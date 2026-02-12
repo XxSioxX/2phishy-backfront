@@ -9,6 +9,7 @@ from app.modules.game.routes.routes import router as game_router
 from app.modules.posts.routes.post_routes import router as post_router
 from app.utils.logger import get_logger
 from app.core.database_postgres import init_db
+from app.core.startup import startup_super_admin
 
 logger = get_logger("main")
 
@@ -25,12 +26,17 @@ async def lifespan(app:FastAPI):
     except Exception as e:
         logger.warning(f"PostgreSQL connection failed: {e}")
 
+    try:
+        startup_super_admin()
+    except Exception as e:
+        logger.error(f"Startup super admin failed: {e}")
+
     logger.info("Finished establishing database connections")
     yield
 
-app = FastAPI(title="Phishy Game Backend API", version="6.2.0", lifespan=lifespan)
+app = FastAPI(title="Phishy Game Backend API", version="6.3.0", lifespan=lifespan)
 
-# Add CORS middleware with explicit configuration
+
 origins = [
     "http://localhost:3000",  # React default port
     "http://127.0.0.1:3000",
@@ -58,7 +64,7 @@ app.include_router(post_router, prefix="/api")
 
 @app.get("/api")
 async def root():
-    return {"message": "Phishy Game Backend API is running", "version": "1.0.0"}
+    return {"message": "Phishy Game Backend API is running", "version": "6.3.0"}
 
 @app.get("/api/health")
 async def health_check():

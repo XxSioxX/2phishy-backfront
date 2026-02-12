@@ -212,3 +212,8 @@ def admin_update_user(db: Session, user_id: str, update_data: UserUpdate, admin_
     db.refresh(user)
     logger.info(f"User {user.username} updated by admin {admin_user.username}")
     return user
+
+def super_admin_exists(db: Session) -> bool:
+    return db.query(User).filter(
+        User.role == UserRole.SUPER_ADMIN
+    ).first() is not None
