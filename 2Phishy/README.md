@@ -35,6 +35,14 @@ npm install
 npm run dev
 ```
 
+## Run Dev
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+## Stop
+```bash
+docker compose -f docker-compose.dev.yml down
+```
 ## Features
 
 - **Role-based UI**: Different interfaces for students, admins, and super-admins

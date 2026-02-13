@@ -1,7 +1,13 @@
 import { User, TopScore, Report, ChartBoxData } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL!;
-console.log("API BASE URL:", process.env.REACT_APP_API_BASE_URL);
+let API_BASE_URL = process.env.REACT_APP_API_BASE_URL!;
+console.log("API BASE URL:", API_BASE_URL);
+
+// Ensure we use HTTP for localhost in development (avoid HSTS issues)
+if (API_BASE_URL.includes('localhost') && API_BASE_URL.startsWith('https')) {
+    API_BASE_URL = API_BASE_URL.replace('https://', 'http://');
+    console.log("Converted to HTTP for localhost development:", API_BASE_URL);
+}
 
 
 // Helper function to get auth headers
@@ -34,21 +40,34 @@ export const logout = (): void => {
 export const api = {
     // User related endpoints
     async login(username: string, password: string): Promise<{ access_token: string; user: User }> {
-        const response = await fetch(`${API_BASE_URL}/users/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ username, password }),
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.detail || `Login failed with status ${response.status}`;
-            throw new Error(errorMessage);
+        try {
+            const response = await fetch(`${API_BASE_URL}/users/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.detail || `Login failed with status ${response.status}`;
+                throw new Error(errorMessage);
+            }
+            
+            return response.json();
+        } catch (error: any) {
+            // Enhanced error logging for debugging
+            console.error('Login API Error:', error);
+            console.error('API URL used:', `${API_BASE_URL}/users/login`);
+            
+            // If it's an SSL error, provide helpful guidance
+            if (error.message.includes('ERR_SSL') || error.message.includes('SSL') || error.message.includes('net::ERR')) {
+                console.error('SSL/Network Error - ensure backend is running on HTTP (not HTTPS) for localhost development');
+            }
+            
+            throw error;
         }
-        
-        return response.json();
     },
 
     async register(userData: Omit<User, 'id'>): Promise<User> {

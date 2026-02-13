@@ -1,14 +1,14 @@
-
 import { useState, useEffect } from "react"
 import BarChartBox from "../../components/barChartBox/BarChartBox"
 import ChartBox from "../../components/chartBox/ChartBox"
 import TopBox from "../../components/topBox/TopBox"
 import PieChartBox from "../../components/pieChartBox/PieChartBox"
+import WeeklyUserModal from "../../components/weeklyUserModal/WeeklyUserModal"
 import { barChartBoxVisit, chartBoxQuizRate } from "../../data"
 import "./home.scss"
-import BigChartBox from "../../components/bigChartBox/BigChartBox"
 import { api } from "../../services/api"
 import { useAuth } from "../../contexts/AuthContext"
+import { initializeWeeklyStats, cacheWeeklyStats, WeeklyUserStats } from "../../utils/weeklyUserStats"
 
 const Home = () => {
     const { user, isAuthenticated } = useAuth();
@@ -17,6 +17,8 @@ const Home = () => {
     const [newUsersData, setNewUsersData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showWeeklyModal, setShowWeeklyModal] = useState(false);
+    const [weeklyStats, setWeeklyStats] = useState<WeeklyUserStats | null>(null);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -30,15 +32,21 @@ const Home = () => {
                 setError(null);
 
                 // Fetch all dashboard data in parallel
-                const [userStatsData, activeParticipantsData, newUsersData] = await Promise.all([
+                const [userStatsData, activeParticipantsData, newUsersData, users] = await Promise.all([
                     api.getUserStats(),
                     api.getActiveParticipantsOverTime('week'), // Default to weekly view for active participants
-                    api.getNewUsersOverTime('week') // Default to weekly view for new users
+                    api.getNewUsersOverTime('week'), // Default to weekly view for new users
+                    api.getUsers() // Get all users for weekly stats
                 ]);
 
                 setUserStats(userStatsData);
                 setActiveParticipantsData(activeParticipantsData);
                 setNewUsersData(newUsersData);
+
+                // Initialize weekly stats from users data
+                const stats = initializeWeeklyStats(users);
+                setWeeklyStats(stats);
+                cacheWeeklyStats(stats);
 
             } catch (err) {
                 console.error('Failed to fetch dashboard data:', err);
@@ -146,15 +154,24 @@ const Home = () => {
 
     return(
         <div className="home">
+            <WeeklyUserModal 
+                isOpen={showWeeklyModal}
+                onClose={() => setShowWeeklyModal(false)}
+                weeklyStats={weeklyStats}
+            />
             <div className="box box1">
                 <TopBox/>
             </div>
-            <div className="box box2"><ChartBox {...chartBoxUser}/></div>
-            <div className="box box3"><ChartBox {...chartBoxQuizRate}/></div>
+            <div className="box box2">
+                <ChartBox 
+                    {...chartBoxUser}
+                    onViewAll={() => setShowWeeklyModal(true)}
+                />
+            </div>
+            <div className="box box3"><ChartBox icon={""} {...chartBoxQuizRate}/></div>
             <div className="box box4"><PieChartBox/></div>
             <div className="box box5"><ChartBox {...chartBoxActiveParticipants}/></div>
             <div className="box box6"><BarChartBox {...barChartBoxVisit}/> </div>
-            <div className="box box7"><BigChartBox /></div>
         </div>
     )
 }

@@ -8,20 +8,43 @@
   color: $main-color;
   border-radius: 12px;
 
+  @include mobile {
+    padding: 15px;
+  }
+
   .headerWithButton {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    @include mobile {
+      margin-bottom: 15px;
+    }
 
     h1 {
       color: $main-color;
       margin: 0;
+      font-size: 22px;
+
+      @include mobile {
+        font-size: 18px;
+        flex: 1;
+        min-width: 200px;
+      }
     }
 
     .addAnnouncementBox {
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
+
+      @include mobile {
+        width: 100%;
+        gap: 8px;
+      }
 
       .actionButton {
         background-color: $dark-bg;
@@ -30,8 +53,16 @@
         padding: 10px 20px;
         border-radius: 5px;
         cursor: pointer;
-        font-size: 16px;
+        font-size: 14px;
         transition: background-color 0.3s, border-color 0.3s;
+        white-space: nowrap;
+
+        @include mobile {
+          flex: 1;
+          padding: 10px 12px;
+          font-size: 12px;
+          min-width: 70px;
+        }
 
         &:hover {
           background-color: $soft-bg;
@@ -53,11 +84,21 @@
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     margin-top: 20px;
 
+    @include mobile {
+      padding: 15px;
+      margin-top: 15px;
+    }
+
     .no-announcements {
       text-align: center;
       padding: 40px;
       color: $soft-color;
       font-size: 1.1rem;
+
+      @include mobile {
+        padding: 30px 15px;
+        font-size: 1rem;
+      }
     }
 
     .announcement-controls {
@@ -67,6 +108,13 @@
       margin-bottom: 20px;
       padding-bottom: 15px;
       border-bottom: 1px solid $soft-bg;
+      flex-wrap: wrap;
+      gap: 10px;
+
+      @include mobile {
+        margin-bottom: 15px;
+        padding-bottom: 12px;
+      }
 
       .select-all {
         display: flex;
@@ -74,15 +122,25 @@
         gap: 8px;
         color: $main-color;
         cursor: pointer;
+        font-size: 14px;
+
+        @include mobile {
+          font-size: 12px;
+        }
 
         input[type="checkbox"] {
           margin: 0;
+          cursor: pointer;
         }
       }
 
       .selected-count {
         color: $soft-color;
         font-size: 0.9rem;
+
+        @include mobile {
+          font-size: 0.8rem;
+        }
       }
     }
 
@@ -90,6 +148,10 @@
       display: flex;
       flex-direction: column;
       gap: 15px;
+
+      @include mobile {
+        gap: 12px;
+      }
     }
 
     .announcement-card {
@@ -100,6 +162,11 @@
       border-radius: 8px;
       border: 1px solid transparent;
       transition: all 0.3s ease;
+
+      @include mobile {
+        gap: 10px;
+        padding: 12px;
+      }
 
       &:hover {
         border-color: $main-color;
@@ -112,26 +179,47 @@
         align-items: flex-start;
         padding-top: 5px;
 
+        @include mobile {
+          padding-top: 3px;
+        }
+
         input[type="checkbox"] {
           margin: 0;
           transform: scale(1.2);
+          cursor: pointer;
+
+          @include mobile {
+            transform: scale(1);
+          }
         }
       }
 
       .announcement-content {
         flex: 1;
+        min-width: 0;
 
         .announcement-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
           margin-bottom: 10px;
+          gap: 10px;
+          flex-wrap: wrap;
+
+          @include mobile {
+            margin-bottom: 8px;
+            gap: 8px;
+          }
 
           h3 {
             color: $main-color;
             margin: 0;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
+
+            @include mobile {
+              font-size: 1rem;
+            }
           }
 
           .announcement-meta {
@@ -140,9 +228,18 @@
             align-items: flex-end;
             gap: 5px;
 
+            @include mobile {
+              align-items: flex-start;
+              gap: 3px;
+            }
+
             .date {
               color: $soft-color;
-              font-size: 0.9rem;
+              font-size: 0.85rem;
+
+              @include mobile {
+                font-size: 0.75rem;
+              }
             }
 
             .status-badge {
@@ -152,6 +249,11 @@
               border-radius: 12px;
               font-size: 0.8rem;
               font-weight: 500;
+
+              @include mobile {
+                padding: 2px 6px;
+                font-size: 0.7rem;
+              }
 
               &.draft {
                 background-color: #95a5a6;
@@ -165,6 +267,11 @@
               border-radius: 12px;
               font-size: 0.8rem;
               font-weight: 500;
+
+              @include mobile {
+                padding: 2px 6px;
+                font-size: 0.7rem;
+              }
             }
           }
         }
@@ -173,6 +280,11 @@
           color: $soft-color;
           line-height: 1.5;
           margin: 0;
+          font-size: 0.95rem;
+
+          @include mobile {
+            font-size: 0.9rem;
+          }
         }
       }
     }
@@ -190,6 +302,10 @@
     justify-content: center;
     align-items: center;
     z-index: 1000;
+
+    @include mobile {
+      align-items: flex-end;
+    }
   }
 
   .modal-content {
@@ -202,6 +318,12 @@
     overflow-y: auto;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 
+    @include mobile {
+      width: 100%;
+      border-radius: 12px 12px 0 0;
+      max-height: 90vh;
+    }
+
     .modal-header {
       display: flex;
       justify-content: space-between;
@@ -209,10 +331,18 @@
       padding: 20px;
       border-bottom: 1px solid $soft-bg;
 
+      @include mobile {
+        padding: 15px;
+      }
+
       h3 {
         color: $main-color;
         margin: 0;
-        font-size: 1.3rem;
+        font-size: 1.2rem;
+
+        @include mobile {
+          font-size: 1rem;
+        }
       }
 
       .modal-close {
@@ -237,14 +367,28 @@
     .announcement-form {
       padding: 20px;
 
+      @include mobile {
+        padding: 15px;
+      }
+
       .form-group {
         margin-bottom: 20px;
+
+        @include mobile {
+          margin-bottom: 15px;
+        }
 
         label {
           display: block;
           color: $main-color;
           margin-bottom: 8px;
           font-weight: 500;
+          font-size: 14px;
+
+          @include mobile {
+            font-size: 13px;
+            margin-bottom: 6px;
+          }
         }
 
         input, textarea, select {
@@ -256,6 +400,11 @@
           color: $main-color;
           font-size: 14px;
           font-family: inherit;
+
+          @include mobile {
+            padding: 10px;
+            font-size: 14px;
+          }
 
           &:focus {
             outline: none;
@@ -271,6 +420,10 @@
         textarea {
           resize: vertical;
           min-height: 100px;
+
+          @include mobile {
+            min-height: 80px;
+          }
         }
       }
 
@@ -279,9 +432,45 @@
         gap: 10px;
         justify-content: flex-end;
         margin-top: 30px;
+
+        @include mobile {
+          gap: 8px;
+          margin-top: 20px;
+        }
+
+        button {
+          padding: 10px 20px;
+          border-radius: 5px;
+          border: none;
+          cursor: pointer;
+          font-size: 14px;
+          transition: all 0.3s;
+
+          @include mobile {
+            flex: 1;
+            padding: 12px;
+            font-size: 13px;
+          }
+
+          &.save-btn {
+            background-color: #2ecc71;
+            color: white;
+
+            &:hover {
+              background-color: #27ae60;
+            }
+          }
+
+          &.cancel-btn {
+            background-color: $soft-bg;
+            color: $main-color;
+
+            &:hover {
+              background-color: var(--main-bg);
+            }
+          }
+        }
       }
     }
   }
-
-  // Button disabled state handled globally
 }

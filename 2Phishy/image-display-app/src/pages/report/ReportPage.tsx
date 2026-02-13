@@ -11,6 +11,7 @@ interface ReportWithResolved extends Report {
 const ReportPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const [studentReports, setStudentReports] = useState<ReportWithResolved[]>([]);
+  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
   const loadReports = () => {
     console.log('Loading reports from localStorage...');
@@ -75,6 +76,11 @@ const ReportPage: React.FC = () => {
     setStudentReports(updatedReports);
     // Save with resolved status so it persists
     localStorage.setItem('resolvedReportsWithStatus', JSON.stringify(updatedReports));
+    setExpandedReportId(null); // Close dropdown after marking resolved
+  };
+
+  const toggleReportExpand = (reportId: string) => {
+    setExpandedReportId(expandedReportId === reportId ? null : reportId);
   };
 
   const newReports = studentReports.filter(report => !report.resolved);
@@ -98,29 +104,56 @@ const ReportPage: React.FC = () => {
       {/* New Reports Section */}
       <div className="reportSection">
         <h2 className="sectionTitle">New Reports</h2>
-        <div className="reportGrid">
+        <div className="reportList">
           {newReports.length === 0 ? (
             <div className="no-reports">
               <p>No new reports</p>
             </div>
           ) : (
             newReports.map((report) => (
-              <div key={report.id} className="reportCard">
-                <div className="reportId">ID: {report.id}</div>
-                <div className="reportMessage">{report.message}</div>
-                <div className="reportUser">Reported by: {report.username || 'Unknown Student'}</div>
-                <div className={`reportStatus ${report.status.toLowerCase()}`}>
-                  Status: {report.status}
+              <div key={report.id} className="reportItem">
+                <div 
+                  className="reportTitle" 
+                  onClick={() => toggleReportExpand(report.id)}
+                >
+                  <span className={`expandIcon ${expandedReportId === report.id ? 'expanded' : ''}`}>
+                    ▶
+                  </span>
+                  <span className="titleText">{report.message.substring(0, 50)}{report.message.length > 50 ? '...' : ''}</span>
+                  <span className="reportStatusBadge high">High</span>
                 </div>
-                <div className="reportDate">Date: {report.date}</div>
-                <div className="reportType">Type: {report.type}</div>
-                {user && (user.role === 'admin' || user.role === 'super-admin') && (
-                  <button 
-                    className="resolveButton" 
-                    onClick={() => handleMarkResolved(report.id)}
-                  >
-                    Mark as Resolved
-                  </button>
+                
+                {expandedReportId === report.id && (
+                  <div className="reportDetails">
+                    <div className="detailRow">
+                      <span className="label">ID:</span>
+                      <span className="value">{report.id}</span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Message:</span>
+                      <span className="value">{report.message}</span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Reported by:</span>
+                      <span className="value">{report.username || 'Unknown Student'}</span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Type:</span>
+                      <span className="value">{report.type}</span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Date:</span>
+                      <span className="value">{report.date}</span>
+                    </div>
+                    {user && (user.role === 'admin' || user.role === 'super-admin') && (
+                      <button 
+                        className="resolveButton" 
+                        onClick={() => handleMarkResolved(report.id)}
+                      >
+                        Mark as Resolved
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))
@@ -132,18 +165,44 @@ const ReportPage: React.FC = () => {
       {resolvedReports.length > 0 && (
         <div className="reportSection">
           <h2 className="sectionTitle">Resolved Reports</h2>
-          <div className="reportGrid">
+          <div className="reportList">
             {resolvedReports.map((report) => (
-              <div key={report.id} className="reportCard resolved">
-                <div className="reportId">ID: {report.id}</div>
-                <div className="reportMessage">{report.message}</div>
-                <div className="reportUser">Reported by: {report.username || 'Unknown Student'}</div>
-                <div className={`reportStatus ${report.status.toLowerCase()}`}>
-                  Status: {report.status}
+              <div key={report.id} className="reportItem resolved">
+                <div 
+                  className="reportTitle" 
+                  onClick={() => toggleReportExpand(report.id)}
+                >
+                  <span className={`expandIcon ${expandedReportId === report.id ? 'expanded' : ''}`}>
+                    ▶
+                  </span>
+                  <span className="titleText">{report.message.substring(0, 50)}{report.message.length > 50 ? '...' : ''}</span>
+                  <span className="reportStatusBadge resolved">✓ Resolved</span>
                 </div>
-                <div className="reportDate">Date: {report.date}</div>
-                <div className="reportType">Type: {report.type}</div>
-                <div className="resolvedBadge">✓ Resolved</div>
+                
+                {expandedReportId === report.id && (
+                  <div className="reportDetails">
+                    <div className="detailRow">
+                      <span className="label">ID:</span>
+                      <span className="value">{report.id}</span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Message:</span>
+                      <span className="value">{report.message}</span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Reported by:</span>
+                      <span className="value">{report.username || 'Unknown Student'}</span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Type:</span>
+                      <span className="value">{report.type}</span>
+                    </div>
+                    <div className="detailRow">
+                      <span className="label">Date:</span>
+                      <span className="value">{report.date}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -91,7 +91,6 @@ export const barChartBoxVisit = {
 
 export const chartBoxQuizRate = {
     color: "#FF8042",
-    icon: "/quiz.svg",
     title: "Quiz Completion Rate",
     number: "85%",
     dataKey: "rate",

@@ -1,13 +1,12 @@
 import "./navbar.scss";
 import { Link } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { getReportsFromStorage } from "../../data";
 import { useAuth } from "../../contexts/AuthContext";
+import { useMobileMenu } from "../../contexts/MobileMenuContext";
 import { Report, ReportWithResolved, Announcement } from "../../types";
 
 const Navbar = () => {
-    const [showSearch, setShowSearch] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
     const [showTooltip, setShowTooltip] = useState(false);
     const [notificationCount, setNotificationCount] = useState(0);
     const [notificationDetails, setNotificationDetails] = useState<{
@@ -16,11 +15,12 @@ const Navbar = () => {
         studentReportStatus?: ReportWithResolved[];
     }>({ reports: [], announcements: [] });
     const { user, isAuthenticated } = useAuth();
+    const { toggleMobileMenu } = useMobileMenu();
 
     // Calculate notification count from localStorage data
     useEffect(() => {
         const calculateNotifications = () => {
-            let reportsCount = 0;
+            let newNotificationsCount = 0;
             let studentReports: ReportWithResolved[] = [];
             let studentReportStatus: ReportWithResolved[] = [];
 
@@ -47,28 +47,40 @@ const Navbar = () => {
                 }
                 
                 studentReports = reportsWithStatus.filter((r: ReportWithResolved) => !r.resolved); // Only unresolved
-                reportsCount = studentReports.length;
+                
+                // Count NEW unresolved reports (not viewed yet)
+                const viewedNotificationsData = localStorage.getItem('viewedNotifications') || '{}';
+                const viewedNotifications = JSON.parse(viewedNotificationsData);
+                newNotificationsCount = studentReports.filter((r: ReportWithResolved) => !viewedNotifications[`report_${r.id}`]).length;
             } 
             // Students see if their reports were resolved
             else if (user && user.role === 'student') {
                 const allReports = getReportsFromStorage();
                 studentReportStatus = allReports.filter((report: Report) => report.username === user.username);
-                reportsCount = studentReportStatus.filter((r: ReportWithResolved) => r.resolved).length; // Count resolved reports to notify student
+                
+                // Count NEW resolved reports (not viewed yet)
+                const viewedNotificationsData = localStorage.getItem('viewedNotifications') || '{}';
+                const viewedNotifications = JSON.parse(viewedNotificationsData);
+                newNotificationsCount = studentReportStatus.filter((r: ReportWithResolved) => r.resolved && !viewedNotifications[`report_${r.id}`]).length;
             }
 
             // Get admin announcements count (published only)
             const storedAnnouncements = localStorage.getItem('adminAnnouncements');
-            let announcementsCount = 0;
             let publishedAnnouncements: Announcement[] = [];
             if (storedAnnouncements) {
                 const adminAnnouncements = JSON.parse(storedAnnouncements);
                 publishedAnnouncements = adminAnnouncements.filter((announcement: Announcement) =>
                     announcement.isPublished && !announcement.isScheduled
                 );
-                announcementsCount = publishedAnnouncements.length;
+                
+                // Count NEW announcements (not viewed yet)
+                const viewedNotificationsData = localStorage.getItem('viewedNotifications') || '{}';
+                const viewedNotifications = JSON.parse(viewedNotificationsData);
+                const newAnnouncementsCount = publishedAnnouncements.filter((_, index: number) => !viewedNotifications[`announcement_${index}`]).length;
+                newNotificationsCount += newAnnouncementsCount;
             }
 
-            setNotificationCount(reportsCount + announcementsCount);
+            setNotificationCount(newNotificationsCount);
             setNotificationDetails({
                 reports: studentReports,
                 announcements: publishedAnnouncements,
@@ -91,14 +103,6 @@ const Navbar = () => {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, [isAuthenticated, user]);
 
-    const handleSearchClick = () => {
-        setShowSearch((prev) => !prev);
-    };
-
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchQuery(e.target.value);
-    };
-
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
             // Enter fullscreen
@@ -113,41 +117,56 @@ const Navbar = () => {
         }
     };
 
-    const handleSearchSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        console.log("Search query:", searchQuery);
-        // You can add your search logic here
+    const handleNotificationClick = () => {
+        // Mark all notifications as viewed
+        const viewedNotifications = JSON.parse(localStorage.getItem('viewedNotifications') || '{}');
+        
+        // Mark reports as viewed
+        notificationDetails.reports.forEach((report: ReportWithResolved) => {
+            viewedNotifications[`report_${report.id}`] = true;
+        });
+        
+        // Mark student reports as viewed
+        notificationDetails.studentReportStatus?.forEach((report: ReportWithResolved) => {
+            if (report.resolved) {
+                viewedNotifications[`report_${report.id}`] = true;
+            }
+        });
+        
+        // Mark announcements as viewed
+        notificationDetails.announcements.forEach((_, index: number) => {
+            viewedNotifications[`announcement_${index}`] = true;
+        });
+        
+        localStorage.setItem('viewedNotifications', JSON.stringify(viewedNotifications));
+        
+        // Update badge count
+        setNotificationCount(0);
     };
 
-    const handleNotificationClick = () => {
-        // Clear notifications by setting count to 0
-        setNotificationCount(0);
-        // Optionally, you could also clear the actual data or mark as read
-        // For now, we'll just hide the notification badge
-    };
 
 
     return(
         <div className="navbar">
-            <div className="logo">
-                <img src="/logo1.png" alt="" />
-                <span>2Phishy</span>
+            <div className="navbar-left">
+                <button 
+                    className="menu-toggle"
+                    onClick={toggleMobileMenu}
+                    aria-label="Toggle menu"
+                    title="Toggle menu"
+                >
+                    ☰
+                </button>
+                <div className="logo">
+                    <img src="/logo1.png" alt="" />
+                    <span>2Phishy</span>
+                </div>
+                <div className="user-mobile">
+                    <img src="user.svg" alt="" />
+                    <span>{isAuthenticated ? user?.username || 'User' : 'Guest'}</span>
+                </div>
             </div>
             <div className="icons">
-                <img src="/search.svg" className="icon" onClick={handleSearchClick} style={{ cursor: "pointer" }} />
-                {showSearch && (
-                    <form className="search-form" onSubmit={handleSearchSubmit}>
-                        <input
-                            type="text"
-                            className="search-input"
-                            placeholder="Search..."
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                            autoFocus
-                        />
-                    </form>
-                )}
-                <img src="/app.svg" className="icon" />
                 <img 
                     src="/expand.svg" 
                     className="icon" 
@@ -171,12 +190,19 @@ const Navbar = () => {
                             {notificationCount > 0 ? (
                                 <div>
                                     <div className="tooltip-header">
-                                        {notificationCount} Notifications
+                                        {notificationCount} New Notification{notificationCount !== 1 ? 's' : ''}
                                     </div>
                                     {/* Admin/Super-admin see reports */}
                                     {user && (user.role === 'admin' || user.role === 'super-admin') && notificationDetails.reports.length > 0 && (
                                         <div className="tooltip-section">
                                             <div className="tooltip-section-title">📋 Reports ({notificationDetails.reports.length})</div>
+                                            {notificationDetails.reports.map((report: ReportWithResolved) => (
+                                                <div key={report.id} className="report-item">
+                                                    <div className="report-type">{report.type || 'Report'}</div>
+                                                    <div className="report-message">{report.message.substring(0, 40)}...</div>
+                                                    <div className="report-meta">From: {report.username} | {report.status}</div>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                     {/* Students see their own report status */}
@@ -185,8 +211,13 @@ const Navbar = () => {
                                             <div className="tooltip-section-title">📋 Your Reports</div>
                                             {notificationDetails.studentReportStatus.map((report: ReportWithResolved) => (
                                                 <div key={report.id} className="report-status-item">
-                                                    <span>{report.resolved ? '✓' : '⏳'} {report.message.substring(0, 20)}...</span>
-                                                    <span className={report.resolved ? 'status-resolved' : 'status-pending'}>{report.resolved ? 'Resolved' : 'Pending'}</span>
+                                                    <div className="status-badge">
+                                                        <span className="status-icon">{report.resolved ? '✓' : '⏳'}</span>
+                                                        <span className={`status-text ${report.resolved ? 'resolved' : 'pending'}`}>
+                                                            {report.resolved ? 'Resolved' : 'Pending'}
+                                                        </span>
+                                                    </div>
+                                                    <span className="report-text">{report.message.substring(0, 30)}...</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -194,6 +225,11 @@ const Navbar = () => {
                                     {notificationDetails.announcements.length > 0 && (
                                         <div className="tooltip-section">
                                             <div className="tooltip-section-title">📢 Announcements ({notificationDetails.announcements.length})</div>
+                                            {notificationDetails.announcements.map((_, index: number) => (
+                                                <div key={`announcement_${index}`} className="announcement-item">
+                                                    <div className="announcement-badge">New Announcement #{index + 1}</div>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
