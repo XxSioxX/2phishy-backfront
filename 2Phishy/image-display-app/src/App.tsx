@@ -1,11 +1,14 @@
 import {
   createBrowserRouter,
   RouterProvider,
-  Outlet
+  Outlet,
+  useLocation
 } from "react-router-dom";
+import { useEffect } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TimezoneProvider } from "./contexts/TimezoneContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { MobileMenuProvider, useMobileMenu } from "./contexts/MobileMenuContext";
 import RouteGuard from "./components/RouteGuard";
 import Footer from "./components/footer/Footer";
 import Menu from "./components/menu/Menu";
@@ -28,32 +31,48 @@ import StudentReport from "./pages/student-report/StudentReport";
 import StudentAnnouncement from "./pages/student-announcement/StudentAnnouncement";
 import DateTimeDisplay from "./components/DateTimeDisplay/DateTimeDisplay";
 
-const App: React.FC = () => {
-  const Layout: React.FC = () => {
-    const { user } = useAuth();
-    const isStudent = user?.role === 'student';
-    
-    return (
-      <div className="main">
-        <Navbar/>
-        <div className="container">
-          <div className="menuContainer">
-            {isStudent ? <StudentMenu/> : <Menu/>}
-            <DateTimeDisplay/>
-          </div>
-          <div className="contentContainer">
-            <Outlet/>
-          </div>
-        </div>
-        <Footer/>
-      </div>
-    );
-  };
+const LayoutContent: React.FC = () => {
+  const { user } = useAuth();
+  const { showMobileMenu, toggleMobileMenu } = useMobileMenu();
+  const location = useLocation();
+  const isStudent = user?.role === 'student';
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    if (showMobileMenu) {
+      toggleMobileMenu();
+    }
+  }, [location.pathname]);
+
+  // Close mobile menu when menu item is clicked
+  const handleMenuClick = () => {
+    if (showMobileMenu) {
+      toggleMobileMenu();
+    }
+  };
+  
+  return (
+    <div className="main">
+      <Navbar/>
+      <div className="container">
+        <div className={`menuContainer ${showMobileMenu ? 'mobile-menu-open' : ''}`} onClick={handleMenuClick}>
+          {isStudent ? <StudentMenu/> : <Menu/>}
+          <DateTimeDisplay/>
+        </div>
+        <div className="contentContainer">
+          <Outlet/>
+        </div>
+      </div>
+      <Footer/>
+    </div>
+  );
+};
+
+const App: React.FC = () => {
   const router = createBrowserRouter([
     {
       path: "/",
-      element: <Layout/>,
+      element: <LayoutContent/>,
       children: [
         {
           path: "/",
@@ -123,7 +142,9 @@ const App: React.FC = () => {
     <ThemeProvider>
       <AuthProvider>
         <TimezoneProvider>
-          <RouterProvider router={router} />
+          <MobileMenuProvider>
+            <RouterProvider router={router} />
+          </MobileMenuProvider>
         </TimezoneProvider>
       </AuthProvider>
     </ThemeProvider>

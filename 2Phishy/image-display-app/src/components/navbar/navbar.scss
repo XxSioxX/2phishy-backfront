@@ -6,79 +6,149 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
 
-    .logo{
+    @include mobile {
+        padding: 12px 10px;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .navbar-left {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex: 1;
+
+        @include mobile {
+            gap: 10px;
+            flex: 0 1 auto;
+        }
+    }
+
+    .logo {
         display: flex;
         align-items: center;
         font-weight: bold;
         gap: 10px;
+        min-width: 0;
+        flex-shrink: 0;
+
+        @include mobile {
+            gap: 5px;
+        }
     }
 
-    .logo img{
+    .logo img {
         max-width: 70px;
         height: auto;
+
+        @include mobile {
+            max-width: 50px;
+        }
     }
+
+    .user-mobile {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+
+        @include mobile {
+            display: flex;
+        }
+
+        img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        span {
+            font-size: 12px;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
     .icons {
         display: flex;
         align-items: center;
         gap: 20px;
+        flex-wrap: wrap;
 
-    .notification{
-        position: relative;
-
-        span{
-            background-color: red;
-            color: white;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
+        @include mobile {
+            gap: 12px;
+            flex: 1;
+            justify-content: flex-end;
         }
 
-    }
+        .notification {
+            position: relative;
 
-        .user{
+            span {
+                background-color: red;
+                color: white;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                position: absolute;
+                top: -10px;
+                right: -10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 13px;
+            }
+        }
+
+        .user {
             display: flex;
             align-items: center;
             gap: 10px;
+
+            @include mobile {
+                display: none;
+            }
 
             img {
                 width: 26px;
                 height: 26px;
                 border-radius: 50%;
                 object-fit: cover;
+                flex-shrink: 0;
+
+                @include mobile {
+                    width: 24px;
+                    height: 24px;
+                }
             }
         }
     }
-}
 
-.search-form {
-  display: inline-block;
-  margin-left: 1rem;
-}
+    .menu-toggle {
+        display: none;
+        background: none;
+        border: none;
+        color: $main-color;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
 
-.search-input {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  background: $main-bg;
-  color: $main-color;
-  outline: none;
-  transition: border-color 0.2s;
-  width: 180px;
-  margin-right: 0.5rem;
-
-  &:focus {
-    border-color: $soft-color;
-    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.15);
-  }
+        @include mobile {
+            display: flex;
+        }
+    }
 }
 
 .notification .custom-tooltip {
@@ -93,7 +163,9 @@
   z-index: 10;
   box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   min-width: 200px;
-  max-width: 250px;
+  max-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
 
   .tooltip-header {
     font-weight: 600;
@@ -104,7 +176,7 @@
   }
 
   .tooltip-section {
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 
     &:last-child {
       margin-bottom: 0;
@@ -114,6 +186,36 @@
       font-weight: 500;
       color: #ddd;
       font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .report-item {
+      background: #333;
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      border-left: 3px solid #4a90e2;
+
+      .report-type {
+        font-weight: 600;
+        color: #52c41a;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .report-message {
+        color: #bbb;
+        font-size: 12px;
+        margin: 4px 0;
+        word-break: break-word;
+      }
+
+      .report-meta {
+        font-size: 11px;
+        color: #999;
+        display: flex;
+        justify-content: space-between;
+      }
     }
 
     .report-status-item {
@@ -121,17 +223,51 @@
       justify-content: space-between;
       align-items: center;
       font-size: 12px;
-      padding: 4px 0;
+      padding: 6px;
       color: #bbb;
+      background: #333;
+      border-radius: 4px;
+      margin-bottom: 6px;
 
-      .status-resolved {
-        color: #52c41a;
-        font-weight: 600;
+      .status-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .status-icon {
+          font-size: 16px;
+        }
+
+        .status-text {
+          font-weight: 600;
+
+          &.resolved {
+            color: #52c41a;
+          }
+
+          &.pending {
+            color: #faad14;
+          }
+        }
       }
 
-      .status-pending {
-        color: #faad14;
+      .report-text {
+        flex: 1;
+        word-break: break-word;
+      }
+    }
+
+    .announcement-item {
+      background: #333;
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      border-left: 3px solid #faad14;
+
+      .announcement-badge {
         font-weight: 600;
+        color: #faad14;
+        font-size: 12px;
       }
     }
   }

@@ -3,9 +3,18 @@ import "./chartBox.scss"
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts"
 import { ChartBoxData } from "../../types/data"
 
-interface ChartBoxProps extends ChartBoxData {}
+interface ChartBoxProps extends ChartBoxData {
+    onViewAll?: () => void;
+}
 
 const ChartBox: React.FC<ChartBoxProps> = (props) => {
+    const handleViewAll = (e: React.MouseEvent) => {
+        if (props.onViewAll) {
+            e.preventDefault();
+            props.onViewAll();
+        }
+    };
+
     return (
         <div className="chartBox">
             <div className="boxInfo">
@@ -14,7 +23,11 @@ const ChartBox: React.FC<ChartBoxProps> = (props) => {
                 <span>{props.title}</span>
                 </div>
                 <h1>{props.number}</h1>
-                <Link to="/" style={{color:props.color}}> View all </Link>
+                {props.onViewAll ? (
+                    <a href="#" onClick={handleViewAll} style={{color:props.color}}>View all</a>
+                ) : (
+                    <Link to="/" style={{color:props.color}}>View all</Link>
+                )}
             </div>
             <div className="chartInfo">
             <div className="chart">

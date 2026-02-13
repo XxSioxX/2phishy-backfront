@@ -78,24 +78,18 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def require_role(required_role: str):
+def require_role(required_roles):
     """Dependency factory for role-based access control"""
+    # Handle both string and list inputs
+    if isinstance(required_roles, str):
+        required_roles = [required_roles]
+    
     def role_checker(current_user: User = Depends(get_current_active_user)) -> User:
-        # Define role hierarchy: super-admin > admin > student
-        role_hierarchy = {
-            "student": 1,
-            "admin": 2, 
-            "super-admin": 3
-        }
-        
-        current_role_level = role_hierarchy.get(current_user.role.value, 0)
-        required_role_level = role_hierarchy.get(required_role, 0)
-        
-        # Allow access if user has required role or higher privilege
-        if current_role_level < required_role_level:
+        # Check if user's role is in the allowed roles
+        if current_user.role.value not in required_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required role: {required_role}"
+                detail=f"Access denied. Required roles: {', '.join(required_roles)}"
             )
         return current_user
     return role_checker

@@ -1,28 +1,56 @@
 @use "../../styles/variables.scss" as *;
 
-.menu{
-    
-    .item{
+.menu {
+    .item {
         display: flex;
         flex-direction: column;
         gap: 10px;
         margin-bottom: 20px;
 
-        .title{
+        @include mobile {
+            margin-bottom: 15px;
+        }
+
+        .title {
             font-size: 12px;
             font-weight: 200;
             color: $soft-color;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
+
+            @include mobile {
+                font-size: 11px;
+            }
         }
-        .listItem{
+
+        .listItem {
             display: flex;
             align-items: center;
             gap: 10px;
             padding: 10px;
             border-radius: 5px;
+            transition: background-color 0.2s;
+            cursor: pointer;
 
-            &:hover{
+            @include mobile {
+                padding: 8px;
+                font-size: 14px;
+                gap: 8px;
+            }
+
+            &:hover {
                 background-color: $soft-bg;
+            }
+
+            img {
+                width: 24px;
+                height: 24px;
+                flex-shrink: 0;
+
+                @include mobile {
+                    width: 20px;
+                    height: 20px;
+                }
             }
         }
     }

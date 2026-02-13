@@ -1,0 +1,272 @@
+@use "../../styles/variables.scss" as *;
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+
+  @include mobile {
+    padding: 10px;
+  }
+
+  .modal-content {
+    background: #1a1a1a;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+
+    @include mobile {
+      max-width: 100%;
+      border-radius: 8px 8px 0 0;
+      max-height: 95vh;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #333;
+      flex-shrink: 0;
+
+      @include mobile {
+        padding: 15px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+
+        @include mobile {
+          font-size: 16px;
+        }
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #999;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+          color: #fff;
+        }
+      }
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+
+      @include mobile {
+        padding: 15px;
+      }
+
+      .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+
+        @include mobile {
+          grid-template-columns: 1fr;
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+
+        .stat-card {
+          background: #222;
+          padding: 15px;
+          border-radius: 6px;
+          border: 1px solid #333;
+          text-align: center;
+
+          .stat-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+          }
+
+          .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #4a90e2;
+          }
+        }
+      }
+
+      .chart-container {
+        background: #222;
+        padding: 20px;
+        border-radius: 6px;
+        border: 1px solid #333;
+        margin-bottom: 30px;
+
+        @include mobile {
+          padding: 15px;
+          margin-bottom: 20px;
+        }
+
+        h3 {
+          margin: 0 0 20px 0;
+          font-size: 14px;
+          font-weight: 600;
+
+          @include mobile {
+            margin: 0 0 15px 0;
+            font-size: 13px;
+          }
+        }
+      }
+
+      .weekly-details {
+        h3 {
+          margin: 0 0 15px 0;
+          font-size: 14px;
+          font-weight: 600;
+
+          @include mobile {
+            font-size: 13px;
+          }
+        }
+
+        .weeks-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+
+          .week-item {
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #222;
+            overflow: hidden;
+
+            .week-header {
+              width: 100%;
+              padding: 15px;
+              background: none;
+              border: none;
+              color: #fff;
+              cursor: pointer;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              transition: background-color 0.2s;
+
+              @include mobile {
+                padding: 12px;
+              }
+
+              &:hover {
+                background: #333;
+              }
+
+              &.expanded {
+                background: #333;
+              }
+
+              .week-title {
+                font-weight: 600;
+                flex: 1;
+                text-align: left;
+                font-size: 14px;
+              }
+
+              .week-count {
+                font-size: 12px;
+                color: #4a90e2;
+                flex: 0 0 auto;
+                margin: 0 10px;
+              }
+
+              .expand-icon {
+                flex: 0 0 auto;
+                font-size: 12px;
+                color: #999;
+              }
+            }
+
+            .week-details-content {
+              padding: 0 15px 15px 15px;
+              background: #1a1a1a;
+              border-top: 1px solid #333;
+
+              @include mobile {
+                padding: 0 12px 12px 12px;
+              }
+
+              .detail-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 0;
+                font-size: 13px;
+
+                .detail-label {
+                  color: #999;
+                  font-weight: 500;
+                }
+
+                .detail-value {
+                  color: #4a90e2;
+                  font-weight: 600;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid #333;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-shrink: 0;
+
+      @include mobile {
+        padding: 15px;
+      }
+
+      .btn-close {
+        padding: 10px 20px;
+        background: #333;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background-color 0.2s;
+
+        &:hover {
+          background: #444;
+        }
+      }
+    }
+  }
+}
