@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.core.database_postgres import get_db
-from app.core.auth import require_admin_role, require_role, get_current_active_user
+from app.modules.auth.services.auth_service import require_admin_role, require_role, get_current_active_user
 from app.modules.user.models.user import User
 from app.modules.posts.schemas.post_schemas import PostCreate, PostUpdate, PostResponse
 from app.modules.posts.services.post_services import (

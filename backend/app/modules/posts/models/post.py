@@ -27,7 +27,6 @@ class Post(Base):
     category = Column(String, nullable=False)
     status = Column(String, nullable=False)
     content = Column(Text, nullable=True)
-    admin_notes = Column(Text, nullable=True) 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by = Column(UUID(as_uuid=True), nullable=False)

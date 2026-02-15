@@ -10,6 +10,15 @@ from app.modules.user.models.user import User, AccountStatus
 from app.utils.logger import get_logger
 import os
 
+from app.modules.email.services.service import EmailService
+from app.modules.auth.models.models import PasswordResetToken
+import secrets
+import hashlib
+from datetime import datetime, timedelta
+
+from app.core.config import settings
+import bcrypt
+
 logger = get_logger("auth.py")
 
 # Configuration
@@ -19,6 +28,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 
 # JWT token scheme
 security = HTTPBearer()
+
+email_service = EmailService()
+
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create a JWT access token"""
@@ -115,3 +127,62 @@ def require_super_admin_role(current_user: User = Depends(get_current_active_use
 def get_current_user_role(current_user: User = Depends(get_current_active_user)) -> str:
     """Get current user's role"""
     return current_user.role.value
+
+def generate_reset_token():
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+    return raw_token, token_hash, expires_at
+
+
+def forgot_password(db, user):
+
+    raw_token, token_hash, expires_at = generate_reset_token()
+
+    reset_entry = PasswordResetToken(
+        user_id=user.userid,
+        token_hash=token_hash,
+        expires_at=expires_at
+    )
+
+    db.add(reset_entry)
+    db.commit()
+
+    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
+
+    email_service.send_password_reset(user.email, reset_link)
+
+def reset_password(db: Session, raw_token: str, new_password: str):
+
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    reset_entry = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token_hash == token_hash,
+        PasswordResetToken.used == False,
+        PasswordResetToken.expires_at > datetime.utcnow()
+    ).first()
+
+    if not reset_entry:
+        return False
+
+    user = db.query(User).filter(
+        User.userid == reset_entry.user_id
+    ).first()
+
+    if not user:
+        return False
+
+    # hash new password
+    hashed_password = bcrypt.hashpw(
+        new_password.encode(),
+        bcrypt.gensalt()
+    ).decode()
+
+    user.password = hashed_password
+    reset_entry.used = True
+
+    db.commit()
+
+    return True

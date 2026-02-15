@@ -1,8 +1,10 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 import "./login.scss";
+
 
 interface LoginFormData {
   username: string;
@@ -154,7 +156,7 @@ const Login: React.FC = () => {
           </div>
           
           <div className="forgot-password">
-            <a href="/forgot-password">Forgot password?</a>
+            <Link to="/forgot-password">Forgot password?</Link>
           </div>
           
           <button 

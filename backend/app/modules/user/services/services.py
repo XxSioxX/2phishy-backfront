@@ -1,12 +1,15 @@
 from datetime import timedelta, datetime
+from sqlalchemy import func
 
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from app.core.auth import create_access_token
+
 from app.modules.user.models.user import User, UserRole, AccountStatus
 from app.modules.user.schemas.schemas import UserCreate, UserStatsResponse, UserUpdate, UserLogin
 from app.utils.logger import get_logger
 import bcrypt
+
+from app.modules.auth.services.auth_service import create_access_token
 
 logger = get_logger("user-services.py")
 
@@ -15,7 +18,7 @@ def create_user(db: Session, user_data: UserCreate):
     hashed_password = bcrypt.hashpw(user_data.password.encode(), bcrypt.gensalt()).decode()
     new_user = User(
         username=user_data.username,
-        email=user_data.email,
+        email=user_data.email.lower(),
         password=hashed_password,
         role=user_data.role
     )
@@ -217,3 +220,9 @@ def super_admin_exists(db: Session) -> bool:
     return db.query(User).filter(
         User.role == UserRole.SUPER_ADMIN
     ).first() is not None
+
+
+def get_user_by_email(db: Session, email: str):
+    return db.query(User).filter(
+        User.email == email.lower()
+    ).first()

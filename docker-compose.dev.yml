@@ -24,6 +24,7 @@ services:
     build: ./backend
     container_name: phishy-backend
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
     volumes:
       - ./backend:/app
     env_file:

@@ -30,6 +30,9 @@ import StudentSettings from "./pages/student-settings/StudentSettings";
 import StudentReport from "./pages/student-report/StudentReport";
 import StudentAnnouncement from "./pages/student-announcement/StudentAnnouncement";
 import DateTimeDisplay from "./components/DateTimeDisplay/DateTimeDisplay";
+import ForgotPassword from "./pages/forgot-password/ForgotPassword";
+import ResetPassword from "./pages/reset-password/ResetPassword";
+
 
 const LayoutContent: React.FC = () => {
   const { user } = useAuth();
@@ -135,7 +138,16 @@ const App: React.FC = () => {
     {
       path: "/register",
       element: <Register />
+    },
+    {
+      path: "/forgot-password",
+      element: <ForgotPassword />
+    },
+    {
+      path: "/reset-password",
+      element: <ResetPassword />
     }
+
   ]);
 
   return (

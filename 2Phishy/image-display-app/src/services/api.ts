@@ -643,5 +643,24 @@ export const api = {
         if (!response.ok) {
             throw new Error('Failed to delete post');
         }
-    }
+    },
+
+    forgotPassword: async (email: string) => {
+            const res = await fetch("/api/auth/forgot-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+            });
+            return res.json();
+        },
+
+    resetPassword: async (token: string, new_password: string) => {
+        const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, new_password }),
+        });
+        return res.json();
+    },
+
 }; 

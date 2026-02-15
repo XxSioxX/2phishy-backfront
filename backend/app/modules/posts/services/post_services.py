@@ -16,7 +16,6 @@ def create_post(db: Session, post_data: PostCreate, created_by: UUID) -> PostRes
         category=post_data.topic,
         status=post_data.status,
         content=post_data.content,
-        admin_notes=post_data.admin_notes,
         created_by=created_by
     )
     db.add(new_post)
@@ -44,7 +43,6 @@ def create_post(db: Session, post_data: PostCreate, created_by: UUID) -> PostRes
         'category': new_post.category,
         'status': new_post.status,
         'content': new_post.content,
-        'admin_notes': new_post.admin_notes,
         'created_at': new_post.created_at,
         'updated_at': new_post.updated_at,
         'created_by': display_name,
@@ -80,7 +78,6 @@ def get_post(db: Session, post_id: UUID) -> PostResponse | None:
         'category': post.category,
         'status': post.status,
         'content': post.content,
-        'admin_notes': post.admin_notes,
         'created_at': post.created_at,
         'updated_at': post.updated_at,
         'created_by': display_name,
@@ -116,7 +113,6 @@ def get_all_posts(db: Session) -> list[PostResponse]:
             'category': post.category,
             'status': post.status,
             'content': post.content,
-            'admin_notes': post.admin_notes,
             'created_at': post.created_at,
             'updated_at': post.updated_at,
             'created_by': display_name,
@@ -166,7 +162,6 @@ def update_post(db: Session, post_id: UUID, post_data: PostUpdate) -> PostRespon
         'category': post.category,
         'status': post.status,
         'content': post.content,
-        'admin_notes': post.admin_notes,
         'created_at': post.created_at,
         'updated_at': post.updated_at,
         'created_by': display_name,

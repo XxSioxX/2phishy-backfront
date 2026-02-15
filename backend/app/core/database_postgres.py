@@ -31,6 +31,7 @@ def init_db():
         # Import all models here to register them with Base
         from app.modules.user.models.user import User
         from app.modules.posts.models.post import Post
+        from app.modules.auth.models.models import PasswordResetToken
         
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")

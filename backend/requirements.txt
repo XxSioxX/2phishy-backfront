@@ -19,3 +19,6 @@ bcrypt~=4.3.0
 passlib[bcrypt]
 python-jose[cryptography]
 python-multipart
+
+resend
+jinja2

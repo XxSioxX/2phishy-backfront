@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database_postgres import get_db
-from app.core.auth import require_admin_role, require_super_admin_role, get_current_user_role
+from app.modules.auth.services.auth_service import require_admin_role, require_super_admin_role, get_current_user_role
 from app.modules.user.schemas.schemas import (
     UserResponse, UserUpdate, UserStatsResponse, AdminUserResponse
 )

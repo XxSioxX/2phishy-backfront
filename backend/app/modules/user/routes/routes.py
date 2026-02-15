@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_active_user, require_admin_role
 from app.core.database_postgres import get_db
 from app.modules.user.models.user import User
+from app.modules.auth.services.auth_service import get_current_active_user
 from app.modules.user.schemas.schemas import UserCreate, UserResponse, LoginResponse, UserLogin, UserStatsResponse
 from app.modules.user.services.services import create_user, get_user, get_all_users, update_user, delete_user, \
     authenticate_user, create_user_token, get_user_statistics
 from app.utils.logger import get_logger
+
 
 router = APIRouter(prefix="/users", tags=["users"])
 logger = get_logger("users-routes.py")
