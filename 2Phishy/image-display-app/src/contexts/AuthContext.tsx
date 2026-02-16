@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { User } from '../types';
 import { isAuthenticated, getCurrentUser, logout as apiLogout } from '../services/api';
+import { api } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -30,6 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to reset inactivity timer
   const resetInactivityTimer = () => {
@@ -52,6 +54,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Function to start heartbeat
+  const startHeartbeat = () => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+    heartbeatIntervalRef.current = setInterval(async () => {
+      try {
+        await api.updatePresence();
+      } catch (error) {
+        console.error('Heartbeat failed:', error);
+      }
+    }, 30000); // 30 seconds
+  };
+
+  // Function to stop heartbeat
+  const stopHeartbeat = () => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  };
+
   useEffect(() => {
     // Check if user is already logged in
     if (isAuthenticated()) {
@@ -59,6 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (savedUser) {
         setUser(savedUser);
         resetInactivityTimer(); // Start inactivity timer if user is logged in
+        startHeartbeat(); // Start heartbeat if user is logged in
       }
     }
     setLoading(false);
@@ -80,6 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         document.removeEventListener(event, handleActivity, true);
       });
       clearInactivityTimer();
+      stopHeartbeat();
     };
   }, []);
 
@@ -97,10 +123,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     resetInactivityTimer();
+    startHeartbeat();
   };
 
   const logout = () => {
     clearInactivityTimer();
+    stopHeartbeat();
     apiLogout();
     setUser(null);
   };

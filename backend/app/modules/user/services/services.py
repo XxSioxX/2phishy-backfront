@@ -189,6 +189,15 @@ def get_users_by_status(db: Session, status: AccountStatus):
     return db.query(User).filter(User.account_status == status).all()
 
 
+def update_last_seen(db: Session, user: User):
+    """Update user's last_seen timestamp"""
+    logger.info(f"Updating last_seen for user {user.username}")
+    user.last_seen = datetime.utcnow()
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def admin_update_user(db: Session, user_id: str, update_data: UserUpdate, admin_user: User):
     """Admin function to update user information"""
     logger.info(f"Admin {admin_user.username} updating user {user_id}")

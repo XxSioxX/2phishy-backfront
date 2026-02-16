@@ -10,7 +10,11 @@ from app.modules.user.models.user import User, AccountStatus
 from app.utils.logger import get_logger
 import os
 
-from app.modules.email.services.service import EmailService
+try:
+    from app.modules.email.services.service import EmailService
+except (ImportError, RuntimeError):
+    EmailService = None
+
 from app.modules.auth.models.models import PasswordResetToken
 import secrets
 import hashlib
@@ -29,7 +33,15 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 # JWT token scheme
 security = HTTPBearer()
 
-email_service = EmailService()
+# Initialize email service lazily
+_email_service = None
+
+def get_email_service():
+    """Get or create email service instance"""
+    global _email_service
+    if _email_service is None and EmailService is not None:
+        _email_service = EmailService()
+    return _email_service
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -152,7 +164,16 @@ def forgot_password(db, user):
 
     reset_link = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
 
-    email_service.send_password_reset(user.email, reset_link)
+    # Send email if email service is available
+    email_service = get_email_service()
+    if email_service:
+        try:
+            email_service.send_password_reset(user.email, reset_link)
+        except Exception as e:
+            logger.error(f"Failed to send password reset email: {e}")
+    else:
+        logger.warning("Email service not available. Password reset link not sent via email.")
+        logger.info(f"Reset link: {reset_link}")
 
 def reset_password(db: Session, raw_token: str, new_password: str):
 

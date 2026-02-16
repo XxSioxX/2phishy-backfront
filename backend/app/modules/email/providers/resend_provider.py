@@ -1,11 +1,17 @@
 import os
-import resend
 from .base import BaseEmailProvider
+
+try:
+    import resend
+except ImportError:
+    resend = None
 
 
 class ResendProvider(BaseEmailProvider):
 
     def __init__(self):
+        if resend is None:
+            raise RuntimeError("resend package is not installed. Install it with: pip install resend")
         resend.api_key = os.getenv("RESEND_API_KEY")
         self.from_email = os.getenv("EMAIL_FROM")
 

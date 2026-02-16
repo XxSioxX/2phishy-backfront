@@ -106,35 +106,8 @@ export const chartBoxQuizRate = {
     ],
 };
 
-// Function to get reports from localStorage
-export const getReportsFromStorage = () => {
-  try {
-    console.log('getReportsFromStorage called');
-    // Get student reports from localStorage
-    const storedReports = localStorage.getItem('studentReports');
-    console.log('Raw stored reports:', storedReports);
-    const studentReports = storedReports ? JSON.parse(storedReports) : [];
-    console.log('Parsed student reports:', studentReports);
-    
-    // Convert student reports to the main Report format
-    const convertedStudentReports = studentReports.map((report: any) => ({
-      id: report.id,
-      message: report.message,
-      status: report.status as "High" | "Mid" | "Low",
-      date: report.date,
-      type: report.type as "Bug" | "Exploit" | "Behavior",
-      user_id: report.user_id,
-      username: "testuser", // For now, assume all student reports are from testuser
-      user_role: "student" as const
-    }));
-    
-    console.log('Converted reports:', convertedStudentReports);
-    return convertedStudentReports;
-  } catch (error) {
-    console.error("Error loading reports from localStorage:", error);
-    return [];
-  }
-};
+// Previously had a helper to read reports from localStorage; notifications and reports
+// now prefer the backend API (`api.getReports`) with localStorage as a fallback.
 
 // Keep empty array for backward compatibility
 export const reports: any[] = [];

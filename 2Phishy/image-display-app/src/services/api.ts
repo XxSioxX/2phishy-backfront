@@ -1,4 +1,4 @@
-import { User, TopScore, Report, ChartBoxData } from '../types';
+import { User, TopScore, ChartBoxData } from '../types';
 
 let API_BASE_URL = process.env.REACT_APP_API_BASE_URL!;
 console.log("API BASE URL:", API_BASE_URL);
@@ -157,11 +157,7 @@ export const api = {
         return [];
     },
 
-    async getReports(): Promise<Report[]> {
-        // TODO: Implement reports endpoint in backend
-        console.warn('getReports: Backend endpoint not implemented yet');
-        return [];
-    },
+    
 
     async getChartData(): Promise<ChartBoxData> {
         // TODO: Implement chart-data endpoint in backend
@@ -511,6 +507,17 @@ export const api = {
         return { ...user, userid: user.userid || user.id };
     },
 
+    async updatePresence(): Promise<{ message: string }> {
+        const response = await fetch(`${API_BASE_URL}/users/presence`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to update presence');
+        }
+        return response.json();
+    },
+
     // Admin endpoints
     async changeUserRole(userId: string, newRole: string): Promise<User> {
         const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/role/${newRole}`, {
@@ -642,6 +649,104 @@ export const api = {
         });
         if (!response.ok) {
             throw new Error('Failed to delete post');
+        }
+    },
+
+    // Announcements endpoints
+    async getAnnouncements(): Promise<any[]> {
+        const response = await fetch(`${API_BASE_URL}/announcements`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch announcements');
+        }
+        const data = await response.json();
+        const announcements = data.announcements || [];
+        return announcements.map((a: any) => ({ ...a, id: a._id }));
+    },
+
+    async createAnnouncement(announcementData: any): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/announcements`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(announcementData)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to create announcement');
+        }
+        const data = await response.json();
+        return data.announcement || data;
+    },
+
+    async updateAnnouncement(announcementId: string, announcementData: any): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/announcements/${announcementId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(announcementData)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to update announcement');
+        }
+        const data = await response.json();
+        return data.announcement || data;
+    },
+
+    async deleteAnnouncement(announcementId: string): Promise<void> {
+        const response = await fetch(`${API_BASE_URL}/announcements/${announcementId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to delete announcement');
+        }
+    },
+
+    // Reports endpoints
+    async getReports(): Promise<any[]> {
+        const response = await fetch(`${API_BASE_URL}/reports`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch reports');
+        }
+        const data = await response.json();
+        const reports = data.reports || [];
+        return reports.map((r: any) => ({ ...r, id: r._id }));
+    },
+
+    async createReport(reportData: any): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/reports`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(reportData)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to create report');
+        }
+        const data = await response.json();
+        return data.report || data;
+    },
+
+    async updateReport(reportId: string, reportData: any): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/reports/${reportId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(reportData)
+        });
+        if (!response.ok) {
+            throw new Error('Failed to update report');
+        }
+        const data = await response.json();
+        return data.report || data;
+    },
+
+    async deleteReport(reportId: string): Promise<void> {
+        const response = await fetch(`${API_BASE_URL}/reports/${reportId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to delete report');
         }
     },
 

@@ -6,6 +6,7 @@ export interface User {
   password?: string;
   created_at?: string;
   last_login?: string | null;
+  last_seen?: string | null;
   account_status?: "active" | "inactive" | "suspended";
   role?: "student" | "admin" | "super-admin";
 }

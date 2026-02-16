@@ -20,6 +20,24 @@ const Users = () => {
   const [selectedRole, setSelectedRole] = useState<string>('student');
   const [roleChangeLoading, setRoleChangeLoading] = useState(false);
 
+  // Check if user is online (last seen within last 60 seconds, or is the current user)
+  const isUserOnline = (userToCheck?: any, lastSeen?: string | null): boolean => {
+    // Current user is always online if logged in
+    if (user && userToCheck && (userToCheck.id === user.userid || userToCheck.userid === user.userid)) {
+      return true;
+    }
+
+    if (!lastSeen) return false;
+    try {
+      const lastSeenTime = new Date(lastSeen).getTime();
+      const currentTime = new Date().getTime();
+      const sixtySecondsMs = 60 * 1000;
+      return (currentTime - lastSeenTime) < sixtySecondsMs;
+    } catch {
+      return false;
+    }
+  };
+
   // Fetch users from backend
   const fetchUsers = async () => {
     // Double-check: only proceed if user is admin or super-admin
@@ -45,6 +63,12 @@ const Users = () => {
     // Only fetch users if user is authenticated, loaded, and is admin or super-admin
     if (isAuthenticated && user && (user.role === 'admin' || user.role === 'super-admin')) {
       fetchUsers();
+
+      // Poll every 30 seconds for real-time presence updates
+      const intervalId = setInterval(fetchUsers, 30000);
+
+      // Cleanup interval on unmount
+      return () => clearInterval(intervalId);
     }
   }, [isAuthenticated, user]);
 
@@ -211,13 +235,16 @@ const Users = () => {
           {users.map((targetUser) => (
             <div key={targetUser.userid || targetUser.id} className="user-card">
               <div className="user-info">
-                <h3>{targetUser.username}</h3>
+                <div className="user-header">
+                  <h3>{targetUser.username}</h3>
+                  <span className={`status-dot ${isUserOnline(targetUser, targetUser.last_seen) ? 'online' : 'offline'}`}></span>
+                </div>
                 <p className="email">{targetUser.email}</p>
                 <p className="user-id">ID: {targetUser.userid || targetUser.id}</p>
                 <p className="user-role">Role: {targetUser.role || 'N/A'}</p>
                 <p className="account-status">Status: {targetUser.account_status || 'N/A'}</p>
                 <p className="last-login">
-                  Last Online: {formatDatePH(targetUser.last_login || '', true)}
+                  Last Seen: {formatDatePH(targetUser.last_seen || '', true)}
                 </p>
               </div>
               <div className="user-actions">

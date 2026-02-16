@@ -1,3 +1,4 @@
-- [x] Update fetchPosts to set created_by_role correctly based on created_by
-- [x] Fix select options for filterUserType
-- [x] Test the filtering functionality
+- [x] Update backend login to set last_seen immediately
+- [x] Change online threshold to 60 seconds in TopBox
+- [x] Add polling every 30 seconds in TopBox for user list refresh
+- [ ] Test the presence system with incognito login

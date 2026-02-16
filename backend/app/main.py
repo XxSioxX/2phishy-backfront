@@ -8,6 +8,8 @@ from app.modules.user.routes.admin_routes import router as admin_router
 from app.modules.game.routes.routes import router as game_router
 from app.modules.posts.routes.post_routes import router as post_router
 from app.modules.auth.routes.routes import router as auth_router
+from app.modules.announcements.routes import router as announcements_router
+from app.modules.reports.routes import router as reports_router
 from app.utils.logger import get_logger
 from app.core.database_postgres import init_db
 from app.core.startup import startup_super_admin
@@ -62,6 +64,8 @@ app.include_router(admin_router, prefix="/api")
 app.include_router(game_router, prefix="/api")
 app.include_router(post_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
+app.include_router(announcements_router, prefix="/api")
+app.include_router(reports_router, prefix="/api")
 
 
 @app.get("/api")

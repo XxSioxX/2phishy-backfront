@@ -1,4 +1,8 @@
-from app.modules.email.providers.resend_provider import ResendProvider
+try:
+    from app.modules.email.providers.resend_provider import ResendProvider
+except (ImportError, RuntimeError):
+    ResendProvider = None
+
 from app.modules.email.services.template_renderer import render
 from app.modules.email.services.registry import EmailTemplates, default_context
 
@@ -6,6 +10,8 @@ from app.modules.email.services.registry import EmailTemplates, default_context
 class EmailService:
 
     def __init__(self):
+        if ResendProvider is None:
+            raise RuntimeError("Email service is not properly configured. Install the 'resend' package to use email functionality.")
         self.provider = ResendProvider()
 
     def send_password_reset(self, to_email: str, reset_link: str):

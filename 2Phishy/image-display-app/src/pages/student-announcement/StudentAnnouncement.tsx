@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./student-announcement.scss";
+import { api } from '../../services/api';
 
 interface Announcement {
   id: string;
@@ -22,16 +23,18 @@ const StudentAnnouncement: React.FC = () => {
   }, []);
 
   const fetchAnnouncements = () => {
-    const stored = localStorage.getItem("adminAnnouncements");
-    if (stored) {
-      const adminAnnouncements = JSON.parse(stored);
-      const publishedAnnouncements = adminAnnouncements.filter(
-        (a: Announcement) => a.isPublished && !a.isScheduled
-      );
-      setAnnouncements(publishedAnnouncements);
-    } else {
-      setAnnouncements([]);
-    }
+    (async () => {
+      try {
+        const data: Announcement[] = await api.getAnnouncements();
+        const publishedAnnouncements = Array.isArray(data)
+          ? data.filter((a: Announcement) => a.isPublished && !a.isScheduled)
+          : [];
+        setAnnouncements(publishedAnnouncements);
+      } catch (e) {
+        console.error('Failed to fetch announcements from backend:', e);
+        setAnnouncements([]);
+      }
+    })();
   };
 
   return (

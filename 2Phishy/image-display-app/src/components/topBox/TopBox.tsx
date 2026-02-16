@@ -1,31 +1,17 @@
 import "./topBox.scss";
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
-import { useAuth } from "../../contexts/AuthContext";
 import { TopScore } from "../../types/data";
 import type { User } from "../../types";
 
 const TopBox: React.FC = () => {
-    const { user: currentUser } = useAuth();
-    const [userScores, setUserScores] = useState<(TopScore & { last_login?: string | null; isOnline?: boolean })[]>([]);
+    const [userScores, setUserScores] = useState<(TopScore & { last_seen?: string | null; user: User })[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Check if user is online (last login within last 10 minutes, or is the current user)
-    const isUserOnline = (userToCheck?: any, lastLogin?: string | null): boolean => {
-        // Current user is always online if logged in
-        if (currentUser && userToCheck && (userToCheck.id === currentUser.userid || userToCheck.userid === currentUser.userid)) {
-            return true;
-        }
-        
-        if (!lastLogin) return false;
-        try {
-            const lastLoginTime = new Date(lastLogin).getTime();
-            const currentTime = new Date().getTime();
-            const tenMinutesMs = 10 * 60 * 1000;
-            return (currentTime - lastLoginTime) < tenMinutesMs;
-        } catch {
-            return false;
-        }
+    // Check if user is online (last seen within last 10 minutes)
+    const isOnline = (user: User): boolean => {
+        if (!user.last_seen) return false;
+        return new Date().getTime() - new Date(user.last_seen).getTime() < 10 * 60 * 1000;
     };
 
     useEffect(() => {
@@ -39,27 +25,33 @@ const TopBox: React.FC = () => {
                         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
                         return dateB - dateA;
                     })
-                    .slice(0, 7) // Limit to 7 users like the mock data
+                    .slice(0, 7) // Limit to 7 users
                     .map((user: User, index: number) => ({
                         id: index + 1,
                         Img: "",
                         username: user.username,
                         email: user.email,
-                        score: "NULL",
-                        last_login: user.last_login,
-                        isOnline: isUserOnline(user, user.last_login)
+                        score: "NULL", // Placeholder for scores API
+                        last_seen: user.last_seen,
+                        user: user // Store the full user object
                     }));
                 setUserScores(sortedUsers);
             } catch (error) {
                 console.error('Failed to fetch user scores:', error);
-                // Fallback to empty array
                 setUserScores([]);
             } finally {
                 setLoading(false);
             }
         };
 
+        // Initial fetch
         fetchUserScores();
+
+        // Poll every 5 seconds
+        const intervalId = setInterval(fetchUserScores, 5000);
+
+        // Cleanup interval on unmount
+        return () => clearInterval(intervalId);
     }, []);
 
     if (loading) {
@@ -84,7 +76,10 @@ const TopBox: React.FC = () => {
                         <div className="user">
                             <div className="profile-container">
                                 <img src="/profile.svg" alt="" />
-                                <span className={`status-dot ${user.isOnline ? 'online' : 'offline'}`}></span>
+                                <span
+                                    className="status-dot"
+                                    style={{ background: isOnline(user.user) ? 'green' : 'gray' }}
+                                ></span>
                             </div>
                             <div className="userTexts">
                                 <span className="username">{user.username}</span>

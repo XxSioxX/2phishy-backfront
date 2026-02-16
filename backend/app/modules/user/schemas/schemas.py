@@ -20,6 +20,7 @@ class UserResponse(UserBase):
     userid: UUID
     created_at: datetime
     last_login: datetime | None
+    last_seen: datetime | None
     role: UserRole
     account_status: AccountStatus
 

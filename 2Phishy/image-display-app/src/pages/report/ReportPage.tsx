@@ -1,6 +1,6 @@
 import "./reportPage.scss";
 import { Report } from "../../types";
-import { getReportsFromStorage } from "../../data";
+import { api } from '../../services/api';
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -14,40 +14,39 @@ const ReportPage: React.FC = () => {
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
   const loadReports = () => {
-    console.log('Loading reports from localStorage...');
-    // Get fresh reports from studentReports storage
-    const freshReports = getReportsFromStorage();
-    
-    // Get reports with resolved status
-    const resolvedReportsData = localStorage.getItem('resolvedReportsWithStatus');
-    let reportsWithStatus: ReportWithResolved[] = [...freshReports];
-    
-    if (resolvedReportsData) {
+    (async () => {
       try {
-        const savedReports = JSON.parse(resolvedReportsData);
-        // Merge: add resolved status to fresh reports
-        reportsWithStatus = freshReports.map((report: Report) => {
-          const savedReport = savedReports.find((r: ReportWithResolved) => r.id === report.id);
-          return {
-            ...report,
-            resolved: savedReport?.resolved || false
-          };
-        });
+        const backendReports = await api.getReports();
+        let reportsWithStatus: ReportWithResolved[] = Array.isArray(backendReports) ? backendReports : [];
+
+        // Fallback: if backend doesn't provide resolved flags, merge with localStorage saved resolved status
+        if (!reportsWithStatus.some(r => 'resolved' in r)) {
+          try {
+            const resolvedReportsData = localStorage.getItem('resolvedReportsWithStatus');
+            if (resolvedReportsData) {
+              const savedReports = JSON.parse(resolvedReportsData);
+              reportsWithStatus = reportsWithStatus.map((report: ReportWithResolved) => {
+                const saved = savedReports.find((r: ReportWithResolved) => r.id === report.id);
+                return { ...report, resolved: saved?.resolved || false };
+              });
+            }
+          } catch (e) {
+            console.error('Error merging resolved status from localStorage:', e);
+          }
+        }
+
+        // Filter reports based on user role
+        let filteredReports = reportsWithStatus;
+        if (user && user.role === 'student') {
+          filteredReports = reportsWithStatus.filter(report => report.username === user.username);
+        }
+
+        setStudentReports(filteredReports);
       } catch (e) {
-        console.error('Error parsing resolved reports:', e);
+        console.error('Failed to load reports from backend:', e);
+        setStudentReports([]);
       }
-    }
-
-    // Filter reports based on user role
-    let filteredReports = reportsWithStatus;
-    if (user && user.role === 'student') {
-      // Students only see their own reports
-      filteredReports = reportsWithStatus.filter(report => report.username === user.username);
-    }
-    // Admins/super-admins see all reports (no filtering)
-
-    console.log('Reports found:', filteredReports);
-    setStudentReports(filteredReports);
+    })();
   };
 
   useEffect(() => {
@@ -70,13 +69,25 @@ const ReportPage: React.FC = () => {
   }, [isAuthenticated, user]);
 
   const handleMarkResolved = (reportId: string) => {
-    const updatedReports = studentReports.map(report => 
-      report.id === reportId ? { ...report, resolved: true } : report
-    );
-    setStudentReports(updatedReports);
-    // Save with resolved status so it persists
-    localStorage.setItem('resolvedReportsWithStatus', JSON.stringify(updatedReports));
-    setExpandedReportId(null); // Close dropdown after marking resolved
+    (async () => {
+      try {
+        const updated = await api.updateReport(reportId, { resolved: true });
+        setStudentReports(prev => prev.map(r => r.id === reportId ? { ...r, resolved: true, ...updated } : r));
+        // Keep local fallback for compatibility
+        try {
+          const existing = localStorage.getItem('resolvedReportsWithStatus');
+          const arr = existing ? JSON.parse(existing) : [];
+          const updatedArr = arr.filter((r: any) => r.id !== reportId).concat([{ id: reportId, resolved: true }]);
+          localStorage.setItem('resolvedReportsWithStatus', JSON.stringify(updatedArr));
+        } catch (e) {
+          console.error('Failed to update local resolved cache:', e);
+        }
+        setExpandedReportId(null);
+      } catch (e) {
+        console.error('Failed to mark report resolved:', e);
+        alert('Failed to mark report resolved');
+      }
+    })();
   };
 
   const toggleReportExpand = (reportId: string) => {

@@ -24,5 +24,6 @@ class User(Base):
     password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
+    last_seen = Column(DateTime, nullable=True)
     account_status = Column(Enum(AccountStatus), default=AccountStatus.ACTIVE)
     role = Column(Enum(UserRole), default=UserRole.STUDENT)

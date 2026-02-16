@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './AnnouncementPage.scss';
 import { getCurrentDatePH } from '../../utils/dateUtils';
+import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Announcement {
   id: string;
@@ -24,26 +26,21 @@ const AnnouncementPage: React.FC = () => {
     isPublished: true
   });
 
-  // Placeholder current user. Replace with your auth context
-  const currentUser = { username: "JohnDoe" };
+  const { user } = useAuth();
+  const currentUser = user || { username: 'Unknown' };
 
   useEffect(() => {
+    const loadAnnouncements = async () => {
+      try {
+        const data = await api.getAnnouncements();
+        setAnnouncements(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error('Failed to load announcements from backend:', e);
+        setAnnouncements([]);
+      }
+    };
     loadAnnouncements();
   }, []);
-
-  const loadAnnouncements = () => {
-    const stored = localStorage.getItem('adminAnnouncements');
-    if (stored) {
-      setAnnouncements(JSON.parse(stored));
-    } else {
-      setAnnouncements([]);
-    }
-  };
-
-  const saveAnnouncements = (newAnnouncements: Announcement[]) => {
-    localStorage.setItem('adminAnnouncements', JSON.stringify(newAnnouncements));
-    setAnnouncements(newAnnouncements);
-  };
 
   const handleAdd = () => {
     setFormData({ title: '', content: '', isPublished: true });
@@ -70,9 +67,16 @@ const AnnouncementPage: React.FC = () => {
   const handleDelete = () => {
     if (selectedAnnouncements.length > 0) {
       if (window.confirm(`Are you sure you want to delete ${selectedAnnouncements.length} announcement(s)?`)) {
-        const updatedAnnouncements = announcements.filter(a => !selectedAnnouncements.includes(a.id));
-        saveAnnouncements(updatedAnnouncements);
-        setSelectedAnnouncements([]);
+        (async () => {
+          try {
+            await Promise.all(selectedAnnouncements.map(id => api.deleteAnnouncement(id)));
+            setAnnouncements(prev => prev.filter(a => !selectedAnnouncements.includes(a.id)));
+            setSelectedAnnouncements([]);
+          } catch (e) {
+            console.error('Failed to delete announcements:', e);
+            alert('Failed to delete announcements');
+          }
+        })();
       }
     }
   };
@@ -81,36 +85,46 @@ const AnnouncementPage: React.FC = () => {
     e.preventDefault();
     
     if (showAddForm) {
-      const newAnnouncement: Announcement = {
-        id: Date.now().toString(),
-        title: formData.title,
-        content: formData.content,
-        date: getCurrentDatePH(),
-        isPublished: formData.isPublished,
-        lastEditedBy: currentUser.username,
-        lastEditedDate: getCurrentDatePH()
-      };
-      saveAnnouncements([newAnnouncement, ...announcements]);
-      setShowAddForm(false);
+      (async () => {
+        try {
+          const payload = {
+            title: formData.title,
+            content: formData.content,
+            date: getCurrentDatePH(),
+            isPublished: formData.isPublished,
+            lastEditedBy: currentUser.username,
+            lastEditedDate: getCurrentDatePH()
+          };
+          const created = await api.createAnnouncement(payload);
+          setAnnouncements(prev => [created, ...prev]);
+          setShowAddForm(false);
+          setFormData({ title: '', content: '', isPublished: true });
+        } catch (e) {
+          console.error('Failed to create announcement:', e);
+          alert('Failed to create announcement');
+        }
+      })();
     } else if (showEditForm && editingAnnouncement) {
-      const updatedAnnouncements = announcements.map(a => 
-        a.id === editingAnnouncement.id 
-          ? {
-              ...a,
-              title: formData.title,
-              content: formData.content,
-              isPublished: formData.isPublished,
-              lastEditedBy: currentUser.username,
-              lastEditedDate: getCurrentDatePH()
-            }
-          : a
-      );
-      saveAnnouncements(updatedAnnouncements);
-      setShowEditForm(false);
-      setEditingAnnouncement(null);
+      (async () => {
+        try {
+          const payload = {
+            title: formData.title,
+            content: formData.content,
+            isPublished: formData.isPublished,
+            lastEditedBy: currentUser.username,
+            lastEditedDate: getCurrentDatePH()
+          };
+          const updated = await api.updateAnnouncement(editingAnnouncement.id, payload);
+          setAnnouncements(prev => prev.map(a => a.id === editingAnnouncement.id ? updated : a));
+          setShowEditForm(false);
+          setEditingAnnouncement(null);
+          setFormData({ title: '', content: '', isPublished: true });
+        } catch (e) {
+          console.error('Failed to update announcement:', e);
+          alert('Failed to update announcement');
+        }
+      })();
     }
-
-    setFormData({ title: '', content: '', isPublished: true });
   };
 
   const handleCheckboxChange = (id: string) => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./student-report.scss";
 import { useAuth } from "../../contexts/AuthContext";
+import { api } from '../../services/api';
 import { getCurrentDatePH } from "../../utils/dateUtils";
 
 interface StudentReport {
@@ -32,35 +33,23 @@ const StudentReport: React.FC = () => {
   const fetchMyReports = async () => {
     try {
       setIsLoading(true);
-      // Get reports from localStorage
-      const storedReports = localStorage.getItem('studentReports');
-      // Get resolved status from admin page
-      const resolvedReportsData = localStorage.getItem('resolvedReportsWithStatus');
-      
-      if (storedReports) {
-        const allReports: StudentReport[] = JSON.parse(storedReports);
-        
-        // Merge with resolved status
+      // Fetch from backend and filter by current user
+      try {
+        const backendReports = await api.getReports();
+        const allReports: StudentReport[] = Array.isArray(backendReports) ? backendReports : [];
         let userReports = allReports.filter(report => report.user_id === user?.userid);
-        
-        if (resolvedReportsData) {
-          try {
-            const resolvedReports = JSON.parse(resolvedReportsData);
-            userReports = userReports.map(report => {
-              const resolvedReport = resolvedReports.find((r: StudentReport) => r.id === report.id);
-              return {
-                ...report,
-                resolved: resolvedReport?.resolved || false
-              };
-            });
-          } catch (e) {
-            console.error('Error parsing resolved reports:', e);
-          }
-        }
-        
         setReports(userReports);
-      } else {
-        setReports([]);
+      } catch (e) {
+        console.error('Failed to fetch reports from backend, falling back to localStorage:', e);
+        // Fallback to localStorage for offline/dev
+        const storedReports = localStorage.getItem('studentReports');
+        if (storedReports) {
+          const allReports: StudentReport[] = JSON.parse(storedReports);
+          const userReports = allReports.filter(report => report.user_id === user?.userid);
+          setReports(userReports);
+        } else {
+          setReports([]);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch reports:", error);
@@ -106,27 +95,16 @@ const StudentReport: React.FC = () => {
     }
     
     try {
-      const newReport: StudentReport = {
-        id: Date.now().toString(),
+      const payload = {
         message: formData.message,
         status: formData.status,
         type: formData.type,
         date: getCurrentDatePH(),
-        user_id: user?.userid || ""
+        studentId: user?.userid || ''
       };
-      
-      // Get existing reports from localStorage
-      const storedReports = localStorage.getItem('studentReports');
-      const allReports: StudentReport[] = storedReports ? JSON.parse(storedReports) : [];
-      
-      // Add new report
-      const updatedReports = [newReport, ...allReports];
-      
-      // Save to localStorage
-      localStorage.setItem('studentReports', JSON.stringify(updatedReports));
-      
-      // Update local state
-      setReports(prev => [newReport, ...prev]);
+
+      const created = await api.createReport(payload);
+      setReports(prev => [created, ...prev]);
       setFormData({ message: "", status: "Mid", type: "Bug" });
       setShowForm(false);
     } catch (error) {
@@ -138,18 +116,18 @@ const StudentReport: React.FC = () => {
   const handleDelete = async (reportId: string) => {
     if (window.confirm("Are you sure you want to delete this report?")) {
       try {
-        // Get existing reports from localStorage
-        const storedReports = localStorage.getItem('studentReports');
-        const allReports: StudentReport[] = storedReports ? JSON.parse(storedReports) : [];
-        
-        // Remove the report
-        const updatedReports = allReports.filter(report => report.id !== reportId);
-        
-        // Save to localStorage
-        localStorage.setItem('studentReports', JSON.stringify(updatedReports));
-        
-        // Update local state
-        setReports(prev => prev.filter(report => report.id !== reportId));
+        // Try deleting via backend and fall back to localStorage
+        try {
+          await api.deleteReport(reportId);
+          setReports(prev => prev.filter(report => report.id !== reportId));
+        } catch (e) {
+          console.warn('Failed to delete report via backend, falling back to localStorage:', e);
+          const storedReports = localStorage.getItem('studentReports');
+          const allReports: StudentReport[] = storedReports ? JSON.parse(storedReports) : [];
+          const updatedReports = allReports.filter(report => report.id !== reportId);
+          localStorage.setItem('studentReports', JSON.stringify(updatedReports));
+          setReports(prev => prev.filter(report => report.id !== reportId));
+        }
       } catch (error) {
         console.error("Failed to delete report:", error);
       }

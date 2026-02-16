@@ -6,7 +6,7 @@ from app.modules.user.models.user import User
 from app.modules.auth.services.auth_service import get_current_active_user
 from app.modules.user.schemas.schemas import UserCreate, UserResponse, LoginResponse, UserLogin, UserStatsResponse
 from app.modules.user.services.services import create_user, get_user, get_all_users, update_user, delete_user, \
-    authenticate_user, create_user_token, get_user_statistics
+    authenticate_user, create_user_token, get_user_statistics, update_last_seen
 from app.utils.logger import get_logger
 
 
@@ -55,6 +55,9 @@ def login_user(login_data: UserLogin, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
+    # Update last_seen immediately on login
+    update_last_seen(db, user)
+
     access_token = create_user_token(user)
     return LoginResponse(
         user=user,
@@ -90,3 +93,14 @@ def update_my_profile(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@router.post("/presence")
+def update_presence(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update user's last_seen timestamp (heartbeat endpoint)"""
+    logger.info(f"User {current_user.username} updating presence")
+    update_last_seen(db, current_user)
+    return {"message": "Presence updated"}
