@@ -49,16 +49,9 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
 
         await this.createQuestionMap();
-        this.game.events.emit(
-          'questions:init',
-          this.questions.length
-        );
-
-
         this.initAssessment();
         this.setupAssessmentCollision();
 
-        this.player.initQuestions(this.totalquestions, this.questions.length)
 
         const knowledgeResponse = await gameAPI.getUserKnowledgeList({
           userid: this.userData.userId,
@@ -80,6 +73,32 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
           this.config.intro.title,
           this.config.intro.description
         );
+
+        this.scene.launch('ui-scene', {
+          player: this.player,
+          showControls: this.sys.game.device.input.touch
+        });
+        this.scene.bringToTop('ui-scene');
+
+
+        const uiScene = this.scene.get('ui-scene') as Phaser.Scene;
+
+        uiScene.events.once('create', () => {
+            const total = this.totalquestions;
+            const answered = this.assessmentResults.length;
+
+            this.game.events.emit('questions:init', total, answered);
+        });
+
+
+        this.game.events.on('blur', () => {
+          this.player.forceStopAllInput();
+        });
+
+        this.input.on('gameout', () => {
+          this.player.forceStopAllInput();
+        });
+
 
 
 
@@ -221,6 +240,9 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         qIndex: number
       ): Promise<void> {
         this.inAssessment = true;
+        this.player.lockMovement();
+
+
 
         const q = this.questions[qIndex];
 
@@ -228,50 +250,56 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.popup.correctAnswer = q.answer;
 
         this.popup.show(q.question, q.choices, async (choice) => {
-          const result = {
-            userid: this.userData.userId,
-            question_id: q.question_id,
-            user_answer: choice,
-            correct_answer: q.answer,
-            topic: this.config.topic,
+            const result = {
+                userid: this.userData.userId,
+                question_id: q.question_id,
+                user_answer: choice,
+                correct_answer: q.answer,
+                topic: this.config.topic,
 
-            subcategory: this.inferSubcat(q.question_id),
-            is_correct: choice === q.answer,
-            timestamp: new Date(),
-          };
+                subcategory: this.inferSubcat(q.question_id),
+                is_correct: choice === q.answer,
+                timestamp: new Date(),
+            };
 
-          // ✅ store answer ONCE
-          this.assessmentResults.push(result);
+            // ✅ store answer ONCE
+            this.assessmentResults.push(result);
 
 
-          try {
-            await this.submitAnswer({
-              question_id: result.question_id,
-              user_answer: result.user_answer,
-              correct_answer: result.correct_answer,
-              topic: result.topic,
-              subcategory: result.subcategory,
-              is_correct: result.is_correct,
-              timestamp: result.timestamp,
-            });
+            try {
+                await this.submitAnswer({
+                  question_id: result.question_id,
+                  user_answer: result.user_answer,
+                  correct_answer: result.correct_answer,
+                  topic: result.topic,
+                  subcategory: result.subcategory,
+                  is_correct: result.is_correct,
+                  timestamp: result.timestamp,
+                });
 
-            console.log("📡 Single question submitted");
-          } catch (err) {
+                console.log("📡 Single question submitted");
+            } catch (err) {
             console.error("❌ Failed to submit single question", err);
-          }
+            }
 
-          // remove question trigger
-          pointPair.forEach((sprite: Phaser.GameObjects.Sprite) =>
+            // remove question trigger
+            pointPair.forEach((sprite: Phaser.GameObjects.Sprite) =>
             sprite.destroy()
-          );
+            );
 
-          this.inAssessment = false;
+            this.inAssessment = false;
+            this.player.unlockMovement();
 
 
-          if (this.assessmentResults.length >= this.questions.length) {
-            this.completeAssessment();
-          }
-          this.player.setRemainingQuestions(this.assessmentResults.length);
+            if (this.assessmentResults.length >= this.questions.length) {
+                this.completeAssessment();
+            }
+            const total = this.totalquestions;
+            const answered = this.assessmentResults.length;
+
+            this.game.events.emit('questions:update', total, answered);
+
+
         });
       }
     private async submitAnswer(result: AssessmentResult): Promise<void> {
@@ -320,6 +348,8 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.popup.show('Level Complete!', ['Continue'], () => {
           this.player.unfreeze();
           this.inAssessment = false;
+          this.player.unlockMovement();
+          this.scene.stop('ui-scene');
 
           this.scene.start('assessment-scene', {
               topic: this.config.next.topic,
@@ -405,6 +435,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
             if (point.isOpen || point.isAnimating) return;
 
             this.inAssessment = true;
+            this.player.lockMovement();
 
             point.isAnimating = true;
 
@@ -437,6 +468,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
                 point.knowledge.knowledge_content,
                 () => {
                       this.inAssessment = false;
+                      this.player.unlockMovement();
                     }
                 );
 
@@ -454,6 +486,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     ): void {
 
       this.inAssessment = true;
+      this.player.lockMovement();
 
       const cam = this.cameras.main;
       const centerX = cam.width / 2;
@@ -496,7 +529,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         wordWrap: { width: bannerWidth - padding }
       }).setOrigin(0.5);
 
-      const continueText = this.add.text(0, 110, 'Press SPACE to continue', {
+      const continueText = this.add.text(0, 110, 'Tap or Press SPACE to continue', {
         fontSize: '18px',
         color: '#aaaaaa',
         align: 'center',
@@ -542,28 +575,36 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         Phaser.Input.Keyboard.KeyCodes.SPACE
       );
 
-      const closeBanner = () => {
-        spaceKey?.removeAllListeners();
+        const closeBanner = () => {
+            spaceKey?.removeAllListeners();
 
-        this.tweens.add({
-          targets: [container, overlay],
-          alpha: 0,
-          duration: 300,
-          onComplete: () => {
-            container.destroy();
-            overlay.destroy();
-            this.inAssessment = false;
-          },
-        });
-      };
+            this.tweens.add({
+              targets: [container, overlay],
+              alpha: 0,
+              duration: 300,
+              onComplete: () => {
+                container.destroy();
+                overlay.destroy();
+                this.inAssessment = false;
+                this.player.unlockMovement();
+              },
+            });
+        };
 
-      spaceKey?.once('down', closeBanner);
+        overlay.setInteractive();
+        container.setSize(bannerWidth, panelHeight);
+        container.setInteractive();
+
+        overlay.once('pointerdown', closeBanner);
+        container.once('pointerdown', closeBanner);
+
+        spaceKey?.once('down', closeBanner);
     }
-
-
 
     protected inferSubcat(questionId: string): string {
       return this.config.inferSubcat(questionId);
     }
+
+
 
 }

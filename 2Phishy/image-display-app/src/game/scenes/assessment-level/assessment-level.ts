@@ -40,6 +40,12 @@ export class AssessmentLevel extends Scene {
     this.setupAssessmentCollision();
     this.initCamera();
 
+    this.scene.launch('ui-scene', {
+      player: this.player,
+      showControls: this.sys.game.device.input.touch
+    });
+
+
     this.popup = new AssessmentPopup(this);
     this.popup.mode = "assessment";
 
@@ -53,6 +59,36 @@ export class AssessmentLevel extends Scene {
     console.log('questions:', this.questions);
 
     console.log(`Loaded ${this.questions.length} questions for topic: ${this.currentTopic}`);
+
+    const blurHandler = () => {
+      this.player.forceStopAllInput();
+    };
+
+    const gameoutHandler = () => {
+      this.player.forceStopAllInput();
+    };
+
+    this.game.events.on('blur', blurHandler);
+    this.input.on('gameout', gameoutHandler);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off('blur', blurHandler);
+      this.input.off('gameout', gameoutHandler);
+    });
+
+
+    this.questions = topicData?.initial_assessment || [];
+
+    this.game.events.emit(
+      'questions:init',
+      this.questions.length,
+      0
+    );
+
+
+
+
+
   }
 
   init(data: { topic: string; nextScene: string }) {
@@ -94,7 +130,8 @@ export class AssessmentLevel extends Scene {
       this.physics.add.overlap(this.player, ap, () => {
         if (this.inAssessment) return;
         this.inAssessment = true;
-        this.player.freeze();
+        this.player.lockMovement();
+
         this.showNextQuestion();
       });
     });
@@ -122,6 +159,11 @@ export class AssessmentLevel extends Scene {
 
       this.assessmentResults.push(result);
       this.currentQuestionIndex++;
+      this.game.events.emit(
+        'questions:update',
+        this.questions.length,
+        this.currentQuestionIndex
+      );
       this.showNextQuestion();
     });
   }
@@ -130,8 +172,12 @@ export class AssessmentLevel extends Scene {
     const userData = (window as any).userData;
     if (!userData || !userData.token || !userData.userId) {
       console.warn('User not logged in. Results stored locally.');
-      this.popup.show('Please log in to save your progress.', ['OK'], () => this.player.unfreeze());
+      this.popup.show('Please log in to save your progress.', ['OK'], () => {
+        this.player.unlockMovement();
+      });
       this.inAssessment = false;
+      this.player.unlockMovement();
+
       return;
     }
 
@@ -183,8 +229,10 @@ export class AssessmentLevel extends Scene {
         topic: this.currentTopic,
       });
 
-      this.player.unfreeze();
+
       this.inAssessment = false;
+      this.player.unlockMovement();
+
     });
   }
 

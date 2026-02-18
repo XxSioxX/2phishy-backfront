@@ -55,6 +55,7 @@ export default class AssessmentPopup {
         .setStrokeStyle(1, 0xffffff)
         .setInteractive({ useHandCursor: true });
 
+
       const label = this.scene.add
         .text(cx, currentY, choice, {
           fontSize: '12px',
@@ -129,6 +130,8 @@ export default class AssessmentPopup {
 
     this.container.setDepth(1000);
     this.container.setAlpha(0);
+    this.container.setScrollFactor(0);
+
 
     this.scene.tweens.add({
       targets: this.container,

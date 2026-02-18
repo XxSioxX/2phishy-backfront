@@ -13,6 +13,13 @@ export class Player extends Actor {
   private questionValue!: Text;
   private totalQuestions = 0;
   private remainingQuestions = 0;
+  private movementLocked = false;
+
+  public moveUp = false;
+  public moveDown = false;
+  public moveLeft = false;
+  public moveRight = false;
+
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'king');
@@ -61,45 +68,44 @@ export class Player extends Actor {
   update(): void {
     if (!this.body) return;
 
-    if (this.frozen) {
+    if (this.frozen || this.movementLocked) {
+
       this.getBody().setVelocity(0);
-      return; // skip input/movement
+      return;
     }
 
     this.getBody().setVelocity(0);
 
-    if (this.keyW?.isDown) {
+    const up = this.keyW?.isDown || this.moveUp;
+    const left = this.keyA?.isDown || this.moveLeft;
+    const down = this.keyS?.isDown || this.moveDown;
+    const right = this.keyD?.isDown || this.moveRight;
+
+    if (up) {
       this.body.velocity.y = -110;
       !this.anims.isPlaying && this.anims.play('run', true);
     }
-    if (this.keyA?.isDown) {
+
+    if (left) {
       this.body.velocity.x = -110;
       this.checkFlip();
       this.getBody().setOffset(48, 15);
       !this.anims.isPlaying && this.anims.play('run', true);
     }
-    if (this.keyS?.isDown) {
+
+    if (down) {
       this.body.velocity.y = 110;
       !this.anims.isPlaying && this.anims.play('run', true);
     }
-    if (this.keyD?.isDown) {
+
+    if (right) {
       this.body.velocity.x = 110;
       this.checkFlip();
       this.getBody().setOffset(15, 15);
       !this.anims.isPlaying && this.anims.play('run', true);
     }
-
-    //this.hpValue.setPosition(this.x, this.y - this.height * 0.4);
-    //this.hpValue.setOrigin(0.8, 0.5);
-
-    this.questionValue.setPosition(
-      this.body.x + this.body.width / 2,
-      this.body.y - 2
-    );
-
-
-
   }
+
 
   public initQuestions(totalquestions: number, totalunanswered: number): void {
     this.totalQuestions = totalquestions;
@@ -173,6 +179,22 @@ export class Player extends Actor {
 
   public bodyRef(): Phaser.Physics.Arcade.Body {
     return this.getBody();
-}
+  }
+  public lockMovement() {
+    this.movementLocked = true;
+    this.forceStopAllInput();
+  }
 
+  public unlockMovement() {
+    this.movementLocked = false;
+  }
+
+  public forceStopAllInput() {
+    this.moveUp = false;
+    this.moveDown = false;
+    this.moveLeft = false;
+    this.moveRight = false;
+
+    this.getBody().setVelocity(0);
+  }
 }
