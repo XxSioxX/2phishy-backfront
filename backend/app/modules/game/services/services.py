@@ -363,6 +363,47 @@ async def generate_question_list(
         else:
             logger.warning(f"Subtopic key '{subcat_key}' not found in knowledge base for topic '{topic.value}'.")
 
+
+
+    MIN_TOTAL_QUESTIONS = int(os.getenv("MIN_TOTAL_QUESTIONS", 6))
+    MIN_TOTAL_QUESTIONS = max(6, min(MIN_TOTAL_QUESTIONS, 15))
+
+    # If below minimum, fill more from priority order
+    if len(question_map) < MIN_TOTAL_QUESTIONS:
+
+        logger.info("Applying global minimum enforcement")
+
+        # Track already selected IDs
+        selected_ids = {q["question_id"] for q in question_map}
+
+        # Sort subcategories
+        priority_order = ["HIGH", "MODERATE", "LOW"]
+
+        for level in priority_order:
+            for subcat_key, priority in subcat_priorities.items():
+
+                if priority.upper() != level:
+                    continue
+
+                available_questions = qb_questions.get(subcat_key, [])
+
+                # Filter out already selected
+                remaining_questions = [
+                    q for q in available_questions
+                    if q["question_id"] not in selected_ids
+                ]
+
+                for q in remaining_questions:
+                    if len(question_map) >= MIN_TOTAL_QUESTIONS:
+                        break
+
+                    question_map.append(q)
+                    selected_ids.add(q["question_id"])
+
+            if len(question_map) >= MIN_TOTAL_QUESTIONS:
+                break
+
+
     # Shuffle the final list to mix questions from different subtopics
     random.shuffle(question_map)
     logger.info(f"Generated a final list of {len(question_map)} questions.")
@@ -451,6 +492,7 @@ async def check_user_progression(
                 "created_at": datetime.utcnow(),
                 "progress": {}
             })
+
 
 async def answer_cross_check (
         db: AsyncIOMotorDatabase,
@@ -710,3 +752,107 @@ def interpret_trust(grade: int) -> str:
         return "At Risk"
     else:
         return "Compromised"
+
+DIFFICULTY_WEIGHTS = {
+    "easy": 1,
+    "medium": 2,
+    "hard": 3
+}
+
+def compute_knowledge_score(question_map, topic_progress_answers):
+
+    if not topic_progress_answers:
+        return 0
+
+    weighted_correct = 0
+    total_weight = 0
+
+    for answer in topic_progress_answers:
+
+        question_id = answer["question_id"]
+        is_correct = answer["is_correct"]
+
+        # Find matching question
+        question = None
+        for q in question_map:
+            if q["question_id"] == question_id:
+                question = q
+                break
+
+        if not question:
+            continue
+
+        difficulty = question.get("difficulty", "easy")
+        weight = DIFFICULTY_WEIGHTS.get(difficulty, 1)
+
+        total_weight += weight
+
+        if is_correct:
+            weighted_correct += weight
+
+    if total_weight == 0:
+        return 0
+
+    return round((weighted_correct / total_weight) * 100, 2)
+
+async def compute_topic_score(db, user_id, topic, question_map):
+
+    progress_doc = await db["progress"].find_one({"user_id": str(user_id)})
+
+    if not progress_doc:
+        return 0
+
+    topic_progress = (
+        progress_doc
+        .get("progress", {})
+        .get(topic.value, {})
+        .get("answers", [])
+    )
+
+    return compute_knowledge_score(question_map, topic_progress)
+
+async def compute_overall_score(db, user_id, topic_question_maps):
+
+    progress_doc = await db["progress"].find_one({"user_id": str(user_id)})
+
+    if not progress_doc:
+        return 0
+
+    weighted_correct = 0
+    total_weight = 0
+
+    for topic, question_map in topic_question_maps.items():
+
+        topic_progress = (
+            progress_doc
+            .get("progress", {})
+            .get(topic, {})
+            .get("answers", [])
+        )
+
+        for answer in topic_progress:
+
+            question_id = answer["question_id"]
+            is_correct = answer["is_correct"]
+
+            question = None
+            for q in question_map:
+                if q["question_id"] == question_id:
+                    question = q
+                    break
+
+            if not question:
+                continue
+
+            difficulty = question.get("difficulty", "easy")
+            weight = DIFFICULTY_WEIGHTS.get(difficulty, 1)
+
+            total_weight += weight
+
+            if is_correct:
+                weighted_correct += weight
+
+    if total_weight == 0:
+        return 0
+
+    return round((weighted_correct / total_weight) * 100, 2)

@@ -401,6 +401,20 @@
             "choices": ["Trojan", "Ransomware", "Spyware", "Worm"],
             "answer": "Spyware",
             "difficulty": "easy"
+          },
+          {
+            "question_id": "mal_types_006",
+            "question": "Which malware type modifies system files and spreads when the infected file is executed?",
+            "choices": ["Worm", "Virus", "Adware", "Rootkit"],
+            "answer": "Virus",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "mal_types_007",
+            "question": "Which malware is specifically designed to provide unauthorized remote control over a system?",
+            "choices": ["RAT (Remote Access Trojan)", "Adware", "Spyware", "Worm"],
+            "answer": "RAT (Remote Access Trojan)",
+            "difficulty": "hard"
           }
         ]
       },
@@ -462,7 +476,32 @@
             ],
             "answer": "Clicking on suspicious email attachments",
             "difficulty": "easy"
+          },
+          {
+            "question_id": "mal_infect_006",
+            "question": "What is a common indicator of a rootkit infection?",
+            "choices": [
+              "Visible pop-up ads",
+              "System tools not functioning correctly",
+              "Faster system performance",
+              "Automatic antivirus updates"
+            ],
+            "answer": "System tools not functioning correctly",
+            "difficulty": "hard"
+          },
+          {
+            "question_id": "mal_infect_007",
+            "question": "Why is disabling antivirus software a warning sign?",
+            "choices": [
+              "It improves performance",
+              "It allows malware to operate undetected",
+              "It updates drivers",
+              "It encrypts files"
+            ],
+            "answer": "It allows malware to operate undetected",
+            "difficulty": "medium"
           }
+
         ]
       }
     ]
@@ -528,7 +567,32 @@
             ],
             "answer": "Offering free items or services to trick users",
             "difficulty": "medium"
+          },
+          {
+            "question_id": "se_types_006",
+            "question": "What is pretexting in social engineering?",
+            "choices": [
+              "Sending malware through USB",
+              "Creating a fabricated scenario to obtain information",
+              "Encrypting files for ransom",
+              "Using antivirus pop-ups"
+            ],
+            "answer": "Creating a fabricated scenario to obtain information",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "se_types_007",
+            "question": "Which of the following best describes spear phishing?",
+            "choices": [
+              "Mass phishing emails sent randomly",
+              "Targeted phishing attacks directed at specific individuals",
+              "SMS-based phishing only",
+              "Malware through USB drives"
+            ],
+            "answer": "Targeted phishing attacks directed at specific individuals",
+            "difficulty": "hard"
           }
+
         ]
       },
       {
@@ -594,7 +658,32 @@
             ],
             "answer": "Pause and verify its authenticity",
             "difficulty": "medium"
+          },
+          {
+            "question_id": "se_defending_006",
+            "question": "Why is verifying sender email domains important?",
+            "choices": [
+              "It improves email speed",
+              "Attackers often spoof legitimate-looking addresses",
+              "It increases inbox storage",
+              "It blocks spam automatically"
+            ],
+            "answer": "Attackers often spoof legitimate-looking addresses",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "se_defending_007",
+            "question": "What is the safest response to a suspicious phone call requesting sensitive data?",
+            "choices": [
+              "Provide partial information",
+              "Hang up and verify through official contact channels",
+              "Ask them to email instead",
+              "Ignore and continue the conversation"
+            ],
+            "answer": "Hang up and verify through official contact channels",
+            "difficulty": "hard"
           }
+
         ]
       }
     ]
@@ -665,7 +754,32 @@
             ],
             "answer": "To prevent compromised credentials from being reused",
             "difficulty": "easy"
+          },
+          {
+            "question_id": "ir_steps_006",
+            "question": "Why is documenting an incident important?",
+            "choices": [
+              "To share on social media",
+              "To improve internet speed",
+              "To support investigation and future prevention",
+              "To avoid system updates"
+            ],
+            "answer": "To support investigation and future prevention",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "ir_steps_007",
+            "question": "What should NOT be done during an active cybersecurity incident?",
+            "choices": [
+              "Disconnect affected systems",
+              "Investigate the source",
+              "Delete logs immediately",
+              "Inform relevant stakeholders"
+            ],
+            "answer": "Delete logs immediately",
+            "difficulty": "hard"
           }
+
         ]
       },
       {
@@ -731,6 +845,30 @@
             ],
             "answer": "To prepare better and respond more effectively",
             "difficulty": "easy"
+          },
+          {
+            "question_id": "ir_response_006",
+            "question": "What is the purpose of a post-incident review?",
+            "choices": [
+              "To assign blame",
+              "To evaluate response effectiveness and improve processes",
+              "To delete system backups",
+              "To reinstall operating systems"
+            ],
+            "answer": "To evaluate response effectiveness and improve processes",
+            "difficulty": "medium"
+          },
+          {
+            "question_id": "ir_response_007",
+            "question": "Why is having predefined communication channels important during an incident?",
+            "choices": [
+              "To reduce confusion and ensure coordinated response",
+              "To increase internet speed",
+              "To notify competitors",
+              "To avoid antivirus alerts"
+            ],
+            "answer": "To reduce confusion and ensure coordinated response",
+            "difficulty": "hard"
           }
         ]
       }

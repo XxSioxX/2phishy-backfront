@@ -25,7 +25,10 @@ from app.modules.game.services.services import (
     filter_unanswered_questions,
     fetch_knowledge_list,
     update_soc_engineering_grade,
-    interpret_trust
+    interpret_trust,
+    compute_topic_score,
+    compute_overall_score,
+    compute_knowledge_score
 )
 from app.modules.learning_path.services.learn_path_service import DefaultLearningEvaluator
 
@@ -35,11 +38,16 @@ from app.core.standard_response import StandardResponse
 
 from datetime import datetime
 
+from app.modules.learning_path.models.learn_path import Topics
+
 router = APIRouter(prefix="/game", tags=["game"])
 logger = get_logger(__name__)
 evaluator = DefaultLearningEvaluator()
 
-@router.post("/initassess/", response_model=StandardResponse[InitialAssessmentResponseItems], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/initassess/",
+    response_model=StandardResponse[InitialAssessmentResponseItems],
+    status_code=status.HTTP_201_CREATED)
 async def initial_assessment_evaluation(
     request: InitialAssessmentRequest,
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
@@ -77,7 +85,10 @@ async def initial_assessment_evaluation(
         )
     )
 
-@router.post("/assessment/submit", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
+@router.post(
+    "/assessment/submit",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK)
 async def assessment_submit(
     request: InitialAssessmentResponseItems,
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
@@ -113,7 +124,10 @@ async def assessment_submit(
             data=None
         )
 
-@router.post("/question/submit/single", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
+@router.post(
+    "/question/submit/single",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK)
 async def single_question_submit(
         request: SingleResponseItem,
         db: AsyncIOMotorDatabase = Depends(get_mongo_db),
@@ -175,7 +189,10 @@ async def mark_topic_completed(
     )
 
 
-@router.post("/data", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
+@router.post(
+    "/data",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK)
 async def get_user_data_from_collection(
         request: GetUser,
         db: AsyncIOMotorDatabase = Depends(get_mongo_db),
@@ -224,7 +241,11 @@ async def get_user_data_from_collection(
         }
     )
 
-@router.post("/generate/knowledgelist/", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
+@router.post(
+    "/generate/knowledgelist/",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK
+)
 async def generate_knowledge_list(
         request: GetUserTopic,
         db: AsyncIOMotorDatabase = Depends(get_mongo_db),
@@ -282,7 +303,11 @@ async def generate_knowledge_list(
             data=None
         )
 
-@router.post("/generate/qlist/", response_model=StandardResponse[Dict[str, Any]], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/generate/qlist/",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_201_CREATED
+)
 async def generate_user_question_list(
         request: GetUserTopic,
         db: AsyncIOMotorDatabase = Depends(get_mongo_db),
@@ -373,5 +398,199 @@ async def submit_soc_engineering_grade(
         return StandardResponse(
             success=False,
             message="Failed to submit soceng grade",
+            data=None
+        )
+
+@router.post(
+    "/score/topic/",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK
+)
+async def get_topic_score(
+    request: GetUserTopic,
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    response: Response = Response(),
+):
+    logger.info("Fetching topic knowledge score...")
+
+    user_uuid = ""
+
+    try:
+        user_uuid = request.userid
+        logger.info("User UUID validated")
+    except ValueError:
+        logger.error(f"Invalid user_id format: {user_uuid}")
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return StandardResponse(
+            success=False,
+            message="Invalid user_id format.",
+            data=None
+        )
+
+    try:
+        logger.info("Generating question map for scoring")
+        qmap = await generate_question_list(
+            db, user_uuid, request.topic, request.collectionName
+        )
+
+        logger.info("Computing topic score")
+        score = await compute_topic_score(
+            db, user_uuid, request.topic, qmap
+        )
+
+        return StandardResponse(
+            success=True,
+            message="Topic score computed successfully.",
+            data={
+                "topic": request.topic.value,
+                "knowledge_score": score
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error computing topic score: {e}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message="Failed to compute topic score",
+            data=None
+        )
+
+@router.post(
+    "/score/overall/",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK
+)
+async def get_overall_score(
+    request: GetUserTopic,
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    response: Response = Response(),
+):
+    logger.info("Fetching overall knowledge score...")
+
+    user_uuid = ""
+
+    try:
+        user_uuid = request.userid
+        logger.info("User UUID validated")
+    except ValueError:
+        logger.error(f"Invalid user_id format: {user_uuid}")
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return StandardResponse(
+            success=False,
+            message="Invalid user_id format.",
+            data=None
+        )
+
+    try:
+        logger.info("Collecting question maps for all topics")
+
+        topic_question_maps = {}
+
+        for topic in Topics:
+            qmap = await generate_question_list(
+                db, user_uuid, topic, request.collectionName
+            )
+            topic_question_maps[topic.value] = qmap
+
+        logger.info("Computing overall score")
+        overall_score = await compute_overall_score(
+            db, user_uuid, topic_question_maps
+        )
+
+        return StandardResponse(
+            success=True,
+            message="Overall score computed successfully.",
+            data={
+                "overall_knowledge_score": overall_score
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error computing overall score: {e}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message="Failed to compute overall score",
+            data=None
+        )
+
+@router.post(
+    "/score/full-profile/",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK
+)
+async def get_full_security_profile(
+    request: GetUserTopic,
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    response: Response = Response(),
+):
+    logger.info("Fetching full security profile...")
+
+    user_uuid = ""
+
+    try:
+        user_uuid = request.userid
+        logger.info("User UUID validated")
+    except ValueError:
+        logger.error(f"Invalid user_id format: {user_uuid}")
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return StandardResponse(
+            success=False,
+            message="Invalid user_id format.",
+            data=None
+        )
+
+    try:
+        topic_scores = {}
+        topic_question_maps = {}
+
+        for topic in Topics:
+            qmap = await generate_question_list(
+                db, user_uuid, topic, request.collectionName
+            )
+            topic_question_maps[topic.value] = qmap
+
+            score = await compute_topic_score(
+                db, user_uuid, topic, qmap
+            )
+
+            topic_scores[topic.value] = score
+
+        overall_score = await compute_overall_score(
+            db, user_uuid, topic_question_maps
+        )
+
+        # Fetch trust score if exists
+        progress_doc = await db["progress"].find_one(
+            {"user_id": str(user_uuid)}
+        )
+
+        trust_data = (
+            progress_doc
+            .get("progress", {})
+            .get("Social Engineering", {})
+            .get("trust", {})
+        ) if progress_doc else {}
+
+        trust_grade = trust_data.get("grade", None)
+
+        return StandardResponse(
+            success=True,
+            message="Security profile generated successfully.",
+            data={
+                "per_topic_scores": topic_scores,
+                "overall_knowledge_score": overall_score,
+                "trust_grade": trust_grade,
+                "trust_level": interpret_trust(trust_grade) if trust_grade is not None else None
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error generating security profile: {e}")
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message="Failed to generate security profile",
             data=None
         )
