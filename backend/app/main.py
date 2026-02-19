@@ -14,6 +14,10 @@ from app.utils.logger import get_logger
 from app.core.database_postgres import init_db
 from app.core.startup import startup_super_admin
 
+from app.core.cache_loader import preload_static_assets
+from app.core.cache_redis import redis_client
+from app.modules.presence.routes.routes import router as presence_router
+
 logger = get_logger("main")
 
 @asynccontextmanager
@@ -33,6 +37,17 @@ async def lifespan(app:FastAPI):
         startup_super_admin()
     except Exception as e:
         logger.error(f"Startup super admin failed: {e}")
+
+    try:
+        await redis_client.ping()
+        logger.info("Redis connection successful")
+    except Exception as e:
+        logger.error(f"Redis connection failed: {e}")
+
+    try:
+        await preload_static_assets(redis_client)
+    except Exception as e:
+        logger.error(f"assets caching failed:  {e}")
 
     logger.info("Finished establishing database connections")
     yield
@@ -66,7 +81,7 @@ app.include_router(post_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(announcements_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
-
+app.include_router(presence_router, prefix="/api")
 
 @app.get("/api")
 async def root():

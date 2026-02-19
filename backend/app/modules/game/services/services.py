@@ -12,6 +12,8 @@ import random
 import os
 
 from app.modules.game.schemas.gameschemas import SingleResponseItem
+from app.core.cache_redis import redis_client as redis
+
 
 logger = get_logger()
 
@@ -27,12 +29,12 @@ def map_subtopic_to_enum(subtopic_str: str) -> Subtopic:
         raise ValueError(f"Invalid subtopic: {subtopic_str}")
 
 
-def evaluate_assessment(response, evaluator: LearningEvaluator):
+async def evaluate_assessment(response, evaluator: LearningEvaluator):
     json_path = ASSETS_DIR / "initial_assessment.json"
 
     logger.info(f"Evaluating assessment from file path: {json_path}")
 
-    question_map = evaluator.build_question_map(json_path)
+    question_map = await evaluator.build_question_map(json_path)
     logger.info(f"Loaded question map with {len(question_map)} questions")
 
     question_ids = [
@@ -208,7 +210,21 @@ async def ensure_initial_assessment_doc(
     await collection.insert_one(doc)
     return doc
 
+async def get_static_asset(redis, key: str, file_path: Path):
+    try:
+        data = await redis.get(key)
+        if data:
+            return json.loads(data)
 
+        with open(file_path, "r") as f:
+            parsed = json.load(f)
+
+        await redis.set(key, json.dumps(parsed), ex=3600)
+        return parsed
+
+    except Exception:
+        with open(file_path, "r") as f:
+            return json.load(f)
 
 async def db_findby_id(
         db: AsyncIOMotorDatabase,
@@ -224,20 +240,31 @@ async def db_findby_id(
     return document
 
 
-def load_question_base(topic_value: str):
-
-    QUESTION_BASE_PATH = ASSETS_DIR / "question_base.json"
-
-    logger.info("preparing question base")
+async def load_question_base(topic_value: str):
     try:
-        with open(QUESTION_BASE_PATH, "r") as f:
-            all_topics_data = json.load(f)
+        data = await redis.get("static:question_base")
 
-            logger.info(f"Loaded question base (first 2 topics): {all_topics_data[:2]}")
+        if data:
+            all_topics_data = json.loads(data)
+        else:
+            logger.warning("Redis cache miss for question base. Reloading from file.")
+
+            with open(ASSETS_DIR / "question_base.json", "r") as f:
+                all_topics_data = json.load(f)
+
+            # repopulate redis
+            await redis.set(
+                "static:question_base",
+                json.dumps(all_topics_data),
+                ex=3600
+            )
 
     except Exception as e:
-        logger.error(f"Failed to load or parse question_base.json: {e}")
-        return {}
+        logger.error(f"Redis failure, falling back to file: {e}")
+
+        with open(ASSETS_DIR / "question_base.json", "r") as f:
+            all_topics_data = json.load(f)
+
 
     qb_questions_by_subcat_key = {}
     for topic_data in all_topics_data:
@@ -254,19 +281,32 @@ def load_question_base(topic_value: str):
     return qb_questions_by_subcat_key
 
 async def fetch_knowledge_list(
-    topic: str,
-    questions: list[dict]
+        topic: str,
+        questions: list[dict]
 ) -> list[dict]:
 
-    KNOWLEDGE_BASE_PATH = ASSETS_DIR / "knowledge_base.json"
-
     try:
-        with open(KNOWLEDGE_BASE_PATH, "r") as f:
-            all_knowledge_data = json.load(f)
-    except Exception as e:
-        logger.error(f"Failed to load knowledge_base.json: {e}")
-        return []
+        data = await redis.get("static:knowledge_base")
 
+        if data:
+            all_knowledge_data = json.loads(data)
+        else:
+            logger.warning("Redis cache miss for knowledge base. Reloading.")
+
+            with open(ASSETS_DIR / "knowledge_base.json", "r") as f:
+                all_knowledge_data = json.load(f)
+
+            await redis.set(
+                "static:knowledge_base",
+                json.dumps(all_knowledge_data),
+                ex=3600
+            )
+
+    except Exception as e:
+        logger.error(f"Redis failure, fallback to file: {e}")
+
+        with open(ASSETS_DIR / "knowledge_base.json", "r") as f:
+            all_knowledge_data = json.load(f)
     # unanswered question ids
     question_ids = {q["question_id"] for q in questions}
 
@@ -309,7 +349,7 @@ async def generate_question_list(
         "LOW": 1
     }
 
-    qb_questions = load_question_base(topic.value)
+    qb_questions = await load_question_base(topic.value)
     logger.info(f"kb_questions: {qb_questions}")
     if not qb_questions:
         logger.error(f"No questions found for topic '{topic.value}' in knowledge base.")

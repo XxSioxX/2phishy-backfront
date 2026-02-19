@@ -4,8 +4,10 @@ from app.modules.learning_path.models.learn_path import Topics, SubtopicPriority
 from app.modules.game.models.game import QuestionRequest
 import json
 from uuid import UUID
-
+from pathlib import Path
 from app.utils.logger import get_logger
+from app.core.cache_redis import redis_client as redis
+
 
 logger = get_logger()
 
@@ -46,37 +48,58 @@ def load_questions(filepath):
     with open(filepath, "r") as f:
         return json.load(f)
 
-def build_question_map(*files):
+async def build_question_map(*files):
+
     question_map = {}
+
     for file in files:
-        logger.info(f"Loading questions from {file}")
-        topics = load_questions(file)  # top-level is a list of topic dicts
-        logger.info(f"Loaded {len(topics)} topics")
+
+        file_path = Path(file)
+        redis_key = f"static:initial_assessment:{file_path.name}"
+
+        topics = await get_static_asset(redis_key, file_path)
+
+        logger.info(f"Loaded {len(topics)} topics from {file_path.name}")
 
         for topic in topics:
             for q in topic.get("initial_assessment", []):
                 question_map[q["question_id"]] = q
-    logger.info(f"Question map: {question_map}")
+
+    logger.info(f"Built question map with {len(question_map)} questions")
+
     return question_map
 
 def evaluate_answer(answer: QuestionRequest, question_map):
-    logger.info(f"Evaluating question: {answer}")
+
     qid = answer.assessment_request.question_id
-    logger.info(f"Evaluating question qid: {qid}")
     user_answer = answer.answer
-    logger.info(f"Evaluating question user_answer: {user_answer}")
-    question = question_map[qid]
-    logger.info(f"Evaluating question _question: {question}")
 
-    if question:
+    question = question_map.get(qid)
 
-        correct_answer = question["answer"]
-        is_correct = user_answer.strip().lower() == correct_answer.strip().lower()
-        if is_correct:
-            return True
-        else:
-            return False
-    else:
+    if not question:
         return "Invalid answer"
 
+    correct_answer = question["answer"]
 
+    return user_answer.strip().lower() == correct_answer.strip().lower()
+
+async def get_static_asset(key: str, file_path: Path):
+    try:
+        data = await redis.get(key)
+
+        if data:
+            return json.loads(data)
+
+        logger.warning(f"Redis cache miss for {key}. Reloading from file.")
+
+        with open(file_path, "r") as f:
+            parsed = json.load(f)
+
+        await redis.set(key, json.dumps(parsed), ex=3600)
+
+        return parsed
+
+    except Exception as e:
+        logger.error(f"Redis failure for {key}, fallback to file: {e}")
+        with open(file_path, "r") as f:
+            return json.load(f)

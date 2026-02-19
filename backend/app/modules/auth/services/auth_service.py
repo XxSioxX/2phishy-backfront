@@ -19,6 +19,7 @@ from app.modules.auth.models.models import PasswordResetToken
 import secrets
 import hashlib
 from datetime import datetime, timedelta
+from app.core.cache_redis import redis_client as redis
 
 from app.core.config import settings
 import bcrypt
@@ -207,3 +208,33 @@ def reset_password(db: Session, raw_token: str, new_password: str):
     db.commit()
 
     return True
+
+
+RESET_EMAIL_LIMIT = 3
+RESET_EMAIL_WINDOW = 3600  # 1 hour
+
+RESET_IP_LIMIT = 10
+RESET_IP_WINDOW = 3600
+
+
+async def check_reset_throttle(email: str, ip: str):
+
+    email_key = f"rate:reset:email:{email.lower()}"
+    ip_key = f"rate:reset:ip:{ip}"
+
+    # Use pipeline for atomic-like behavior
+    pipe = redis.pipeline()
+
+    pipe.incr(email_key)
+    pipe.expire(email_key, RESET_EMAIL_WINDOW)
+
+    pipe.incr(ip_key)
+    pipe.expire(ip_key, RESET_IP_WINDOW)
+
+    email_count, _, ip_count, _ = await pipe.execute()
+
+    if email_count > RESET_EMAIL_LIMIT:
+        raise Exception("Too many password reset attempts for this email. Try again later.")
+
+    if ip_count > RESET_IP_LIMIT:
+        raise Exception("Too many password reset attempts from this IP. Try again later.")

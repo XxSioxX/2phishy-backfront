@@ -507,15 +507,17 @@ export const api = {
         return { ...user, userid: user.userid || user.id };
     },
 
-    async updatePresence(): Promise<{ message: string }> {
-        const response = await fetch(`${API_BASE_URL}/users/presence`, {
+    async updatePresence(): Promise<{ status: string }> {
+        const response = await fetch(`${API_BASE_URL}/presence/heartbeat`, {
             method: 'POST',
             headers: getAuthHeaders()
         });
+
         if (!response.ok) {
             throw new Error('Failed to update presence');
         }
-        return response.json();
+
+            return response.json();
     },
 
     // Admin endpoints

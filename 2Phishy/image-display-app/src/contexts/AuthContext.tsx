@@ -59,14 +59,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
     }
+
+    // Send immediate heartbeat
+    api.updatePresence().catch(error => {
+      console.error('Initial heartbeat failed:', error);
+    });
+
     heartbeatIntervalRef.current = setInterval(async () => {
       try {
         await api.updatePresence();
       } catch (error) {
         console.error('Heartbeat failed:', error);
       }
-    }, 30000); // 30 seconds
+    }, 30000);
   };
+
 
   // Function to stop heartbeat
   const stopHeartbeat = () => {
@@ -113,8 +120,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     if (user) {
       resetInactivityTimer();
+      startHeartbeat();   // ← add this
     } else {
       clearInactivityTimer();
+      stopHeartbeat();    // ← add this
     }
   }, [user]);
 

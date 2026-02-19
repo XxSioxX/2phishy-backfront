@@ -1,16 +1,17 @@
 
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
 
 from sqlalchemy.orm import Session
 from app.core.database_postgres import get_db
 from app.modules.user.services.services import get_user_by_email
-from app.modules.auth.services.auth_service import forgot_password
+from app.modules.auth.services.auth_service import forgot_password,check_reset_throttle
 from app.modules.auth.schemas.schemas import ForgotPasswordRequest, ResetPasswordRequest
 from app.modules.auth.services.auth_service import reset_password
 
 from app.utils.logger import get_logger
+
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = get_logger(__name__)
@@ -19,8 +20,16 @@ logger = get_logger(__name__)
 async def forgot_password_route(
     data: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
+    request: Request,
     db: Session = Depends(get_db)
 ):
+    client_ip = request.client.host
+
+    await check_reset_throttle(
+        email=data.email,
+        ip=client_ip
+    )
+
     user = get_user_by_email(db, data.email)
 
     if user:

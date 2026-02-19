@@ -22,3 +22,4 @@ python-multipart
 
 resend
 jinja2
+redis
