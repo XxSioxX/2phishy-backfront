@@ -25,6 +25,7 @@ class ReportUpdate(BaseModel):
 class ReportResponse(ReportBase):
     id: str = Field(alias="_id")
     studentId: str
+    username: str
     date: str
     createdAt: datetime
     updatedAt: datetime

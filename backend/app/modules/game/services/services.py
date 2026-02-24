@@ -338,9 +338,11 @@ async def generate_question_list(
         db: AsyncIOMotorDatabase,
         user_id: UUID,
         topic: Topics,
-        collectionName: str
+        collectionName: str = None
 
 ):
+    if collectionName is None:
+        collectionName = "initial_assessments"
     logger.info("Generating question list")
     question_map = []
     QUESTIONS_PER_PRIORITY = {

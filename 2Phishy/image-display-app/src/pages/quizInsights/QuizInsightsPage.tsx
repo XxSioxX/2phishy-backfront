@@ -5,11 +5,10 @@ import { formatDatePH } from "../../utils/dateUtils";
 import "./QuizInsightsPage.scss";
 
 interface QuizInsight {
-  id?: string;
-  userid?: string;
   username: string;
-  score: null; // TODO: Add score when backend supports it
-  lastAttempt: string | null;
+  score: number;
+  level: number;
+  date: string | null;
 }
 
 const QuizInsightsPage = () => {
@@ -18,9 +17,9 @@ const QuizInsightsPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch quiz insights from backend
+ 
   const fetchQuizInsights = async () => {
-    // Double-check: only proceed if user is admin or super-admin
+    
     if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
       console.log('Access denied: User is not admin or super-admin');
       return;
@@ -29,22 +28,9 @@ const QuizInsightsPage = () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch all users and format for quiz insights
-      const users = await api.getUsers();
-      const formattedInsights: QuizInsight[] = users.map(u => ({
-        id: u.userid || u.id?.toString(),
-        userid: u.userid,
-        username: u.username,
-        score: null, // TODO: Add score when backend implements quiz scoring
-        lastAttempt: u.last_login || null
-      }));
-      // Sort by lastAttempt from new to old
-      formattedInsights.sort((a, b) => {
-        if (!a.lastAttempt) return 1;
-        if (!b.lastAttempt) return -1;
-        return new Date(b.lastAttempt).getTime() - new Date(a.lastAttempt).getTime();
-      });
-      setQuizInsights(formattedInsights);
+      
+      const insights = await (api as unknown as { getQuizInsights: () => Promise<QuizInsight[]> }).getQuizInsights();
+      setQuizInsights(insights);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch quiz insights");
       console.error("Error fetching quiz insights:", err);
@@ -54,18 +40,18 @@ const QuizInsightsPage = () => {
   };
 
   useEffect(() => {
-    // Only fetch if user is authenticated, loaded, and is admin or super-admin
+    
     if (isAuthenticated && user && (user.role === 'admin' || user.role === 'super-admin')) {
       fetchQuizInsights();
     }
   }, [isAuthenticated, user]);
 
-  // Show loading while user data is being loaded
+  
   if (!isAuthenticated || !user) {
     return <div>Loading...</div>;
   }
 
-  // Don't render anything if user is not admin or super-admin
+  
   if (user.role !== 'admin' && user.role !== 'super-admin') {
     return null;
   }
@@ -109,15 +95,17 @@ const QuizInsightsPage = () => {
             <tr>
               <th>Username</th>
               <th>Score</th>
-              <th>Last Attempt</th>
+              <th>Level</th>
+              <th>Date</th>
             </tr>
           </thead>
           <tbody>
-            {quizInsights.map((row) => (
-              <tr key={row.id || row.username}>
+            {quizInsights.map((row, index) => (
+              <tr key={row.username + index}>
                 <td>{row.username}</td>
                 <td className="score">{row.score}</td>
-                <td>{row.lastAttempt ? formatDatePH(row.lastAttempt, false) : '-'}</td>
+                <td>LEVEL {row.level}</td>
+                <td>{row.date ? formatDatePH(row.date, false) : '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -127,4 +115,4 @@ const QuizInsightsPage = () => {
   );
 };
 
-export default QuizInsightsPage; 
+export default QuizInsightsPage;

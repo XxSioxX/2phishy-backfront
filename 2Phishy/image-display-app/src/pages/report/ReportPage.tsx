@@ -19,7 +19,6 @@ const ReportPage: React.FC = () => {
         const backendReports = await api.getReports();
         let reportsWithStatus: ReportWithResolved[] = Array.isArray(backendReports) ? backendReports : [];
 
-        // Fallback: if backend doesn't provide resolved flags, merge with localStorage saved resolved status
         if (!reportsWithStatus.some(r => 'resolved' in r)) {
           try {
             const resolvedReportsData = localStorage.getItem('resolvedReportsWithStatus');
@@ -38,7 +37,7 @@ const ReportPage: React.FC = () => {
         // Filter reports based on user role
         let filteredReports = reportsWithStatus;
         if (user && user.role === 'student') {
-          filteredReports = reportsWithStatus.filter(report => report.username === user.username);
+          filteredReports = reportsWithStatus.filter(report => report.studentId === user.userid);
         }
 
         setStudentReports(filteredReports);
@@ -55,7 +54,6 @@ const ReportPage: React.FC = () => {
     }
   }, [isAuthenticated, user]);
 
-  // Listen for storage changes to update reports in real-time
   useEffect(() => {
     const handleStorageChange = () => {
       console.log('Storage changed, reloading reports...');
@@ -73,7 +71,6 @@ const ReportPage: React.FC = () => {
       try {
         const updated = await api.updateReport(reportId, { resolved: true });
         setStudentReports(prev => prev.map(r => r.id === reportId ? { ...r, resolved: true, ...updated } : r));
-        // Keep local fallback for compatibility
         try {
           const existing = localStorage.getItem('resolvedReportsWithStatus');
           const arr = existing ? JSON.parse(existing) : [];

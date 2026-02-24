@@ -37,7 +37,7 @@ class TopicCompletionRequest(BaseModel):
     topic: str
 
 class GetUserTopic(GetUser):
-    topic: Topics
+    topic: Optional[Topics] = None
 
 class TopicRequest(BaseModel):
     topic: Topics

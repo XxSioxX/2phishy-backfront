@@ -50,7 +50,7 @@
         margin-bottom: 1rem;
         font-weight: 600;
         text-align: left;
-        min-height: 1.5rem; // Ensure consistent header height
+        min-height: 1.5rem; 
       }
 
       .form-group {
@@ -61,7 +61,7 @@
           color: $main-color;
           margin-bottom: 0.5rem;
           display: block;
-          min-height: 1.2rem; // Ensure consistent label height
+          min-height: 1.2rem; 
         }
 
         input[type="checkbox"] {
@@ -91,17 +91,12 @@
           margin-bottom: 0.5rem;
         }
       }
-
-      // Add consistent top margin for sections without labels
       .form-group:first-child {
         margin-top: 0;
       }
-
-      // Ensure consistent spacing for buttons without labels
       button:first-child {
         margin-top: 0;
       }
-
       &.account-section {
         width: 100%;
       }

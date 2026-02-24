@@ -10,7 +10,7 @@ interface Announcement {
   content: string;
   date: string;
   isPublished: boolean;
-  lastEditedBy?: string; // store admin username here
+  lastEditedBy?: string;
   lastEditedDate?: string;
 }
 
@@ -95,13 +95,18 @@ const AnnouncementPage: React.FC = () => {
             lastEditedBy: currentUser.username,
             lastEditedDate: getCurrentDatePH()
           };
+          console.log('Creating announcement with payload:', payload);
           const created = await api.createAnnouncement(payload);
-          setAnnouncements(prev => [created, ...prev]);
+          console.log('Created announcement response:', created);
+          // Ensure the created announcement has an id field
+          const announcementWithId = { ...created, id: created.id || created._id };
+          setAnnouncements(prev => [announcementWithId, ...prev]);
           setShowAddForm(false);
           setFormData({ title: '', content: '', isPublished: true });
+          alert('Announcement created successfully!');
         } catch (e) {
           console.error('Failed to create announcement:', e);
-          alert('Failed to create announcement');
+          alert(`Failed to create announcement: ${(e as Error).message || 'Unknown error'}`);
         }
       })();
     } else if (showEditForm && editingAnnouncement) {
@@ -114,14 +119,20 @@ const AnnouncementPage: React.FC = () => {
             lastEditedBy: currentUser.username,
             lastEditedDate: getCurrentDatePH()
           };
+          console.log('Updating announcement with payload:', payload);
           const updated = await api.updateAnnouncement(editingAnnouncement.id, payload);
-          setAnnouncements(prev => prev.map(a => a.id === editingAnnouncement.id ? updated : a));
+          console.log('Update response:', updated);
+          // Ensure the updated announcement has an id field
+          const announcementWithId = { ...updated, id: updated.id || updated._id };
+          setAnnouncements(prev => prev.map(a => a.id === editingAnnouncement.id ? announcementWithId : a));
           setShowEditForm(false);
           setEditingAnnouncement(null);
+          setSelectedAnnouncements([]);
           setFormData({ title: '', content: '', isPublished: true });
-        } catch (e) {
+          alert('Announcement updated successfully!');
+        } catch (e: any) {
           console.error('Failed to update announcement:', e);
-          alert('Failed to update announcement');
+          alert(`Failed to update announcement: ${e.message || 'Unknown error'}`);
         }
       })();
     }

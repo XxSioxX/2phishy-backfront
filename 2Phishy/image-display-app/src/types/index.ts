@@ -19,6 +19,7 @@ export interface Report {
   type: "Bug" | "Exploit" | "Behavior";
   user_id?: string;
   username?: string;
+  studentId?: string;
   user_role?: "student" | "admin" | "super-admin";
 }
 

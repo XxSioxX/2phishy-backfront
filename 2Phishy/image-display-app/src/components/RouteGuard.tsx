@@ -15,7 +15,6 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
 }) => {
   const { user, isAuthenticated, loading } = useAuth();
 
-  // Show loading while checking authentication
   if (loading) {
     return (
       <div style={{
@@ -30,12 +29,11 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
     );
   }
 
-  // If not authenticated, redirect to login
+  // redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // If no roles specified, allow access
   if (allowedRoles.length === 0) {
     return <>{children}</>;
   }
@@ -45,14 +43,12 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
     return <>{children}</>;
   }
 
-  // Redirect to appropriate page based on role
   if (user?.role === 'student') {
     return <Navigate to="/play-game" replace />;
   } else if (user?.role === 'admin' || user?.role === 'super-admin') {
     return <Navigate to="/admin" replace />;
   }
 
-  // Default redirect
   return <Navigate to={redirectTo} replace />;
 };
 
