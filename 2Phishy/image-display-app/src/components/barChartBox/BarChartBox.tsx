@@ -6,12 +6,25 @@ type Props = {
     color:string;
     dataKey:string;
     chartData:object[];
+    onViewAll?: () => void;
 }
 
 const BarChartBox = (props: Props) => {
+    const handleViewAll = (e: React.MouseEvent) => {
+        if (props.onViewAll) {
+            e.preventDefault();
+            props.onViewAll();
+        }
+    };
+
     return (
         <div className="barChartBox">
-            <h1>{props.title}</h1>
+            <div className="header">
+                <h1>{props.title}</h1>
+                {props.onViewAll && (
+                    <a href="#" onClick={handleViewAll} style={{color: props.color, fontSize: '14px'}}>View all</a>
+                )}
+            </div>
             <div className="chart">
                 <ResponsiveContainer width="99%" height={150}>
                     <BarChart data={props.chartData}>
@@ -25,7 +38,7 @@ const BarChartBox = (props: Props) => {
                         </ResponsiveContainer>
             </div>
         </div>
-        
+
     );
 };
 

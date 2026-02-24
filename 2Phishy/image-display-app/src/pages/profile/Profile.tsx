@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./profile.scss";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
@@ -14,6 +14,46 @@ const Profile: React.FC = () => {
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [scoreProfile, setScoreProfile] = useState<any>(null);
+  const [loadingScores, setLoadingScores] = useState(true);
+  const [accountOpen, setAccountOpen] = useState(true);
+  const [personalOpen, setPersonalOpen] = useState(true);
+  const [scoreOpen, setScoreOpen] = useState(true);
+
+  useEffect(() => {
+    const fetchScoreProfile = async () => {
+      if (!user || !user.userid) return;
+
+      try {
+        setLoadingScores(true);
+        const profile = await api.getFullScoreProfile(user.userid);
+        setScoreProfile(profile);
+      } catch (error) {
+        console.error("Failed to fetch score profile:", error);
+      } finally {
+        setLoadingScores(false);
+      }
+    };
+
+    fetchScoreProfile();
+  }, [user]);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      if (mobile) {
+        setPersonalOpen(false);
+        setScoreOpen(false);
+      } else {
+        setPersonalOpen(true);
+        setScoreOpen(true);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -91,6 +131,10 @@ const Profile: React.FC = () => {
     setIsEditing(false);
   };
 
+  const toggleAccount = () => setAccountOpen(!accountOpen);
+  const togglePersonal = () => setPersonalOpen(!personalOpen);
+  const toggleScore = () => setScoreOpen(!scoreOpen);
+
   if (!user) {
     return (
       <div className="profile">
@@ -121,38 +165,67 @@ const Profile: React.FC = () => {
 
         <div className="profile-sections">
           <div className="profile-section">
-            <h2>Account Information</h2>
-            <div className="user-details">
+            <div className="section-header">
+              <h2>Account Information</h2>
+              <button className="toggle-button" onClick={toggleAccount}>
+                <img
+                  src="/expand.svg"
+                  alt="toggle"
+                  className={`toggle-icon ${accountOpen ? 'open' : ''}`}
+                />
+              </button>
+            </div>
+            <div className="section-content" style={{ display: accountOpen ? 'block' : 'none' }}>
+              <div className="user-details">
               <div className="detail-item">
                 <label>User ID:</label>
-                <span>{user.userid}</span>
+                <span>{user.userid || 'N/A'}</span>
               </div>
-              <div className="detail-item">
-                <label>Role:</label>
-                <span className={`role-badge role-${user.role}`}>
-                  {user.role}
-                </span>
-              </div>
-              <div className="detail-item">
-                <label>Account Status:</label>
-                <span className={`status-badge status-${user.account_status}`}>
-                  {user.account_status}
-                </span>
-              </div>
-              <div className="detail-item">
-                <label>Member Since:</label>
-                <span>{formatDatePH(user.created_at || '')}</span>
-              </div>
-              <div className="detail-item">
-                <label>Last Login:</label>
-                <span>{formatDatePH(user.last_login || '', true)}</span>
-              </div>
+              {user.role && (
+                <div className="detail-item">
+                  <label>Role:</label>
+                  <span className={`role-badge role-${user.role}`}>
+                    {user.role}
+                  </span>
+                </div>
+              )}
+              {user.account_status && (
+                <div className="detail-item">
+                  <label>Account Status:</label>
+                  <span className={`status-badge status-${user.account_status}`}>
+                    {user.account_status}
+                  </span>
+                </div>
+              )}
+              {user.created_at && (
+                <div className="detail-item">
+                  <label>Member Since:</label>
+                  <span>{formatDatePH(user.created_at)}</span>
+                </div>
+              )}
+              {user.last_login && (
+                <div className="detail-item">
+                  <label>Last Login:</label>
+                  <span>{formatDatePH(user.last_login, true)}</span>
+                </div>
+              )}
+            </div>
             </div>
           </div>
 
           <div className="profile-section">
-            <h2>Personal Information</h2>
-            {user.role === 'student' ? (
+            <div className="section-header">
+              <h2>Personal Information</h2>
+              <button className="toggle-button" onClick={togglePersonal}>
+                <img
+                  src="/expand.svg"
+                  alt="toggle"
+                  className={`toggle-icon ${personalOpen ? 'open' : ''}`}
+                />
+              </button>
+            </div>
+            <div className="section-content" style={{ display: personalOpen ? 'block' : 'none' }}>
+              {user.role === 'student' ? (
               // Read-only view for students
               <div className="user-details">
                 <div className="detail-item">
@@ -243,6 +316,59 @@ const Profile: React.FC = () => {
                 )}
               </>
             )}
+            </div>
+          </div>
+
+          <div className="profile-section">
+            <div className="section-header">
+              <h2>Full Score Profile</h2>
+              <button className="toggle-button" onClick={toggleScore}>
+                <img
+                  src="/expand.svg"
+                  alt="toggle"
+                  className={`toggle-icon ${scoreOpen ? 'open' : ''}`}
+                />
+              </button>
+            </div>
+            <div className="section-content" style={{ display: scoreOpen ? 'block' : 'none' }}>
+              {loadingScores ? (
+              <div className="loading-message">Loading scores...</div>
+            ) : scoreProfile ? (
+              <div className="score-details">
+                {scoreProfile.overall_knowledge_score !== undefined && (
+                  <div className="detail-item">
+                    <label>Overall Knowledge Score:</label>
+                    <span className="score-value">{scoreProfile.overall_knowledge_score}</span>
+                  </div>
+                )}
+                {scoreProfile.trust_grade && (
+                  <div className="detail-item">
+                    <label>Trust Grade:</label>
+                    <span className="trust-grade">{scoreProfile.trust_grade}</span>
+                  </div>
+                )}
+                {scoreProfile.trust_level && (
+                  <div className="detail-item">
+                    <label>Trust Level:</label>
+                    <span className="trust-level">{scoreProfile.trust_level}</span>
+                  </div>
+                )}
+                {scoreProfile.per_topic_scores && Object.keys(scoreProfile.per_topic_scores).length > 0 && (
+                  <div className="topic-scores">
+                    <h3>Topic Scores:</h3>
+                    {Object.entries(scoreProfile.per_topic_scores).map(([topic, score]: [string, any]) => (
+                      <div key={topic} className="topic-score-item">
+                        <label>{topic}:</label>
+                        <span>{score}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="no-scores-message">No score data available.</div>
+            )}
+            </div>
           </div>
         </div>
       </div>

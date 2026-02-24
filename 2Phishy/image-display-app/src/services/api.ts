@@ -1,16 +1,15 @@
-import { User, TopScore, ChartBoxData } from '../types';
+import { User, ChartBoxData } from '../types';
 
 let API_BASE_URL = process.env.REACT_APP_API_BASE_URL!;
 console.log("API BASE URL:", API_BASE_URL);
 
-// Ensure we use HTTP for localhost in development (avoid HSTS issues)
 if (API_BASE_URL.includes('localhost') && API_BASE_URL.startsWith('https')) {
     API_BASE_URL = API_BASE_URL.replace('https://', 'http://');
     console.log("Converted to HTTP for localhost development:", API_BASE_URL);
 }
 
 
-// Helper function to get auth headers
+
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     return {
@@ -19,19 +18,19 @@ const getAuthHeaders = () => {
     };
 };
 
-// Helper function to check if user is authenticated
+
 export const isAuthenticated = (): boolean => {
     const token = localStorage.getItem('token');
     return !!token;
 };
 
-// Helper function to get current user
+
 export const getCurrentUser = (): any => {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
 };
 
-// Helper function to logout
+
 export const logout = (): void => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -57,11 +56,9 @@ export const api = {
             
             return response.json();
         } catch (error: any) {
-            // Enhanced error logging for debugging
             console.error('Login API Error:', error);
             console.error('API URL used:', `${API_BASE_URL}/users/login`);
             
-            // If it's an SSL error, provide helpful guidance
             if (error.message.includes('ERR_SSL') || error.message.includes('SSL') || error.message.includes('net::ERR')) {
                 console.error('SSL/Network Error - ensure backend is running on HTTP (not HTTPS) for localhost development');
             }
@@ -150,17 +147,76 @@ export const api = {
         }
     },
 
-    // Data related endpoints - These endpoints don't exist in backend yet
-    async getTopScores(): Promise<TopScore[]> {
-        // TODO: Implement scores endpoint in backend
-        console.warn('getTopScores: Backend endpoint not implemented yet');
-        return [];
+    // nandito yung score api
+    async getTopicScore(topicId: string): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/game/score/topic/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ topic_id: topicId }),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch topic score');
+        }
+        return response.json();
+    },
+
+    async getOverallScore(): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/game/score/overall/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch overall score');
+        }
+        return response.json();
+    },
+
+    async getFullScoreProfile(userId?: string): Promise<any> {
+        const user = userId || getCurrentUser()?.userid;
+        if (!user) {
+            throw new Error('User ID not found');
+        }
+        const response = await fetch(`${API_BASE_URL}/game/score/full-profile/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ userid: user })
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch full score profile');
+        }
+        const data = await response.json();
+        return data.data || data;
+    },
+
+    // Data related endpoints
+    async getTopScores(): Promise<any[]> {
+        const response = await fetch(`${API_BASE_URL}/game/score/users/top-scores/?limit=7`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch top scores');
+        }
+        const data = await response.json();
+        return data.data || [];
+    },
+
+    async getTopicPerformance(): Promise<any[]> {
+        const response = await fetch(`${API_BASE_URL}/game/score/topics/performance/`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch topic performance');
+        }
+        const data = await response.json();
+        return data.data || [];
     },
 
     
 
     async getChartData(): Promise<ChartBoxData> {
-        // TODO: Implement chart-data endpoint in backend
+        
         console.warn('getChartData: Backend endpoint not implemented yet');
         return {
             color: '#8884d8',
@@ -675,20 +731,35 @@ export const api = {
             throw new Error('Failed to create announcement');
         }
         const data = await response.json();
-        return data.announcement || data;
+        const announcement = data.announcement || data;
+        return { ...announcement, id: announcement._id || announcement.id };
     },
 
     async updateAnnouncement(announcementId: string, announcementData: any): Promise<any> {
+        console.log('API: Updating announcement', announcementId, 'with data:', announcementData);
+        console.log('API: URL:', `${API_BASE_URL}/announcements/${announcementId}`);
         const response = await fetch(`${API_BASE_URL}/announcements/${announcementId}`, {
             method: 'PUT',
             headers: getAuthHeaders(),
             body: JSON.stringify(announcementData)
         });
+        console.log('API: Response status:', response.status);
         if (!response.ok) {
-            throw new Error('Failed to update announcement');
+            const errorText = await response.text();
+            console.error('API: Error response:', errorText);
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch {
+                errorData = { detail: errorText };
+            }
+            const errorMessage = errorData.detail || `Failed to update announcement with status ${response.status}`;
+            throw new Error(errorMessage);
         }
         const data = await response.json();
-        return data.announcement || data;
+        console.log('API: Update successful, response:', data);
+        const announcement = data.announcement || data;
+        return { ...announcement, id: announcement._id || announcement.id };
     },
 
     async deleteAnnouncement(announcementId: string): Promise<void> {
@@ -729,7 +800,7 @@ export const api = {
 
     async updateReport(reportId: string, reportData: any): Promise<any> {
         const response = await fetch(`${API_BASE_URL}/reports/${reportId}`, {
-            method: 'PATCH',
+            method: 'PUT',
             headers: getAuthHeaders(),
             body: JSON.stringify(reportData)
         });

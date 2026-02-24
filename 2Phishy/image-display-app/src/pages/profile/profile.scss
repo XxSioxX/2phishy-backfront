@@ -80,12 +80,40 @@
       flex-direction: column;
       align-items: stretch;
 
-      h2 {
-        font-size: 1.1rem;
-        color: $soft-color;
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 1rem;
-        font-weight: 600;
-        text-align: left;
+
+        h2 {
+          font-size: 1.1rem;
+          color: $soft-color;
+          font-weight: 600;
+          text-align: left;
+          margin: 0;
+        }
+
+        .toggle-button {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0.25rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          .toggle-icon {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.2s ease;
+            filter: invert(1);
+
+            &.open {
+              transform: rotate(180deg);
+            }
+          }
+        }
       }
 
       .user-details {
@@ -227,6 +255,42 @@
         margin-top: 1rem;
         // Unified button styles applied globally
       }
+
+      .score-details {
+        .topic-scores {
+          h3 {
+            font-size: 1rem;
+            color: $soft-color;
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+          }
+
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 0.75rem;
+
+          .topic-score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+
+            label {
+              font-weight: 500;
+              color: $main-color;
+              font-size: 0.9rem;
+            }
+
+            span {
+              color: $soft-color;
+              font-weight: 600;
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -252,7 +316,16 @@
 
       .profile-section {
         min-width: unset;
-        
+
+        .section-header {
+          .toggle-button {
+            .toggle-icon {
+              width: 14px;
+              height: 14px;
+            }
+          }
+        }
+
         .user-details {
           .detail-item {
             flex-direction: column;
@@ -269,6 +342,16 @@
         .profile-form {
           .form-actions {
             flex-direction: column;
+          }
+        }
+
+        .score-details {
+          .topic-scores {
+            grid-template-columns: 1fr;
+
+            .topic-score-item {
+              padding: 0.4rem;
+            }
           }
         }
       }

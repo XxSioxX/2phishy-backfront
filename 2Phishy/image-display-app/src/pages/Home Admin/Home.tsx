@@ -4,7 +4,8 @@ import ChartBox from "../../components/chartBox/ChartBox"
 import TopBox from "../../components/topBox/TopBox"
 import PieChartBox from "../../components/pieChartBox/PieChartBox"
 import WeeklyUserModal from "../../components/weeklyUserModal/WeeklyUserModal"
-import { barChartBoxVisit, chartBoxQuizRate } from "../../data"
+import TopicPerformanceModal from "../../components/topicPerformanceModal/TopicPerformanceModal"
+import { chartBoxQuizRate } from "../../data"
 import "./home.scss"
 import { api } from "../../services/api"
 import { useAuth } from "../../contexts/AuthContext"
@@ -15,9 +16,11 @@ const Home = () => {
     const [userStats, setUserStats] = useState<any>(null);
     const [activeParticipantsData, setActiveParticipantsData] = useState<any>(null);
     const [newUsersData, setNewUsersData] = useState<any>(null);
+    const [topicPerformanceData, setTopicPerformanceData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showWeeklyModal, setShowWeeklyModal] = useState(false);
+    const [showTopicModal, setShowTopicModal] = useState(false);
     const [weeklyStats, setWeeklyStats] = useState<WeeklyUserStats | null>(null);
 
     useEffect(() => {
@@ -32,16 +35,18 @@ const Home = () => {
                 setError(null);
 
                 // Fetch all dashboard data in parallel
-                const [userStatsData, activeParticipantsData, newUsersData, users] = await Promise.all([
+                const [userStatsData, activeParticipantsData, newUsersData, users, topicPerformance] = await Promise.all([
                     api.getUserStats(),
                     api.getActiveParticipantsOverTime('week'), // Default to weekly view for active participants
                     api.getNewUsersOverTime('week'), // Default to weekly view for new users
-                    api.getUsers() // Get all users for weekly stats
+                    api.getUsers(), // Get all users for weekly stats
+                    api.getTopicPerformance() // Get topic performance data
                 ]);
 
                 setUserStats(userStatsData);
                 setActiveParticipantsData(activeParticipantsData);
                 setNewUsersData(newUsersData);
+                setTopicPerformanceData(topicPerformance);
 
                 // Initialize weekly stats from users data
                 const stats = initializeWeeklyStats(users);
@@ -101,6 +106,23 @@ const Home = () => {
         ],
     };
 
+    // Create User Topics chart data from topic performance
+    const barChartBoxUserTopics = {
+        title: "User Topics (Areas Needing Improvement)",
+        color: "#FFA500",
+        dataKey: "score",
+        chartData: topicPerformanceData.length > 0 ? topicPerformanceData.map(topic => ({
+            name: topic.name,
+            score: topic.score
+        })) : [
+            {name: "Safe Browsing", score: 0},
+            {name: "Password Security", score: 0},
+            {name: "Malware", score: 0},
+            {name: "Social Engineering", score: 0},
+            {name: "Incident Response", score: 0},
+        ]
+    };
+
     if (loading) {
         return (
             <div className="home">
@@ -154,11 +176,16 @@ const Home = () => {
 
     return(
         <div className="home">
-            <WeeklyUserModal 
-                isOpen={showWeeklyModal}
-                onClose={() => setShowWeeklyModal(false)}
-                weeklyStats={weeklyStats}
-            />
+        <WeeklyUserModal
+            isOpen={showWeeklyModal}
+            onClose={() => setShowWeeklyModal(false)}
+            weeklyStats={weeklyStats}
+        />
+        <TopicPerformanceModal
+            isOpen={showTopicModal}
+            onClose={() => setShowTopicModal(false)}
+            topicData={topicPerformanceData}
+        />
             <div className="box box1">
                 <TopBox/>
             </div>
@@ -171,7 +198,7 @@ const Home = () => {
             <div className="box box3"><ChartBox icon={""} {...chartBoxQuizRate}/></div>
             <div className="box box4"><PieChartBox/></div>
             <div className="box box5"><ChartBox {...chartBoxActiveParticipants}/></div>
-            <div className="box box6"><BarChartBox {...barChartBoxVisit}/> </div>
+            <div className="box box6"><BarChartBox {...barChartBoxUserTopics} onViewAll={() => setShowTopicModal(true)}/></div>
         </div>
     )
 }

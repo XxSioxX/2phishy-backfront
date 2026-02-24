@@ -18,22 +18,39 @@ const TopBox: React.FC = () => {
         const fetchUserScores = async () => {
             try {
                 const users = await api.getUsers();
-                // Sort users by created_at descending (newest first)
-                const sortedUsers = users
-                    .sort((a: User, b: User) => {
-                        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-                        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-                        return dateB - dateA;
-                    })
-                    .slice(0, 7) // Limit to 7 users
-                    .map((user: User, index: number) => ({
-                        id: index + 1,
+                const topScoresData = await api.getTopScores();
+                
+                // Create a map of user_id to score for quick lookup
+                const scoreMap = new Map(
+                    topScoresData.map((item: any) => [
+                        item.user_id,
+                        item.overall_knowledge_score
+                    ])
+                );
+                
+                // Create user score objects
+                const userScoreObjects = users.map((user: User) => {
+                    const score = scoreMap.get(user.userid || user.id?.toString() || "") || 0;
+                    return {
+                        id: 0, // Will be set after sorting
                         Img: "",
                         username: user.username,
                         email: user.email,
-                        score: "NULL", // Placeholder for scores API
+                        score: score,
+                        scoreString: score.toString(),
                         last_seen: user.last_seen,
-                        user: user // Store the full user object
+                        user: user
+                    };
+                });
+
+                // Sort by score descending, then take top 7
+                const sortedUsers = userScoreObjects
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 7)
+                    .map((item, index) => ({
+                        ...item,
+                        id: index + 1,
+                        score: item.scoreString
                     }));
                 setUserScores(sortedUsers);
             } catch (error) {
@@ -57,7 +74,7 @@ const TopBox: React.FC = () => {
     if (loading) {
         return (
             <div className="topBox">
-                <h1>User Scores</h1>
+                <h1>Overall User Scores</h1>
                 <div className="list">
                     <div style={{ textAlign: 'center', padding: '20px' }}>
                         Loading...

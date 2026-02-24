@@ -1,7 +1,9 @@
 from app.core.database_mongo import db
+from app.core.database_postgres import get_db
 from datetime import datetime
 from bson import ObjectId
 from app.utils.logger import get_logger
+from app.modules.user.services.services import get_user
 
 logger = get_logger(__name__)
 
@@ -29,6 +31,16 @@ class ReportService:
             reports = []
             async for report in self.collection.find().sort("createdAt", -1):
                 report['_id'] = str(report['_id'])
+                # Add username from user database
+                db = next(get_db())
+                try:
+                    user = get_user(db, report['studentId'])
+                    report['username'] = user.username if user else 'Unknown Student'
+                except Exception as e:
+                    logger.warning(f"Could not fetch username for studentId {report['studentId']}: {e}")
+                    report['username'] = 'Unknown Student'
+                finally:
+                    db.close()
                 reports.append(report)
             return reports
         except Exception as e:
@@ -41,6 +53,16 @@ class ReportService:
             reports = []
             async for report in self.collection.find({"studentId": student_id}).sort("createdAt", -1):
                 report['_id'] = str(report['_id'])
+                # Add username from user database
+                db = next(get_db())
+                try:
+                    user = get_user(db, report['studentId'])
+                    report['username'] = user.username if user else 'Unknown Student'
+                except Exception as e:
+                    logger.warning(f"Could not fetch username for studentId {report['studentId']}: {e}")
+                    report['username'] = 'Unknown Student'
+                finally:
+                    db.close()
                 reports.append(report)
             return reports
         except Exception as e:
