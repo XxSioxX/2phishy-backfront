@@ -29,7 +29,7 @@ const Users = () => {
 
     if (!lastSeen) return false;
     try {
-      const lastSeenTime = new Date(lastSeen).getTime();
+      const lastSeenTime = new Date(lastSeen + "Z").getTime();
       const currentTime = new Date().getTime();
       const sixtySecondsMs = 60 * 1000;
       return (currentTime - lastSeenTime) < sixtySecondsMs;

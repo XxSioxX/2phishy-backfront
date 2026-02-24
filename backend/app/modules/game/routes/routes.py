@@ -56,7 +56,7 @@ async def initial_assessment_evaluation(
 ):
     logger.info("initial_assessment_evaluation: Evaluating initial assessment")
 
-    grade_dict = evaluate_assessment(request.assessment_response, evaluator)
+    grade_dict = await evaluate_assessment(request.assessment_response, evaluator)
     logger.info(f"DEBUG: {grade_dict}")
     subcat_grade = evaluate_subcat_grade(grade_dict)
     subcat_priority = evaluator.evaluate_subcat_priority(request.topic, subcat_grade)
