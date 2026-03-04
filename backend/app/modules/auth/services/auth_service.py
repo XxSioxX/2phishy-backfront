@@ -20,7 +20,7 @@ import secrets
 import hashlib
 from datetime import datetime, timedelta
 from app.core.cache_redis import redis_client as redis
-
+from app.core.security import create_access_token, verify_token
 from app.core.config import settings
 import bcrypt
 
@@ -43,30 +43,6 @@ def get_email_service():
     if _email_service is None and EmailService is not None:
         _email_service = EmailService()
     return _email_service
-
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Create a JWT access token"""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-def verify_token(token: str) -> Optional[str]:
-    """Verify a JWT token and return the user ID"""
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            return None
-        return user_id
-    except JWTError:
-        return None
 
 def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
     """Get user by ID (moved here to avoid circular import)"""

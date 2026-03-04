@@ -22,9 +22,13 @@ export class DialogueUI {
     this.container = this.scene.add.container(0, 0);
     this.container.setDepth(1000);
 
-    this.showNode('start');
-  }
+    // If branching, look for "start"
+    const startNode =
+      this.scenario.nodes.find(n => n.id === 'start') ??
+      this.scenario.nodes[0];
 
+    this.showNode(startNode.id);
+  }
   private showNode(nodeId: string): void {
     this.container.removeAll(true);
 

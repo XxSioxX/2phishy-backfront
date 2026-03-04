@@ -9,7 +9,7 @@ from app.modules.user.schemas.schemas import UserCreate, UserStatsResponse, User
 from app.utils.logger import get_logger
 import bcrypt
 
-from app.modules.auth.services.auth_service import create_access_token
+from app.core.security import create_access_token
 
 logger = get_logger("user-services.py")
 

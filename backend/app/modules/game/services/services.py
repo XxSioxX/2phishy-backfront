@@ -74,16 +74,26 @@ async def evaluate_assessment(response, evaluator: LearningEvaluator):
 def evaluate_subcat_grade(assessment_result: dict) -> dict:
     subtopic_scores = defaultdict(lambda: {"correct": 0, "total": 0})
     logger.info("Evaluating subcat grade")
+    logger.debug(f"Assessment result: {assessment_result}")
 
-    logger.info(f"DEBUG: {assessment_result} ")
-    for question_id, (subtopic, is_correct) in assessment_result.items():
-        logger.info(f"Current: {question_id} -> {subtopic}, {is_correct}")
+    for question_id, value in assessment_result.items():
+
+        # Skip invalid entries like "Invalid prefix"
+        if not isinstance(value, tuple):
+            continue
+
+        subtopic, is_correct = value
+
         subtopic_scores[subtopic]["total"] += 1
+
         if is_correct:
             subtopic_scores[subtopic]["correct"] += 1
 
+    # Avoid division by zero
     return {
-        subtopic: round(scores["correct"] / scores["total"], 2)
+        subtopic: round(
+            scores["correct"] / scores["total"], 2
+        ) if scores["total"] > 0 else 0
         for subtopic, scores in subtopic_scores.items()
     }
 
@@ -384,7 +394,7 @@ async def generate_question_list(
         logger.error(f"subcat_priority data is malformed for user '{user_id}'")
         return []
     subcat_priorities = priority_info[1]
-
+    selected_ids = set()
     question_map = []
     for subcat_key, priority in subcat_priorities.items():
         num_to_select = QUESTIONS_PER_PRIORITY.get(priority.upper(), 1)
@@ -396,11 +406,19 @@ async def generate_question_list(
             # Ensure we don't try to select more than what's available
             actual_num_to_select = min(num_to_select, len(available_questions))
 
-            # Use random.sample() to pick unique random questions
-            selected_questions = random.sample(available_questions, actual_num_to_select)
+            unique_pool = [
+                q for q in available_questions
+                if q.get("question_id") not in selected_ids
+            ]
 
-            # Add the selected question objects (dictionaries) to our final list
-            question_map.extend(selected_questions)
+            actual_num_to_select = min(num_to_select, len(unique_pool))
+
+            selected_questions = random.sample(unique_pool, actual_num_to_select)
+
+            for q in selected_questions:
+                question_map.append(q)
+                selected_ids.add(q.get("question_id"))
+
             logger.debug(f"Selected {len(selected_questions)} questions for subtopic '{subcat_key}'.")
         else:
             logger.warning(f"Subtopic key '{subcat_key}' not found in knowledge base for topic '{topic.value}'.")
@@ -856,33 +874,36 @@ async def compute_topic_score(db, user_id, topic, question_map):
 async def compute_overall_score(db, user_id, topic_question_maps):
 
     progress_doc = await db["progress"].find_one({"user_id": str(user_id)})
-
     if not progress_doc:
         return 0
+
+    progress_data = progress_doc.get("progress", {})
 
     weighted_correct = 0
     total_weight = 0
 
-    for topic, question_map in topic_question_maps.items():
+    for topic_key, question_map in topic_question_maps.items():
+
+        # Normalize topic key if Enum was passed
+        topic_key = topic_key.value if hasattr(topic_key, "value") else topic_key
 
         topic_progress = (
-            progress_doc
-            .get("progress", {})
-            .get(topic, {})
+            progress_data
+            .get(topic_key, {})
             .get("answers", [])
         )
 
+        if not topic_progress:
+            continue
+
+        # 🔥 O(1) lookup instead of nested loop
+        question_lookup = {
+            q["question_id"]: q for q in question_map
+        }
+
         for answer in topic_progress:
 
-            question_id = answer["question_id"]
-            is_correct = answer["is_correct"]
-
-            question = None
-            for q in question_map:
-                if q["question_id"] == question_id:
-                    question = q
-                    break
-
+            question = question_lookup.get(answer.get("question_id"))
             if not question:
                 continue
 
@@ -891,7 +912,7 @@ async def compute_overall_score(db, user_id, topic_question_maps):
 
             total_weight += weight
 
-            if is_correct:
+            if answer.get("is_correct"):
                 weighted_correct += weight
 
     if total_weight == 0:

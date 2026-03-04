@@ -60,11 +60,21 @@ export class MainMenuScene extends Scene {
       const initial = response.data.initial_assessments?.assessments ?? {};
       const progress = response.data.progress?.progress ?? {};
 
+      const firstLevel = LEVEL_FLOW[0];
+      const firstAssessment = initial[firstLevel.topic];
+
+      if (!firstAssessment?.assessment_completed) {
+        this.scene.start("prologue-scene", {
+          topic: firstLevel.topic,
+          nextScene: firstLevel.sceneKey
+        });
+        return;
+      }
+
       for (const level of LEVEL_FLOW) {
         const assessment = initial[level.topic];
         const levelProgress = progress[level.topic];
 
-        // 1️⃣ Initial assessment not done
         if (!assessment?.assessment_completed) {
           this.scene.start('assessment-scene', {
             topic: level.topic,
@@ -73,14 +83,12 @@ export class MainMenuScene extends Scene {
           return;
         }
 
-        // 2️⃣ Level not completed
         if (!levelProgress?.level_completed) {
           this.scene.start(level.sceneKey);
           return;
         }
       }
 
-      // 🎉 All levels completed
       this.popup.show(
         'All levels completed!',
         ['OK'],

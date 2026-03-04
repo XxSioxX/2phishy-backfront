@@ -1,0 +1,54 @@
+{
+  "scenarios": [
+    {
+      "id": "prologue_intro",
+      "type": "cutscene",
+      "skippable": true,
+      "nextScene": "assessment-scene",
+      "settings": {
+        "background": "#000000",
+        "textColor": "#ffffff",
+        "fontSize": 28,
+        "typeSpeed": 30
+      },
+      "nodes": [
+        { "id": "1", "text": "..." },
+        { "id": "2", "text": "My head hurts." },
+        { "id": "3", "text": "Where... am I?" },
+        { "id": "4", "text": "I remember logging in." },
+        { "id": "5", "text": "A message. A warning." },
+        { "id": "6", "text": "Then—" },
+        { "id": "7", "text": "Everything went dark." },
+        { "id": "8", "text": "This place... it doesn’t feel real." },
+        { "id": "9", "text": "Or maybe... it’s too real." },
+        { "id": "10", "text": "Someone brought me here." },
+        { "id": "11", "text": "And I need to figure out why." },
+        { "id": "12", "text": "Before it's too late.", "end": true }
+      ]
+    },
+    {
+      "id": "assessment_arrival",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "This isn’t my room..." },
+        { "id": "2", "text": "Stone walls. Torches. And symbols carved into the floor." },
+        { "id": "3", "text": "This feels like some kind of trial." },
+        { "id": "4", "text": "That staff... it’s reacting to something nearby." },
+        { "id": "5", "text": "Those glowing markers ahead..." },
+        { "id": "6", "text": "They’re not random." },
+        { "id": "7", "text": "If this place is testing me..." },
+        { "id": "8", "text": "Then something is judging me." },
+        { "id": "9", "text": "Whatever brought me here..." },
+        { "id": "10", "text": "It’s watching." },
+        { "id": "11", "text": "And it expects answers.", "end": true }
+      ]
+    }
+  ]
+}

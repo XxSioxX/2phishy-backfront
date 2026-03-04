@@ -5,6 +5,7 @@ import {PSLevel} from "../level-2-PS";
 import {MLevel} from "../level-3-M";
 import {SELevel} from "../level-4-SE";
 import {IRLevel} from "../level-5-IR";
+import {PrologueScene} from "../dialogues/prologue.ts";
 
 export class LoadingScene extends Scene {
   constructor() {
@@ -13,7 +14,8 @@ export class LoadingScene extends Scene {
   preload(): void {
     this.load.baseURL = 'phaser-assets/';
     this.load.json('assessmentData', 'initial_assessment.json');
-    this.load.json('se-dialogues', 'dialogues.json')
+    this.load.json('se-dialogues', 'se-level_dialogues.json')
+    this.load.json('general_dialogues', 'general_dialogues.json');
 
     this.load.image('king', 'sprites/king.png');
     this.load.atlas('a-king', 'spritesheets/a-king.png', 'spritesheets/a-king_atlas.json');
@@ -43,17 +45,19 @@ export class LoadingScene extends Scene {
       console.log('All assets loaded successfully');
     });
 
-
+        console.log(this.cache.json.getKeys());
 
   }
   create(): void {
     console.log('Loading scene was created');
+    this.scene.add("prologue-scene", PrologueScene);
     this.scene.add('main-menu-scene', MainMenuScene);
     this.scene.add('sfb-level-scene', SFBLevel);
     this.scene.add('ps-level-scene', PSLevel);
     this.scene.add('m-level-scene', MLevel);
     this.scene.add('se-level-scene', SELevel);
     this.scene.add('ir-level-scene', IRLevel);
+
 
     this.scene.start('main-menu-scene');
     console.log('loading/index.ts (create)', this.textures.exists('tiles'));

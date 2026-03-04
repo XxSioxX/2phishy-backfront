@@ -1,6 +1,7 @@
 import Phaser, { Game, Types } from 'phaser';
 import { LoadingScene, AssessmentLevel, UIScene } from './scenes';
 import { WIN_SCORE } from './consts';
+import {PrologueScene} from "./scenes/dialogues/prologue.ts";
 
 type GameConfigExtended = Types.Core.GameConfig & {
   winScore: number;
