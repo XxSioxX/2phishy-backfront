@@ -37,6 +37,7 @@
         "typeSpeed": 25
       },
       "nodes": [
+        { "id": "0", "text": "" },
         { "id": "1", "text": "This isn’t my room..." },
         { "id": "2", "text": "Stone walls. Torches. And symbols carved into the floor." },
         { "id": "3", "text": "This feels like some kind of trial." },

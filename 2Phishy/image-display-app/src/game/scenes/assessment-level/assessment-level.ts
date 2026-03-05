@@ -3,6 +3,8 @@ import { Player } from '../../classes/player';
 import { gameObjectsToObjectPoints } from '../../helpers/gameobject-to-object-point';
 import AssessmentPopup from '../../helpers/assessment-popup';
 import { gameAPI, AssessmentResult } from '../../helpers/game-api';
+import { DialogueManager } from "../../helpers/DialogueManager";
+import { DialogueUI } from "../ui/DialogueUI";
 
 export class AssessmentLevel extends Scene {
   private player!: Player;
@@ -18,7 +20,8 @@ export class AssessmentLevel extends Scene {
   private inAssessment = false;
   private nextScene!: string;
 
-
+  private dialogueManager!: DialogueManager;
+  private dialogueUI!: DialogueUI;
 
   constructor() {
     super('assessment-scene');
@@ -53,6 +56,27 @@ export class AssessmentLevel extends Scene {
     console.log('questions:', this.questions);
 
     console.log(`Loaded ${this.questions.length} questions for topic: ${this.currentTopic}`);
+
+    this.player.freeze();
+    this.inAssessment = true;
+
+    this.cameras.main.fadeIn(1000, 0, 0, 0);
+
+    const dialogueData = this.cache.json.get("general_dialogues");
+
+    this.dialogueManager = new DialogueManager(dialogueData);
+    this.dialogueUI = new DialogueUI(this);
+
+    const scenario = this.dialogueManager.getScenarioById("assessment_arrival");
+
+    this.dialogueUI.start(scenario, () => {
+      this.player.unfreeze();
+      this.inAssessment = false;
+    });
+
+    this.time.delayedCall(50, () =>
+      this.input.keyboard.emit('keydown-SPACE')
+    );
   }
 
   init(data: { topic: string; nextScene: string }) {

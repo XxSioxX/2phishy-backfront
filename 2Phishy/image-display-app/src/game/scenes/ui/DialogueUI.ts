@@ -22,13 +22,16 @@ export class DialogueUI {
     this.container = this.scene.add.container(0, 0);
     this.container.setDepth(1000);
 
-    // If branching, look for "start"
     const startNode =
       this.scenario.nodes.find(n => n.id === 'start') ??
       this.scenario.nodes[0];
 
-    this.showNode(startNode.id);
+    // wait 1 frame so camera + UI stabilizes
+    this.scene.time.delayedCall(0, () => {
+      this.showNode(startNode.id);
+    });
   }
+
   private showNode(nodeId: string): void {
     this.container.removeAll(true);
 
@@ -64,10 +67,12 @@ export class DialogueUI {
     const textStartX = panelX - panelWidth / 2 + padding;
     const textStartY = panelY - panelHeight / 2 + padding;
 
+    const dialogueText = this.currentNode.npc ?? this.currentNode.text ?? "";
+
     const npcText = this.scene.add.text(
       textStartX,
       textStartY,
-      this.currentNode.npc,
+      dialogueText,
       {
         fontSize: '16px',
         color: '#ffffff',
@@ -99,10 +104,27 @@ export class DialogueUI {
 
     this.container.add(continueText);
 
-    // Wait for SPACE to show responses
+    // Wait for SPACE to continue dialogue
     this.scene.input.keyboard.once('keydown-SPACE', () => {
-      this.container.removeAll(true);
-      this.showResponsesPanel();
+
+      // Branching dialogue (SE level)
+      if (this.currentNode.responses && this.currentNode.responses.length > 0) {
+        this.container.removeAll(true);
+        this.showResponsesPanel();
+        return;
+      }
+
+      // Linear dialogue (assessment / monologue)
+      const nextNode = this.scenario.nodes.find(
+        n => Number(n.id) === Number(this.currentNode.id) + 1
+      );
+
+      if (nextNode) {
+        this.showNode(nextNode.id);
+      } else {
+        this.finish();
+      }
+
     });
   }
 
