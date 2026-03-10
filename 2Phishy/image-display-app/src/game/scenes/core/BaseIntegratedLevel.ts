@@ -5,6 +5,9 @@ import AssessmentPopup from "../../helpers/assessment-popup";
 import {AssessmentResult, gameAPI} from "../../helpers/game-api";
 import {Player} from "../../classes/player";
 import {gameObjectsToObjectPoints} from "../../helpers/gameobject-to-object-point";
+import { DialogueManager } from "../../helpers/DialogueManager";
+import { DialogueUI } from "../ui/DialogueUI";
+
 
 export abstract class BaseIntegratedLevel extends Phaser.Scene {
     protected player!: Player;
@@ -19,6 +22,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     protected tileset!: Tilemaps.Tileset;
     protected wallsLayer!: Tilemaps.TilemapLayer;
     protected wallsLayer2!: Tilemaps.TilemapLayer;
+    protected platform!: Tilemaps.TilemapLayer;
 
     protected questions: any[] = [];
     protected assessmentResults: AssessmentResult[] = [];
@@ -29,20 +33,23 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
     protected readonly config: LevelConfig;
 
+    protected dialogueManager!: DialogueManager;
+    protected dialogueUI!: DialogueUI;
+
+    private exitMessageShown = false;
+    private exitPlatforms: Phaser.GameObjects.Sprite[] = [];
+
+    private exitActivated = false;
+
     constructor(config: LevelConfig) {
         super(config.sceneKey);
         this.config = config;
       }
 
-
     async create(): Promise<void> {
         console.log(`${this.scene.key} - create()`);
 
         this.initMap();
-
-        this.physics.add.collider(this.player, this.wallsLayer);
-        this.physics.add.collider(this.player, this.wallsLayer2);
-
         this.initCamera();
 
         this.popup = new AssessmentPopup(this);
@@ -50,6 +57,8 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
         await this.createQuestionMap();
         this.initAssessment();
+        this.spawnPlayerOnSpawnPoint();
+        this.initNextLevelPlatforms();
         this.setupAssessmentCollision();
 
 
@@ -67,12 +76,12 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.initKnowledge();
         this.setupKnowledgeCollision();
 
-
-
-        this.showLevelIntroBanner(
-          this.config.intro.title,
-          this.config.intro.description
-        );
+        this.startIntroDialogue(this.config.intro.dialogueId, () => {
+          this.showLevelIntroBanner(
+            this.config.intro.title,
+            this.config.intro.description
+          );
+        });
 
         this.scene.launch('ui-scene', {
           player: this.player,
@@ -89,20 +98,14 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
             this.game.events.emit('questions:init', total, answered);
         });
-
-
         this.game.events.on('blur', () => {
           this.player.forceStopAllInput();
         });
-
         this.input.on('gameout', () => {
           this.player.forceStopAllInput();
         });
-
-
-
-
     }
+
 
 
     update(): void {
@@ -130,8 +133,6 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
           }
 
           point.wasTouching = touching;
-
-
         });
     }
 
@@ -146,15 +147,143 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.map.createLayer('Floor', this.tileset, 0, 0)!;
         this.wallsLayer = this.map.createLayer('Walls', this.tileset, 0, 0)!;
         this.wallsLayer2 = this.map.createLayer('Walls-second', this.tileset, 0, 0)!;
+        this.platform = this.map.createLayer('Platform', this.tileset, 0, 0)!;
         this.wallsLayer.setCollisionByProperty({ collides: true });
         this.wallsLayer2.setCollisionByProperty({ collides: true });
 
-        // Set physics world bounds to match the tilemap
         this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
 
-        // Create player and prevent leaving the world
-        this.player = new Player(this, 100, 100);
+    }
+
+    private spawnPlayerOnSpawnPoint(zone?: number): void {
+
+        const spawnObjects = this.map.filterObjects(
+            'SpawnPoint',
+            obj => obj.name === 'PlayerSpawn'
+        );
+
+        let spawnX = 100;
+        let spawnY = 100;
+
+        if (spawnObjects.length > 0) {
+            spawnX = spawnObjects[0].x;
+            spawnY = spawnObjects[0].y;
+        }
+
+        // spawn platform
+        const platform = this.add
+            .sprite(spawnX, spawnY, 'tiles_spr', 386)
+            .setScale(1.5)
+            .setDepth(0);
+
+        // ✨ platform glow pulse
+        this.tweens.add({
+            targets: platform,
+            alpha: 0.6,
+            duration: 150,
+            yoyo: true,
+            repeat: 3
+        });
+
+        // create player
+        this.player = new Player(this, spawnX, spawnY - 4);
+
         this.player.bodyRef().setCollideWorldBounds(true);
+        this.physics.add.collider(this.player, this.wallsLayer);
+        this.physics.add.collider(this.player, this.wallsLayer2);
+
+        // lock movement during spawn
+        this.player.lockMovement();
+
+        // start invisible
+        this.player.setAlpha(0);
+        this.player.setScale(0.8);
+
+        // ✨ particle poof
+        const particles = this.add.particles('tiles_spr');
+
+        const emitter = particles.createEmitter({
+            frame: 629,
+            x: spawnX,
+            y: spawnY - 8,
+            speed: { min: -40, max: 40 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.4, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 500,
+            quantity: 20,
+            gravityY: 0
+        });
+
+        // stop emitter after burst
+        this.time.delayedCall(200, () => {
+            emitter.stop();
+
+            this.time.delayedCall(500, () => {
+                particles.destroy();
+            });
+        });
+
+        // ✨ player materialize animation
+        this.tweens.add({
+            targets: this.player,
+            y: this.player.y - 10,
+            alpha: 1,
+            scale: 1,
+            duration: 500,
+            ease: 'Back.Out',
+            onComplete: () => {
+                this.player.unlockMovement();
+            }
+        });
+
+    }
+
+    private initNextLevelPlatforms(): void {
+        this.exitPlatforms.push(platform);
+        const exitObjects = this.map.filterObjects(
+            'NextLevelPlatform',
+            obj => obj.name === 'NextLevelPlatform'
+        );
+
+        exitObjects.forEach(obj => {
+
+            const platform = this.physics.add
+              .sprite(obj.x, obj.y, 'tiles_spr', 388)
+              .setScale(1.5);
+
+            platform.setImmovable(true);
+            platform.body.allowGravity = false;
+
+
+            this.physics.add.overlap(this.player, platform, () => {
+
+                if (!this.assessmentCompleted) {
+
+                    if (!this.exitMessageShown) {
+
+                        this.exitMessageShown = true;
+
+                        this.popup.showInfo("Locked", "Complete all questions first.", () => {
+                            this.exitMessageShown = false;
+                        });
+
+                    }
+
+                    return;
+                }
+
+                this.player.lockMovement();
+
+                this.scene.stop('ui-scene');
+
+                this.scene.start(this.config.next.sceneKey, {
+                    topic: this.config.next.topic
+                });
+
+            });
+
+        });
     }
 
     private showDebugWalls(): void {
@@ -184,14 +313,14 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
 
         if (response?.data?.questions?.length > 0) {
-          console.log("📘 Using existing backend question_map");
+          console.log("Using existing backend question_map");
           this.questions = response.data.questions;
           this.totalquestions = response.data.questionsTotal;
           return;
         }
 
 
-        console.log("🆕 No question_map found, generating...");
+        console.log("No question_map found, generating...");
         const created = await gameAPI.createUserQuestionMap({
           userid: this.userData.userId,
           topic: this.config.topic,
@@ -216,6 +345,25 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         const bottom = this.physics.add.sprite(pt.x, pt.y, 'tiles_spr', 340).setScale(1.5);
         const top = this.physics.add.sprite(pt.x, pt.y - 16, 'tiles_spr', 308).setScale(1.5);
 
+        bottom.once('destroy', () => this.tweens.killTweensOf(bottom));
+        top.once('destroy', () => this.tweens.killTweensOf(top));
+
+        this.tweens.add({
+          targets: [bottom, top],
+          y: '-=4',
+          duration: 900,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+        this.tweens.add({
+          targets: [bottom, top],
+          alpha: 0.7,
+          duration: 800,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
         // bind question index to each sprite pair
         const pair = [bottom, top] as any;
         pair.questionIndex = index;
@@ -242,7 +390,13 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.inAssessment = true;
         this.player.lockMovement();
 
-
+        this.tweens.add({
+          targets: pointPair,
+          scale: 1.7,
+          duration: 120,
+          yoyo: true,
+          ease: 'Quad.easeOut'
+        });
 
         const q = this.questions[qIndex];
 
@@ -262,9 +416,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
                 timestamp: new Date(),
             };
 
-            // ✅ store answer ONCE
             this.assessmentResults.push(result);
-
 
             try {
                 await this.submitAnswer({
@@ -286,6 +438,9 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
             pointPair.forEach((sprite: Phaser.GameObjects.Sprite) =>
             sprite.destroy()
             );
+
+            bottom.once('destroy', () => this.tweens.killTweensOf(bottom));
+            top.once('destroy', () => this.tweens.killTweensOf(top));
 
             this.inAssessment = false;
             this.player.unlockMovement();
@@ -331,35 +486,47 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.assessmentCompleted = true;
 
         try {
-          gameAPI.setToken(this.userData.token);
+            gameAPI.setToken(this.userData.token);
 
-          await gameAPI.markTopicCompleted({
-            userid: this.userData.userId,
-            topic: this.config.topic,
+            await gameAPI.markTopicCompleted({
+                userid: this.userData.userId,
+                topic: this.config.topic,
+            });
+
+            console.log('Topic marked as completed');
+
+        } catch (err) {
+            console.error('Failed to mark topic completed', err);
+        }
+
+        if (!this.exitActivated) {
+
+          this.exitPlatforms.forEach(platform => {
+
+            this.tweens.add({
+              targets: platform,
+              scale: 1.6,
+              duration: 600,
+              yoyo: true,
+              repeat: -1,
+              ease: 'Sine.easeInOut'
+            });
 
           });
 
-          console.log('Topic marked as completed');
-
-        } catch (err) {
-          console.error('Failed to mark topic completed', err);
+          this.exitActivated = true;
         }
 
+        this.player.lockMovement();
+        this.inAssessment = true;
+
         this.popup.show('Level Complete!', ['Continue'], () => {
-          this.player.unfreeze();
+
           this.inAssessment = false;
           this.player.unlockMovement();
-          this.scene.stop('ui-scene');
-
-          this.scene.start('assessment-scene', {
-              topic: this.config.next.topic,
-              nextScene: this.config.next.sceneKey,
-            });
 
         });
     }
-
-    // KNOWLEDGE SYSTEM
 
     private createKnowledgeAnimations(): void {
         if (this.anims.exists('knowledge_open')) return;
@@ -605,6 +772,35 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
       return this.config.inferSubcat(questionId);
     }
 
+    protected startIntroDialogue(
+      scenarioId: string,
+      onComplete?: () => void
+    ): void {
 
+        const dialogueData = this.cache.json.get("general_dialogues");
+
+        this.dialogueManager = new DialogueManager(dialogueData);
+        this.dialogueUI = new DialogueUI(this);
+
+        const scenario = this.dialogueManager.getScenarioById(scenarioId);
+
+        this.player.lockMovement();
+        this.inAssessment = true;
+
+        this.dialogueUI.start(scenario, () => {
+          this.player.unlockMovement();
+          this.inAssessment = false;
+
+          if (onComplete) {
+            onComplete();
+          }
+        });
+
+        // skip first line bug bandaid
+        this.time.delayedCall(50, () => {
+            this.input.keyboard.emit("keydown-SPACE");
+        });
+
+    }
 
 }

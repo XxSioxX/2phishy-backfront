@@ -130,6 +130,7 @@ export class DialogueRunner {
         this.typingEvent = undefined;
 
         this.continueIndicator.setAlpha(1);
+        this.indicatorTween.resume();
       }
       }
     });

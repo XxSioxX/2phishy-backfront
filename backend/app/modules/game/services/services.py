@@ -403,7 +403,6 @@ async def generate_question_list(
         available_questions = qb_questions.get(subcat_key)
 
         if available_questions:
-            # Ensure we don't try to select more than what's available
             actual_num_to_select = min(num_to_select, len(available_questions))
 
             unique_pool = [

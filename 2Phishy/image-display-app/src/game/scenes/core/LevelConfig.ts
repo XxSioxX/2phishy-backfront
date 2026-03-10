@@ -8,9 +8,10 @@ export interface LevelConfig {
   tilesetName: string;
 
   intro: {
-    title: string;
-    description: string;
-  };
+    title: string
+    description: string
+    dialogueId: string
+  }
 
   next: {
     sceneKey: string;
