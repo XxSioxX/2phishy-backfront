@@ -34,7 +34,9 @@ from app.modules.learning_path.services.learn_path_service import DefaultLearnin
 
 from app.utils.logger import get_logger
 from app.core.database_mongo import get_mongo_db
+from app.core.database_postgres import get_db
 from app.core.standard_response import StandardResponse
+from sqlalchemy.orm import Session
 
 from datetime import datetime
 
@@ -628,17 +630,12 @@ async def get_top_user_scores(
                 continue
 
             try:
-                # Get a quick estimate based on progress data
-                # Instead of computing full scores, use available progress metrics
                 progress_data = doc.get("progress", {})
-
-                # Calculate simple average from available topic progress
                 total_correct = 0
                 total_questions = 0
 
                 for topic_name, topic_data in progress_data.items():
                     if isinstance(topic_data, dict):
-                        # Count answered questions
                         answers = topic_data.get("answers", [])
                         if isinstance(answers, list):
                             for answer_data in answers:
@@ -647,23 +644,19 @@ async def get_top_user_scores(
                                     if answer_data.get("is_correct", False):
                                         total_correct += 1
 
-                # Use total correct answers as progressive score
                 score = total_correct
-
                 user_scores.append({
                     "user_id": user_id,
                     "overall_knowledge_score": score
                 })
             except Exception as e:
                 logger.error(f"Error computing score for user {user_id}: {e}")
-                # Add user with 0 score rather than skipping
                 user_scores.append({
                     "user_id": user_id,
                     "overall_knowledge_score": 0
                 })
                 continue
 
-        # Sort by score descending and limit results
         user_scores.sort(key=lambda x: x["overall_knowledge_score"], reverse=True)
         top_scores = user_scores[:limit]
 
@@ -697,7 +690,6 @@ async def get_topic_performance(
     logger.info("Fetching topic performance data (where students struggle)...")
 
     try:
-        # Get all progress documents
         progress_docs = await db["progress"].find({}).to_list(None)
 
         if not progress_docs:
@@ -707,20 +699,15 @@ async def get_topic_performance(
                 message="No student data available",
                 data=[]
             )
-
-        # Initialize topic scores
         topic_scores = {topic.value: [] for topic in Topics}
 
         for doc in progress_docs:
             try:
                 progress_data = doc.get("progress", {})
 
-                # Process each topic
                 for topic in Topics:
                     topic_name = topic.value
                     topic_data = progress_data.get(topic_name, {})
-
-                    # Count correct and total answers for this topic
                     total_correct = 0
                     total_questions = 0
 
@@ -731,8 +718,6 @@ async def get_topic_performance(
                                 total_questions += 1
                                 if answer_data.get("is_correct", False):
                                     total_correct += 1
-
-                    # Calculate score for this topic if questions were answered
                     if total_questions > 0:
                         score_percentage = (total_correct / total_questions) * 100
                         topic_scores[topic_name].append(score_percentage)
@@ -741,7 +726,6 @@ async def get_topic_performance(
                 logger.warning(f"Error processing user doc: {e}")
                 continue
 
-        # Calculate average score for each topic
         topic_performance = []
         for topic in Topics:
             topic_name = topic.value
@@ -752,7 +736,6 @@ async def get_topic_performance(
             else:
                 avg_score = 0
 
-            # Store short name for display
             short_names = {
                 "Safe Browsing Practices": "Safe Browsing",
                 "Password Security": "Password Security",
@@ -785,123 +768,90 @@ async def get_topic_performance(
             data=[]
         )
 
- 
- 
- @ r o u t e r . g e t ( 
-         " / s c o r e / u s e r s / q u i z - i n s i g h t s / " , 
-         r e s p o n s e _ m o d e l = S t a n d a r d R e s p o n s e [ L i s t [ D i c t [ s t r ,   A n y ] ] ] , 
-         s t a t u s _ c o d e = s t a t u s . H T T P _ 2 0 0 _ O K 
- ) 
- a s y n c   d e f   g e t _ q u i z _ i n s i g h t s ( 
-         d b :   A s y n c I O M o t o r D a t a b a s e   =   D e p e n d s ( g e t _ m o n g o _ d b ) , 
-         r e s p o n s e :   R e s p o n s e   =   R e s p o n s e ( ) , 
- ) : 
-         " " " G e t   q u i z   i n s i g h t s   f o r   a l l   u s e r s   -   u s e r n a m e ,   s c o r e ,   l e v e l ,   d a t e " " " 
-         l o g g e r . i n f o ( " F e t c h i n g   q u i z   i n s i g h t s   f o r   a l l   u s e r s . . . " ) 
- 
-         t r y : 
-                 f r o m   a p p . c o r e . d a t a b a s e _ p o s t g r e s   i m p o r t   g e t _ d b 
-                 f r o m   s q l a l c h e m y . o r m   i m p o r t   S e s s i o n 
-                 f r o m   a p p . m o d u l e s . u s e r . m o d e l s . u s e r   i m p o r t   U s e r 
- 
-                 #   G e t   a l l   u s e r s   f r o m   p o s t g r e s 
-                 d b _ s e s s i o n :   S e s s i o n   =   n e x t ( g e t _ d b ( ) ) 
-                 u s e r s   =   d b _ s e s s i o n . q u e r y ( U s e r ) . a l l ( ) 
-                 d b _ s e s s i o n . c l o s e ( ) 
- 
-                 i f   n o t   u s e r s : 
-                         l o g g e r . i n f o ( " N o   u s e r s   f o u n d " ) 
-                         r e t u r n   S t a n d a r d R e s p o n s e ( 
-                                 s u c c e s s = T r u e , 
-                                 m e s s a g e = " N o   u s e r s   a v a i l a b l e " , 
-                                 d a t a = [ ] 
-                         ) 
- 
-                 q u i z _ i n s i g h t s   =   [ ] 
- 
-                 f o r   u s e r   i n   u s e r s : 
-                         t r y : 
-                                 u s e r _ i d   =   s t r ( u s e r . u s e r i d ) 
-                                 u s e r n a m e   =   u s e r . u s e r n a m e 
- 
-                                 #   G e t   p r o g r e s s   f r o m   m o n g o 
-                                 p r o g r e s s _ d o c   =   a w a i t   d b [ " p r o g r e s s " ] . f i n d _ o n e ( { " u s e r _ i d " :   u s e r _ i d } ) 
- 
-                                 i f   n o t   p r o g r e s s _ d o c : 
-                                         #   N o   p r o g r e s s ,   a d d   w i t h   0 
-                                         q u i z _ i n s i g h t s . a p p e n d ( { 
-                                                 " u s e r n a m e " :   u s e r n a m e , 
-                                                 " s c o r e " :   0 , 
-                                                 " l e v e l " :   1 , 
-                                                 " d a t e " :   N o n e 
-                                         } ) 
-                                         c o n t i n u e 
- 
-                                 p r o g r e s s _ d a t a   =   p r o g r e s s _ d o c . g e t ( " p r o g r e s s " ,   { } ) 
- 
-                                 #   C a l c u l a t e   t o t a l   c o r r e c t   a n s w e r s 
-                                 t o t a l _ c o r r e c t   =   0 
-                                 l a t e s t _ t i m e s t a m p   =   N o n e 
- 
-                                 #   C o u n t   c o m p l e t e d   t o p i c s   f o r   l e v e l 
-                                 c o m p l e t e d _ t o p i c s   =   0 
- 
-                                 f o r   t o p i c _ n a m e ,   t o p i c _ d a t a   i n   p r o g r e s s _ d a t a . i t e m s ( ) : 
-                                         i f   i s i n s t a n c e ( t o p i c _ d a t a ,   d i c t ) : 
-                                                 #   C h e c k   i f   l e v e l   c o m p l e t e d 
-                                                 i f   t o p i c _ d a t a . g e t ( " l e v e l _ c o m p l e t e d " ,   F a l s e ) : 
-                                                         c o m p l e t e d _ t o p i c s   + =   1 
- 
-                                                 #   C o u n t   c o r r e c t   a n s w e r s   a n d   f i n d   l a t e s t   t i m e s t a m p 
-                                                 a n s w e r s   =   t o p i c _ d a t a . g e t ( " a n s w e r s " ,   [ ] ) 
-                                                 i f   i s i n s t a n c e ( a n s w e r s ,   l i s t ) : 
-                                                         f o r   a n s w e r _ d a t a   i n   a n s w e r s : 
-                                                                 i f   i s i n s t a n c e ( a n s w e r _ d a t a ,   d i c t ) : 
-                                                                         i f   a n s w e r _ d a t a . g e t ( " i s _ c o r r e c t " ,   F a l s e ) : 
-                                                                                 t o t a l _ c o r r e c t   + =   1 
-                                                                         t i m e s t a m p   =   a n s w e r _ d a t a . g e t ( " t i m e s t a m p " ) 
-                                                                         i f   t i m e s t a m p : 
-                                                                                 t s   =   t i m e s t a m p   i f   i s i n s t a n c e ( t i m e s t a m p ,   d a t e t i m e )   e l s e   d a t e t i m e . f r o m i s o f o r m a t ( t i m e s t a m p . r e p l a c e ( " Z " ,   " + 0 0 : 0 0 " ) ) 
-                                                                                 i f   l a t e s t _ t i m e s t a m p   i s   N o n e   o r   t s   >   l a t e s t _ t i m e s t a m p : 
-                                                                                         l a t e s t _ t i m e s t a m p   =   t s 
- 
-                                 #   L e v e l   i s   n u m b e r   o f   c o m p l e t e d   t o p i c s   +   1   ( c u r r e n t   l e v e l ) 
-                                 l e v e l   =   c o m p l e t e d _ t o p i c s   +   1 
- 
-                                 q u i z _ i n s i g h t s . a p p e n d ( { 
-                                         " u s e r n a m e " :   u s e r n a m e , 
-                                         " s c o r e " :   t o t a l _ c o r r e c t , 
-                                         " l e v e l " :   l e v e l , 
-                                         " d a t e " :   l a t e s t _ t i m e s t a m p . i s o f o r m a t ( )   i f   l a t e s t _ t i m e s t a m p   e l s e   N o n e 
-                                 } ) 
- 
-                         e x c e p t   E x c e p t i o n   a s   e : 
-                                 l o g g e r . e r r o r ( f " E r r o r   p r o c e s s i n g   u s e r   { u s e r . u s e r n a m e } :   { e } " ) 
-                                 #   A d d   w i t h   0   v a l u e s 
-                                 q u i z _ i n s i g h t s . a p p e n d ( { 
-                                         " u s e r n a m e " :   u s e r . u s e r n a m e , 
-                                         " s c o r e " :   0 , 
-                                         " l e v e l " :   1 , 
-                                         " d a t e " :   N o n e 
-                                 } ) 
-                                 c o n t i n u e 
- 
-                 #   S o r t   b y   s c o r e   d e s c e n d i n g 
-                 q u i z _ i n s i g h t s . s o r t ( k e y = l a m b d a   x :   x [ " s c o r e " ] ,   r e v e r s e = T r u e ) 
- 
-                 l o g g e r . i n f o ( f " S u c c e s s f u l l y   r e t r i e v e d   q u i z   i n s i g h t s   f o r   { l e n ( q u i z _ i n s i g h t s ) }   u s e r s " ) 
-                 r e t u r n   S t a n d a r d R e s p o n s e ( 
-                         s u c c e s s = T r u e , 
-                         m e s s a g e = " Q u i z   i n s i g h t s   r e t r i e v e d " , 
-                         d a t a = q u i z _ i n s i g h t s 
-                 ) 
- 
-         e x c e p t   E x c e p t i o n   a s   e : 
-                 l o g g e r . e r r o r ( f " E r r o r   f e t c h i n g   q u i z   i n s i g h t s :   { e } " ,   e x c _ i n f o = T r u e ) 
-                 r e s p o n s e . s t a t u s _ c o d e   =   s t a t u s . H T T P _ 5 0 0 _ I N T E R N A L _ S E R V E R _ E R R O R 
-                 r e t u r n   S t a n d a r d R e s p o n s e ( 
-                         s u c c e s s = F a l s e , 
-                         m e s s a g e = f " F a i l e d   t o   f e t c h   q u i z   i n s i g h t s :   { s t r ( e ) } " , 
-                         d a t a = [ ] 
-                 )  
- 
+
+@router.get(
+    "/admin/quiz-insights",
+    response_model=StandardResponse[List[Dict[str, Any]]],
+    status_code=status.HTTP_200_OK
+)
+async def get_quiz_insights(
+    db_mongo: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    db_pg: Session = Depends(get_db),
+    response: Response = Response(),
+):
+    logger.info("Fetching quiz insights for admin dashboard...")
+
+    try:
+        from app.modules.user.models.user import User as PGUser
+
+        pg_users = db_pg.query(PGUser).all()
+        user_map = {str(u.userid): u.username for u in pg_users}
+        progress_docs = await db_mongo["progress"].find({}).to_list(None)
+
+        insights = []
+
+        for doc in progress_docs:
+            user_id = doc.get("user_id", "")
+            username = user_map.get(str(user_id), f"user-{str(user_id)[:8]}")
+            progress_data = doc.get("progress", {})
+
+            for topic_name, topic_data in progress_data.items():
+                if not isinstance(topic_data, dict):
+                    continue
+
+                answers = topic_data.get("answers", [])
+                if not isinstance(answers, list) or len(answers) == 0:
+                    continue
+
+                total = len(answers)
+                correct = sum(
+                    1 for a in answers
+                    if isinstance(a, dict) and a.get("is_correct", False)
+                )
+                score_pct = round((correct / total) * 100, 1) if total > 0 else 0.0
+                latest_ts = None
+                for ans in answers:
+                    if not isinstance(ans, dict):
+                        continue
+                    ts = ans.get("timestamp")
+                    if ts is None:
+                        continue
+                    if isinstance(ts, str):
+                        try:
+                            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                        except Exception:
+                            ts = None
+                    if ts and (latest_ts is None or ts > latest_ts):
+                        latest_ts = ts
+                if latest_ts is None:
+                    lca = topic_data.get("level_completed_at")
+                    if lca:
+                        latest_ts = lca
+
+                insights.append({
+                    "username": username,
+                    "topic": topic_name,
+                    "correct_answers": correct,
+                    "total_questions": total,
+                    "score": score_pct,
+                    "date": latest_ts.isoformat() if latest_ts else None,
+                    "avatar_url": f"https://ui-avatars.com/api/?name={username}&background=2563eb&color=ffffff&size=40&bold=true",
+                })
+
+        insights.sort(key=lambda x: x["date"] or "", reverse=True)
+
+        logger.info(f"Quiz insights: {len(insights)} records found")
+        return StandardResponse(
+            success=True,
+            message=f"Retrieved {len(insights)} quiz insight records",
+            data=insights,
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching quiz insights: {e}", exc_info=True)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message=f"Failed to fetch quiz insights: {str(e)}",
+            data=[],
+        )

@@ -8,7 +8,7 @@ const TopBox: React.FC = () => {
     const [userScores, setUserScores] = useState<(TopScore & { last_seen?: string | null; user: User })[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Check if user is online (last seen within last 10 minutes)
+    // Check if user is online
     const isOnline = (user: User): boolean => {
         if (!user.last_seen) return false;
         return new Date().getTime() - new Date(user.last_seen).getTime() < 10 * 60 * 1000;
@@ -19,20 +19,16 @@ const TopBox: React.FC = () => {
             try {
                 const users = await api.getUsers();
                 const topScoresData = await api.getTopScores();
-                
-                // Create a map of user_id to score for quick lookup
                 const scoreMap = new Map(
                     topScoresData.map((item: any) => [
                         item.user_id,
                         item.overall_knowledge_score
                     ])
                 );
-                
-                // Create user score objects
                 const userScoreObjects = users.map((user: User) => {
                     const score = scoreMap.get(user.userid || user.id?.toString() || "") || 0;
                     return {
-                        id: 0, // Will be set after sorting
+                        id: 0,
                         Img: "",
                         username: user.username,
                         email: user.email,
@@ -42,8 +38,6 @@ const TopBox: React.FC = () => {
                         user: user
                     };
                 });
-
-                // Sort by score descending, then take top 7
                 const sortedUsers = userScoreObjects
                     .sort((a, b) => b.score - a.score)
                     .slice(0, 7)
@@ -60,14 +54,8 @@ const TopBox: React.FC = () => {
                 setLoading(false);
             }
         };
-
-        // Initial fetch
         fetchUserScores();
-
-        // Poll every 5 seconds
         const intervalId = setInterval(fetchUserScores, 5000);
-
-        // Cleanup interval on unmount
         return () => clearInterval(intervalId);
     }, []);
 

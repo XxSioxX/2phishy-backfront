@@ -98,7 +98,6 @@ const AnnouncementPage: React.FC = () => {
           console.log('Creating announcement with payload:', payload);
           const created = await api.createAnnouncement(payload);
           console.log('Created announcement response:', created);
-          // Ensure the created announcement has an id field
           const announcementWithId = { ...created, id: created.id || created._id };
           setAnnouncements(prev => [announcementWithId, ...prev]);
           setShowAddForm(false);
@@ -122,7 +121,6 @@ const AnnouncementPage: React.FC = () => {
           console.log('Updating announcement with payload:', payload);
           const updated = await api.updateAnnouncement(editingAnnouncement.id, payload);
           console.log('Update response:', updated);
-          // Ensure the updated announcement has an id field
           const announcementWithId = { ...updated, id: updated.id || updated._id };
           setAnnouncements(prev => prev.map(a => a.id === editingAnnouncement.id ? announcementWithId : a));
           setShowEditForm(false);

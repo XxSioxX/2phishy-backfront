@@ -85,7 +85,7 @@
 
           select, textarea {
             padding: 0.75rem;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid $dark-color;
             border-radius: 4px;
             background-color: $dark-bg;
             color: $main-color;
@@ -95,7 +95,7 @@
             &:focus {
               outline: none;
               border-color: $main-color;
-              box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+              box-shadow: 0 0 0 2px $soft-bg;
             }
             
             &.error {
@@ -103,7 +103,7 @@
             }
             
             &::placeholder {
-              color: rgba(255, 255, 255, 0.5);
+              color: $soft-color;
             }
           }
 
@@ -157,6 +157,7 @@
 
         .report-card {
           background-color: $dark-bg;
+          border: 1px solid $dark-color;
           padding: 15px;
           border-radius: 8px;
           color: $main-color;
@@ -320,6 +321,17 @@
 
     .student-report-container {
       box-shadow: none;
+    }
+  }
+}
+
+[data-theme="light"] {
+  .student-report {
+    .student-report-container {
+      .report-form-section,
+      .reports-list .reports-section .report-card {
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+      }
     }
   }
 }

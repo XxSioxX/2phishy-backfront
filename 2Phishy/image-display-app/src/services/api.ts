@@ -821,6 +821,18 @@ export const api = {
         }
     },
 
+    // Admin: quiz insights
+    async getQuizInsights(): Promise<any[]> {
+        const response = await fetch(`${API_BASE_URL}/game/admin/quiz-insights`, {
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch quiz insights');
+        }
+        const data = await response.json();
+        return data.data || [];
+    },
+
     forgotPassword: async (email: string) => {
             const res = await fetch("/api/auth/forgot-password", {
             method: "POST",

@@ -32,9 +32,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Function to reset inactivity timer
   const resetInactivityTimer = () => {
+    
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
@@ -45,16 +44,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }, INACTIVITY_TIMEOUT);
     }
   };
-
-  // Function to clear inactivity timer
   const clearInactivityTimer = () => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = null;
     }
   };
-
-  // Function to start heartbeat
   const startHeartbeat = () => {
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
@@ -65,41 +60,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (error) {
         console.error('Heartbeat failed:', error);
       }
-    }, 30000); // 30 seconds
+    }, 30000);
   };
 
-  // Function to stop heartbeat
+
   const stopHeartbeat = () => {
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
     }
   };
-
   useEffect(() => {
-    // Check if user is already logged in
     if (isAuthenticated()) {
       const savedUser = getCurrentUser();
       if (savedUser) {
         setUser(savedUser);
-        resetInactivityTimer(); // Start inactivity timer if user is logged in
-        startHeartbeat(); // Start heartbeat if user is logged in
+        resetInactivityTimer();
+        startHeartbeat();
       }
     }
     setLoading(false);
-
-    // Set up activity event listeners
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-
     const handleActivity = () => {
       resetInactivityTimer();
     };
-
     events.forEach(event => {
       document.addEventListener(event, handleActivity, true);
     });
-
-    // Cleanup function
     return () => {
       events.forEach(event => {
         document.removeEventListener(event, handleActivity, true);

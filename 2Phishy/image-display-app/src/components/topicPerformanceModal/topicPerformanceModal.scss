@@ -18,9 +18,11 @@
   }
 
   .modal-content {
-    background: #1a1a1a;
+    background: $dark-bg;
     border-radius: 8px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid $dark-color;
+    color: $main-color;
     width: 100%;
     max-width: 900px;
     max-height: 90vh;
@@ -39,7 +41,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 20px;
-      border-bottom: 1px solid #333;
+      border-bottom: 1px solid $dark-color;
       flex-shrink: 0;
 
       @include mobile {
@@ -60,7 +62,7 @@
         background: none;
         border: none;
         font-size: 24px;
-        color: #999;
+        color: $soft-color;
         cursor: pointer;
         padding: 0;
         width: 30px;
@@ -70,7 +72,7 @@
         justify-content: center;
 
         &:hover {
-          color: #fff;
+          color: $main-color;
         }
       }
     }
@@ -97,15 +99,15 @@
         }
 
         .stat-card {
-          background: #222;
+          background: $soft-bg;
           padding: 15px;
           border-radius: 6px;
-          border: 1px solid #333;
+          border: 1px solid $dark-color;
           text-align: center;
 
           .stat-label {
             font-size: 12px;
-            color: #999;
+            color: $soft-color;
             margin-bottom: 8px;
             text-transform: uppercase;
           }
@@ -119,10 +121,10 @@
       }
 
       .chart-container {
-        background: #222;
+        background: $soft-bg;
         padding: 20px;
         border-radius: 6px;
-        border: 1px solid #333;
+        border: 1px solid $dark-color;
         margin-bottom: 30px;
 
         @include mobile {
@@ -159,9 +161,9 @@
           gap: 12px;
 
           .topic-item {
-            border: 1px solid #333;
+            border: 1px solid $dark-color;
             border-radius: 6px;
-            background: #222;
+            background: $soft-bg;
             padding: 15px;
 
             @include mobile {
@@ -176,9 +178,9 @@
 
               .topic-rank {
                 font-size: 12px;
-                color: #999;
+                color: $soft-color;
                 font-weight: 600;
-                background: #333;
+                background: $dark-bg;
                 padding: 2px 6px;
                 border-radius: 3px;
               }
@@ -200,7 +202,7 @@
             .topic-bar {
               width: 100%;
               height: 8px;
-              background: #333;
+              background: $dark-bg;
               border-radius: 4px;
               margin-bottom: 8px;
               overflow: hidden;
@@ -214,7 +216,7 @@
 
             .topic-insight {
               font-size: 12px;
-              color: #999;
+              color: $soft-color;
               font-style: italic;
             }
           }
@@ -224,7 +226,7 @@
 
     .modal-footer {
       padding: 20px;
-      border-top: 1px solid #333;
+      border-top: 1px solid $dark-color;
       display: flex;
       justify-content: flex-end;
       gap: 10px;
@@ -236,16 +238,16 @@
 
       .btn-close {
         padding: 10px 20px;
-        background: #333;
-        color: #fff;
-        border: none;
+        background: $soft-bg;
+        color: $main-color;
+        border: 1px solid $dark-color;
         border-radius: 4px;
         cursor: pointer;
         font-weight: 500;
         transition: background-color 0.2s;
 
         &:hover {
-          background: #444;
+          background: $dark-bg;
         }
       }
     }
