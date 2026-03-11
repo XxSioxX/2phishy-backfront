@@ -50,17 +50,17 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         console.log(`${this.scene.key} - create()`);
 
         this.initMap();
-        this.initCamera();
+
 
         this.popup = new AssessmentPopup(this);
 
-
         await this.createQuestionMap();
         this.initAssessment();
-        this.spawnPlayerOnSpawnPoint();
+        this.spawnPlayerOnSpawnPoint(0);
         this.initNextLevelPlatforms();
-        this.setupAssessmentCollision();
 
+        this.initCamera();
+        this.setupAssessmentCollision();
 
         const knowledgeResponse = await gameAPI.getUserKnowledgeList({
           userid: this.userData.userId,
@@ -83,6 +83,42 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
           );
         });
 
+        this.initUI();
+    }
+
+
+    update(): void {
+
+        if (!this.player) return;
+
+        if (!this.inAssessment) {
+            this.player.update();
+        } else {
+            this.player.bodyRef().setVelocity(0);
+        }
+
+        this.knowledgePoints.forEach((point: any) => {
+            const sprite = point[0];
+
+            const touching = this.physics.overlap(this.player, sprite);
+
+            if (point.isOpen && !point.isAnimating && !touching && point.wasTouching) {
+                point.isAnimating = true;
+
+                sprite.play('knowledge_close');
+
+                sprite.once('animationcomplete-knowledge_close', () => {
+                    sprite.setFrame(627);
+                    point.isOpen = false;
+                    point.isAnimating = false;
+                });
+            }
+
+            point.wasTouching = touching;
+        });
+    }
+
+    private initUI(): void {
         this.scene.launch('ui-scene', {
           player: this.player,
           showControls: this.sys.game.device.input.touch
@@ -107,36 +143,6 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     }
 
 
-
-    update(): void {
-        if (!this.inAssessment) {
-            this.player.update();
-        } else {
-            this.player.bodyRef().setVelocity(0);
-        }
-
-        this.knowledgePoints.forEach((point: any) => {
-          const sprite = point[0];
-
-          const touching = this.physics.overlap(this.player, sprite);
-
-          if (point.isOpen && !point.isAnimating && !touching && point.wasTouching) {
-            point.isAnimating = true;
-
-            sprite.play('knowledge_close');
-
-            sprite.once('animationcomplete-knowledge_close', () => {
-              sprite.setFrame(627);
-              point.isOpen = false;
-              point.isAnimating = false;
-            });
-          }
-
-          point.wasTouching = touching;
-        });
-    }
-
-
     private initMap(): void {
         this.map = this.make.tilemap({ key: this.config.mapKey });
         this.tileset = this.map.addTilesetImage(
@@ -152,7 +158,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.wallsLayer2.setCollisionByProperty({ collides: true });
 
         this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-
+        console.log(this.map.layers.map(l => l.name));
     }
 
     private spawnPlayerOnSpawnPoint(zone?: number): void {
@@ -240,7 +246,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     }
 
     private initNextLevelPlatforms(): void {
-        this.exitPlatforms.push(platform);
+
         const exitObjects = this.map.filterObjects(
             'NextLevelPlatform',
             obj => obj.name === 'NextLevelPlatform'
@@ -251,7 +257,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
             const platform = this.physics.add
               .sprite(obj.x, obj.y, 'tiles_spr', 388)
               .setScale(1.5);
-
+            this.exitPlatforms.push(platform);
             platform.setImmovable(true);
             platform.body.allowGravity = false;
 
@@ -283,6 +289,15 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
             });
 
+        });
+
+        this.tweens.add({
+          targets: platform,
+          alpha: 0.7,
+          duration: 700,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
         });
     }
 
@@ -342,14 +357,14 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
       const selectedPoints = allPoints.slice(0, this.questions.length);
 
       this.questionPoints = selectedPoints.map((pt, index) => {
-        const bottom = this.physics.add.sprite(pt.x, pt.y, 'tiles_spr', 340).setScale(1.5);
-        const top = this.physics.add.sprite(pt.x, pt.y - 16, 'tiles_spr', 308).setScale(1.5);
+        const qpbottom = this.physics.add.sprite(pt.x, pt.y, 'tiles_spr', 340).setScale(1.5);
+        const qptop = this.physics.add.sprite(pt.x, pt.y - 16, 'tiles_spr', 308).setScale(1.5);
 
-        bottom.once('destroy', () => this.tweens.killTweensOf(bottom));
-        top.once('destroy', () => this.tweens.killTweensOf(top));
+        qpbottom.once('destroy', () => this.tweens.killTweensOf(qpbottom));
+        qptop.once('destroy', () => this.tweens.killTweensOf(qptop));
 
         this.tweens.add({
-          targets: [bottom, top],
+          targets: [qpbottom, qptop],
           y: '-=4',
           duration: 900,
           yoyo: true,
@@ -357,7 +372,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
           ease: 'Sine.easeInOut'
         });
         this.tweens.add({
-          targets: [bottom, top],
+          targets: [qpbottom, qptop],
           alpha: 0.7,
           duration: 800,
           yoyo: true,
@@ -365,7 +380,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
           ease: 'Sine.easeInOut'
         });
         // bind question index to each sprite pair
-        const pair = [bottom, top] as any;
+        const pair = [qpbottom, qptop] as any;
         pair.questionIndex = index;
 
         return pair;
@@ -438,10 +453,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
             pointPair.forEach((sprite: Phaser.GameObjects.Sprite) =>
             sprite.destroy()
             );
-
-            bottom.once('destroy', () => this.tweens.killTweensOf(bottom));
-            top.once('destroy', () => this.tweens.killTweensOf(top));
-
+            
             this.inAssessment = false;
             this.player.unlockMovement();
 
@@ -559,10 +571,10 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.map.filterObjects('KnowledgePoints', obj => obj.name === 'KnowledgePoint') || []
         );
 
-        // 🎲 Randomize spawn LOCATIONS
+
         Phaser.Utils.Array.Shuffle(allPoints);
 
-        // 🔢 Spawn exactly as many as needed
+
         const selectedPoints = allPoints.slice(0, this.knowledgeList.length);
 
         this.knowledgePoints = selectedPoints.map((pt, index) => {
