@@ -287,60 +287,6 @@ export class SFBLevel extends BaseIntegratedLevel {
 
   }
 
-
-
-  protected spawnPlayerOnSpawnPoint(zone: number = 0): void {
-
-      const spawnObjects = this.map.filterObjects(
-          'SpawnPoint',
-          obj => obj.name === 'SpawnPoint'
-      );
-
-      const getZone = (obj: any) =>
-          obj.properties?.find((p: any) => p.name === "zone_number")?.value;
-
-      const spawn = spawnObjects.find(obj => getZone(obj) === zone);
-
-      if (!spawn) {
-          console.warn("Spawn not found for zone:", zone);
-          return;
-      }
-
-      const spawnX = spawn.x;
-      const spawnY = spawn.y;
-
-      const existingPlatform = this.spawnedPlatforms.find(
-          p => p.x === spawnX && p.y === spawnY
-      );
-
-      if (!existingPlatform) {
-
-          const platform = this.add
-              .sprite(spawnX, spawnY, 'tiles_spr', 386)
-              .setScale(1.5)
-              .setDepth(0);
-
-          this.spawnedPlatforms.push(platform);
-
-      }
-
-      if (!this.player) {
-
-          this.player = new Player(this, spawnX, spawnY - 4);
-
-          this.player.bodyRef().setCollideWorldBounds(true);
-
-          this.physics.add.collider(this.player, this.wallsLayer);
-          this.physics.add.collider(this.player, this.wallsLayer2);
-
-      } else {
-
-          this.player.setPosition(spawnX, spawnY - 4);
-
-      }
-
-  }
-
   protected initKnowledge(): void {
 
     const allPoints = this.map.filterObjects(

@@ -40,6 +40,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     private exitPlatforms: Phaser.GameObjects.Sprite[] = [];
 
     private exitActivated = false;
+    protected currentZone = 0;
 
     constructor(config: LevelConfig) {
         super(config.sceneKey);
@@ -56,7 +57,11 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
         await this.createQuestionMap();
         this.initAssessment();
-        this.spawnPlayerOnSpawnPoint(0);
+        this.spawnPlayerOnSpawnPoint(this.currentZone);
+        if (!this.player) {
+            throw new Error("Player failed to spawn");
+        }
+        console.log("Player after spawn:", this.player);
         this.initNextLevelPlatforms();
 
         this.initCamera();
@@ -158,31 +163,41 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.wallsLayer2.setCollisionByProperty({ collides: true });
 
         this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-        console.log(this.map.layers.map(l => l.name));
+        console.log("Tile Layers:", this.map.layers.map(l => l.name));
+        console.log("Object Layers:", this.map.objects.map(o => o.name));
     }
 
-    private spawnPlayerOnSpawnPoint(zone?: number): void {
+    protected spawnPlayerOnSpawnPoint(zone?: number): void {
 
-        const spawnObjects = this.map.filterObjects(
-            'SpawnPoint',
-            obj => obj.name === 'PlayerSpawn'
-        );
+        const spawnLayer = this.map.getObjectLayer('SpawnPoint');
+        const spawnObjects = spawnLayer?.objects || [];
 
-        let spawnX = 100;
-        let spawnY = 100;
+        const getZone = (obj: any) =>
+            obj.properties?.find((p: any) => p.name === "zone_number")?.value;
 
-        if (spawnObjects.length > 0) {
-            spawnX = spawnObjects[0].x;
-            spawnY = spawnObjects[0].y;
+        let spawn;
+
+        if (zone !== undefined) {
+            spawn = spawnObjects.find(obj => Number(getZone(obj)) === zone);
+
+            if (!spawn) {
+                console.warn("Zone not found, falling back to first spawn");
+            }
+        }
+        if (!spawn) {
+            spawn = spawnObjects[0];
         }
 
-        // spawn platform
+        const spawnX = spawn?.x ?? 100;
+        const spawnY = spawn?.y ?? 100;
+
+        console.log("Chosen spawn:", spawn);
+
         const platform = this.add
             .sprite(spawnX, spawnY, 'tiles_spr', 386)
             .setScale(1.5)
             .setDepth(0);
 
-        // ✨ platform glow pulse
         this.tweens.add({
             targets: platform,
             alpha: 0.6,
@@ -206,12 +221,8 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.player.setScale(0.8);
 
         // ✨ particle poof
-        const particles = this.add.particles('tiles_spr');
-
-        const emitter = particles.createEmitter({
+        const particles = this.add.particles(spawnX, spawnY - 8, 'tiles_spr', {
             frame: 629,
-            x: spawnX,
-            y: spawnY - 8,
             speed: { min: -40, max: 40 },
             angle: { min: 0, max: 360 },
             scale: { start: 0.4, end: 0 },
@@ -223,13 +234,12 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
         // stop emitter after burst
         this.time.delayedCall(200, () => {
-            emitter.stop();
+            particles.stop();
 
             this.time.delayedCall(500, () => {
                 particles.destroy();
             });
         });
-
         // ✨ player materialize animation
         this.tweens.add({
             targets: this.player,
@@ -242,6 +252,9 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
                 this.player.unlockMovement();
             }
         });
+
+        console.log("Spawn coords:", spawnX, spawnY);
+        console.log("Player created:", this.player);
 
     }
 
@@ -287,18 +300,20 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
                     topic: this.config.next.topic
                 });
 
+                this.tweens.add({
+                  targets: platform,
+                  alpha: 0.7,
+                  duration: 700,
+                  yoyo: true,
+                  repeat: -1,
+                  ease: 'Sine.easeInOut'
+                });
+
             });
 
         });
 
-        this.tweens.add({
-          targets: platform,
-          alpha: 0.7,
-          duration: 700,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
+
     }
 
     private showDebugWalls(): void {
@@ -313,9 +328,20 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         });
       }
     private initCamera(): void {
+
+        if (!this.player) {
+            console.error("Player not initialized before camera setup");
+            return;
+        }
+
         this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
         this.cameras.main.setZoom(2);
-        this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+        this.cameras.main.setBounds(
+            0,
+            0,
+            this.map.widthInPixels,
+            this.map.heightInPixels
+        );
     }
 
 
@@ -398,7 +424,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         });
       }
 
-    private async startQuestionAtPoint(
+    protected async startQuestionAtPoint(
         pointPair: any,
         qIndex: number
       ): Promise<void> {
@@ -453,7 +479,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
             pointPair.forEach((sprite: Phaser.GameObjects.Sprite) =>
             sprite.destroy()
             );
-            
+
             this.inAssessment = false;
             this.player.unlockMovement();
 
