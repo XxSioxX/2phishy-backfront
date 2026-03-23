@@ -1,14 +1,17 @@
 import { BaseIntegratedLevel } from '../core/BaseIntegratedLevel';
 import { LEVEL_CONFIGS } from '../core/LevelConfigurations';
 import {Player} from "../../classes/player.ts";
+import {Tilemaps} from "phaser";
+import {gameAPI} from "../../helpers/game-api.ts";
 
 export class SFBLevel extends BaseIntegratedLevel {
-  private currentZone = 0;
-  private correctDoors: Phaser.GameObjects.Sprite[][] = [];
-  private wrongDoors: Phaser.GameObjects.Sprite[][] = [];
+  private currentZone = 1;
+  private correctDoors: Record<number, Phaser.GameObjects.Sprite[]> = {};
+  private wrongDoors: Record<number, Phaser.GameObjects.Sprite[]> = {};
   private trapChests: Phaser.GameObjects.Sprite[] = [];
   private currentCheckpoint = 0;
   private spawnedPlatforms: Phaser.GameObjects.Sprite[] = [];
+  private doorWallsLayer!:Tilemaps.TilemapLayer;
 
 
   constructor() {
@@ -16,8 +19,13 @@ export class SFBLevel extends BaseIntegratedLevel {
   }
 
   async create() {
-
+    const progress = await gameAPI.getUserProgress(this.userData.userId);
+    const savedZone = progress.data?.progress?.progress?.[this.config.topic]?.current_zone ?? 1;
+    this.currentZone = savedZone;
     await super.create();
+
+
+
 
     this.createTrapAnimations();
     this.initDoors();
@@ -146,16 +154,33 @@ export class SFBLevel extends BaseIntegratedLevel {
 
     await super.startQuestionAtPoint(pointPair, qIndex);
 
-      const answered = this.assessmentResults.length;
+      const lastResult = this.assessmentResults[this.assessmentResults.length - 1];
+      const isCorrect = lastResult.is_correct;
+      const zoneIndex = this.getZoneIndexFromQuestion(qIndex);
 
-      if (answered === 1) this.openDoor(this.correctDoors[0]);
-      if (answered === 3) this.openDoor(this.correctDoors[1]);
-      if (answered === 7) this.openDoor(this.correctDoors[2]);
+      if (isCorrect) {
 
+        const newZone = zoneIndex + 1;
+        this.currentZone = newZone;
 
+        this.openDoor(this.correctDoors[zoneIndex + 1]);
+
+        gameAPI.updateCurrentZone({
+          userid: this.userData.userId,
+          topic: this.config.topic,
+          current_zone: newZone
+        }).catch(console.error);
+
+        } else {
+
+        this.openDoor(this.wrongDoors[zoneIndex + 1]);
+
+      }
   }
 
   private initDoors() {
+
+    this.doorWallsLayer = this.map.createLayer('Door-walls', this.tileset, 0, 0);
 
     const correctDoorObjects = this.map.filterObjects(
       'Door-correct',
@@ -168,24 +193,55 @@ export class SFBLevel extends BaseIntegratedLevel {
     );
 
     correctDoorObjects.forEach(obj => {
+
+      const getZone = (obj: any) =>
+        obj.properties?.find((p: any) => p.name === "zone_number")?.value;
+
+      const zone = Number(getZone(obj));
       const door = this.spawnDoor(obj, true);
-      this.correctDoors.push(door);
+
+      door.forEach(sprite => {
+        sprite.setAlpha(1);
+        if (sprite.body) sprite.body.enable = true;
+      });
+
+      this.correctDoors[zone] = door;
     });
 
     wrongDoorObjects.forEach(obj => {
+
+      const getZone = (obj: any) =>
+        obj.properties?.find((p: any) => p.name === "zone_number")?.value;
+
+      const zone = Number(getZone(obj));
       const door = this.spawnDoor(obj, false);
-      this.wrongDoors.push(door);
+
+      door.forEach(sprite => {
+        sprite.setAlpha(1);
+        if (sprite.body) sprite.body.enable = true;
+      });
+
+      this.wrongDoors[zone] = door;
     });
 
   }
 
   private openDoor(door: Phaser.GameObjects.Sprite[]) {
 
+    const OPEN = { topL: 453, topR: 454, botL: 485, botR: 486 };
+
     door.forEach(sprite => {
 
       this.tweens.killTweensOf(sprite);
 
-      if (sprite.body) sprite.body.enable = false;
+      this.physics.world.disable(sprite);
+
+      const frame = sprite.frame.name;
+
+      if (frame === 450) sprite.setFrame(OPEN.topL);
+      if (frame === 451) sprite.setFrame(OPEN.topR);
+      if (frame === 482) sprite.setFrame(OPEN.botL);
+      if (frame === 483) sprite.setFrame(OPEN.botR);
 
       this.tweens.add({
         targets: sprite,
@@ -195,7 +251,6 @@ export class SFBLevel extends BaseIntegratedLevel {
       });
 
     });
-
   }
 
   private createTrapAnimations() {
@@ -218,7 +273,7 @@ export class SFBLevel extends BaseIntegratedLevel {
 
     const trapObjects = this.map.filterObjects(
       'TrapChest',
-      obj => obj.name === 'TrapChest'
+      obj => obj.name === 'TrapChestPoint'
     );
 
     trapObjects.forEach(obj => {
@@ -239,11 +294,24 @@ export class SFBLevel extends BaseIntegratedLevel {
 
         chest.play('trap_open');
 
+        this.player.lockMovement();
+        this.cameras.main.shake(200, 0.01);
+
+        this.tweens.add({
+          targets: this.player,
+          alpha: 0,
+          duration: 150,
+          yoyo: true,
+        });
         this.popup.showInfo(
           "Trap!",
           "That was a malicious link!",
           () => {
-            console.log("Player damaged");
+
+            // 👇 TELEPORT HERE
+            this.teleportToZone(this.currentZone);
+
+            this.player.unlockMovement();
           }
         );
 
@@ -260,19 +328,36 @@ export class SFBLevel extends BaseIntegratedLevel {
     const x = obj.x;
     const y = obj.y;
 
-    const frames = isCorrect
-      ? { topL: 450, topR: 451, botL: 482, botR: 483 }
-      : { topL: 453, topR: 454, botL: 485, botR: 486 };
+    const CLOSED = { topL: 450, topR: 451, botL: 482, botR: 483 };
 
-    const botL = this.physics.add.staticSprite(x - 8, y, 'tiles_spr', frames.botL).setScale(1.5);
-    const botR = this.physics.add.staticSprite(x + 8, y, 'tiles_spr', frames.botR).setScale(1.5);
+    const DEPTH = {
+      FLOOR: 0,
+      BELOW_PLAYER: 4,
+      PLAYER: 5,
+      ABOVE_PLAYER: 6,
+      UI: 100
+    };
 
-    const topL = this.physics.add.staticSprite(x - 8, y - 16, 'tiles_spr', frames.topL).setScale(1.5);
-    const topR = this.physics.add.staticSprite(x + 8, y - 16, 'tiles_spr', frames.topR).setScale(1.5);
+    const botL = this.physics.add.staticSprite(x - 8, y, 'tiles_spr', CLOSED.botL)
+      .setScale(1)
+      .setDepth(DEPTH.BELOW_PLAYER);
+
+    const botR = this.physics.add.staticSprite(x + 8, y, 'tiles_spr', CLOSED.botR)
+      .setScale(1)
+      .setDepth(DEPTH.BELOW_PLAYER);
+
+    const topL = this.physics.add.staticSprite(x - 8, y - 16, 'tiles_spr', CLOSED.topL)
+      .setScale(1)
+      .setDepth(DEPTH.ABOVE_PLAYER);
+
+    const topR = this.physics.add.staticSprite(x + 8, y - 16, 'tiles_spr', CLOSED.topR)
+      .setScale(1)
+      .setDepth(DEPTH.ABOVE_PLAYER);
+
+    this.physics.add.collider(this.player, botL);
+    this.physics.add.collider(this.player, botR);
 
     const door = [botL, botR, topL, topR];
-
-    /* glowing lock indicator */
 
     this.tweens.add({
       targets: door,
@@ -284,7 +369,6 @@ export class SFBLevel extends BaseIntegratedLevel {
     });
 
     return door;
-
   }
 
   protected initKnowledge(): void {
@@ -344,6 +428,23 @@ export class SFBLevel extends BaseIntegratedLevel {
     spawnKnowledge(zones[2], knowledgeZones.zone2);
     spawnKnowledge(zones[3], knowledgeZones.zone3);
 
+  }
+
+  private teleportToZone(zone: number) {
+
+    const spawnObjects = this.map.filterObjects('SpawnPoint', () => true);
+
+    const getZone = (obj: any) =>
+      obj.properties?.find((p: any) => p.name === "zone_number")?.value;
+
+    const spawn = spawnObjects.find(obj => Number(getZone(obj)) === zone);
+
+    if (!spawn) {
+      console.warn("No spawn for zone:", zone);
+      return;
+    }
+
+    this.player.setPosition(spawn.x, spawn.y - 4);
   }
 
 }

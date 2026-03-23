@@ -19,6 +19,7 @@ export const LEVEL_CONFIGS = {
         'Explore the area, open Knowledge Chests, and uncover smart browsing habits.\n' +
         'Approach the Wards to prove what you’ve learned!\n\n' +
         'The number above your character represents the remaining questions you must answer in this level.',
+      dialogueId: 'level1_spawn_intro',
     },
 
     next: {

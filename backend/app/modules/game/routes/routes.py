@@ -188,6 +188,67 @@ async def mark_topic_completed(
         data={"updated": result.modified_count}
     )
 
+@router.post(
+    "/progress/intro-seen",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK
+)
+async def mark_intro_seen(
+    request: TopicCompletionRequest,
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db)
+):
+    logger.info(f"Marking intro seen for topic: {request.topic}")
+
+    result = await db.progress.update_one(
+        {"user_id": request.userid},
+        {
+            "$set": {
+                f"progress.{request.topic}.intro_seen": True,
+                f"progress.{request.topic}.intro_seen_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+
+    return StandardResponse(
+        success=True,
+        message="Intro marked as seen",
+        data={"updated": result.modified_count}
+    )
+
+@router.post(
+    "/progress/zone",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK
+)
+async def update_current_zone(
+    request: dict,  
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db)
+):
+    userid = request.get("userid")
+    topic = request.get("topic")
+    zone = request.get("current_zone")
+
+    if userid is None or topic is None or zone is None:
+        raise HTTPException(status_code=400, detail="Missing required fields")
+
+    result = await db.progress.update_one(
+        {"user_id": userid},
+        {
+            "$set": {
+                f"progress.{topic}.current_zone": zone,
+                f"progress.{topic}.updated_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+
+    return StandardResponse(
+        success=True,
+        message="Current zone updated",
+        data={"updated": result.modified_count}
+    )
+
 
 @router.post(
     "/data",

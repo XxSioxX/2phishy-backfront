@@ -45,51 +45,69 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     constructor(config: LevelConfig) {
         super(config.sceneKey);
         this.config = config;
-      }
+    }
 
     async create(): Promise<void> {
         console.log(`${this.scene.key} - create()`);
-
         this.initMap();
-
-
         this.popup = new AssessmentPopup(this);
-
         await this.createQuestionMap();
         this.initAssessment();
         this.spawnPlayerOnSpawnPoint(this.currentZone);
-        if (!this.player) {
-            throw new Error("Player failed to spawn");
-        }
-        console.log("Player after spawn:", this.player);
         this.initNextLevelPlatforms();
-
         this.initCamera();
         this.setupAssessmentCollision();
-
-        const knowledgeResponse = await gameAPI.getUserKnowledgeList({
-          userid: this.userData.userId,
-          topic: this.config.topic,
-
-        });
-
-        console.log(knowledgeResponse);
-
-        this.knowledgeList = knowledgeResponse.data.knowledge;
-
+        await this.setKnowledgeList();
         this.createKnowledgeAnimations();
         this.initKnowledge();
         this.setupKnowledgeCollision();
+        await this.introDialogue();
+        this.initUI();
+    }
 
-        this.startIntroDialogue(this.config.intro.dialogueId, () => {
+    async setKnowledgeList(): void {
+        const knowledgeResponse = await gameAPI.getUserKnowledgeList({
+          userid: this.userData.userId,
+          topic: this.config.topic,
+        });
+        this.knowledgeList = knowledgeResponse.data.knowledge;
+    }
+
+    async introDialogue(): void {
+        const progressResponse = await gameAPI.getUserProgress(this.userData.userId);
+
+        const topicProgress =
+          progressResponse.data?.progress?.progress?.[this.config.topic];
+
+        const hasSeenIntro = topicProgress?.intro_seen === true;
+
+        if (!hasSeenIntro) {
+
+          this.startIntroDialogue(this.config.intro.dialogueId, async () => {
+
+            this.showLevelIntroBanner(
+              this.config.intro.title,
+              this.config.intro.description
+            );
+
+            await gameAPI.markIntroSeen({
+              userid: this.userData.userId,
+              topic: this.config.topic
+            });
+
+          });
+
+        } else {
+
           this.showLevelIntroBanner(
             this.config.intro.title,
             this.config.intro.description
           );
-        });
 
-        this.initUI();
+        }
     }
+
+
 
 
     update(): void {

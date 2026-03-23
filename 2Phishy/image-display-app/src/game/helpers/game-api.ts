@@ -282,8 +282,53 @@ class GameAPI {
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('❌ submitSocialEngineering error:', err);
+      console.error('submitSocialEngineering error:', err);
       throw new Error(`Failed to submit SE result: ${err}`);
+    }
+
+    return await response.json();
+  }
+
+  async updateCurrentZone(payload: {
+    userid: string;
+    topic: string;
+    current_zone: number;
+  }) {
+    console.log('Updating current zone:', payload);
+
+    const response = await fetch(`${this.baseUrl}/progress/zone`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('updateCurrentZone error:', err);
+      throw new Error(`Failed to update current zone: ${err}`);
+    }
+
+    return await response.json();
+  }
+
+  async markIntroSeen(payload: {
+    userid: string;
+    topic: string;
+  }) {
+    console.log('Marking intro seen:', payload);
+
+    const response = await fetch(`${this.baseUrl}/progress/intro-seen`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('markIntroSeen error:', err);
+      throw new Error(`Failed to mark intro seen: ${err}`);
     }
 
     return await response.json();

@@ -50,6 +50,36 @@
         { "id": "11", "text": "It’s watching." },
         { "id": "12", "text": "And it expects answers.", "end": true }
       ]
+    },
+    {
+      "id": "level1_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "..." },
+        { "id": "2", "text": "So this is how it works." },
+        { "id": "3", "text": "Those markers… they weren’t random." },
+        { "id": "4", "text": "Each one was testing what I’d do." },
+        { "id": "5", "text": "What I’d trust." },
+        { "id": "6", "text": "What I’d ignore." },
+        { "id": "7", "text": "And now…" },
+        { "id": "8", "text": "This place is changing." },
+        { "id": "9", "text": "More paths. More traps." },
+        { "id": "10", "text": "Nothing here is placed by accident." },
+        { "id": "11", "text": "If something looks harmless…" },
+        { "id": "12", "text": "It probably isn’t." },
+        { "id": "13", "text": "I need to be careful." },
+        { "id": "14", "text": "Check everything." },
+        { "id": "15", "text": "Trust nothing too quickly." },
+        { "id": "16", "text": "Because whatever this is…" },
+        { "id": "17", "text": "It’s getting harder.", "end": true }
+      ]
     }
   ]
 }
