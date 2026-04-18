@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './AnnouncementPage.scss';
-import { getCurrentDatePH } from '../../utils/dateUtils';
+import { getCurrentDatePH, formatDatePH } from '../../utils/dateUtils';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -20,6 +20,8 @@ const AnnouncementPage: React.FC = () => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [selectedAnnouncements, setSelectedAnnouncements] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -95,9 +97,7 @@ const AnnouncementPage: React.FC = () => {
             lastEditedBy: currentUser.username,
             lastEditedDate: getCurrentDatePH()
           };
-          console.log('Creating announcement with payload:', payload);
           const created = await api.createAnnouncement(payload);
-          console.log('Created announcement response:', created);
           const announcementWithId = { ...created, id: created.id || created._id };
           setAnnouncements(prev => [announcementWithId, ...prev]);
           setShowAddForm(false);
@@ -118,9 +118,7 @@ const AnnouncementPage: React.FC = () => {
             lastEditedBy: currentUser.username,
             lastEditedDate: getCurrentDatePH()
           };
-          console.log('Updating announcement with payload:', payload);
           const updated = await api.updateAnnouncement(editingAnnouncement.id, payload);
-          console.log('Update response:', updated);
           const announcementWithId = { ...updated, id: updated.id || updated._id };
           setAnnouncements(prev => prev.map(a => a.id === editingAnnouncement.id ? announcementWithId : a));
           setShowEditForm(false);
@@ -145,65 +143,230 @@ const AnnouncementPage: React.FC = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedAnnouncements.length === announcements.length) {
+    if (selectedAnnouncements.length === filteredAnnouncements.length && filteredAnnouncements.length > 0) {
       setSelectedAnnouncements([]);
     } else {
-      setSelectedAnnouncements(announcements.map(a => a.id));
+      setSelectedAnnouncements(filteredAnnouncements.map(a => a.id));
     }
+  };
+
+  // Filtered announcements
+  const filteredAnnouncements = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let filtered = announcements;
+
+    if (q) {
+      filtered = filtered.filter(
+        (a) =>
+          a.title.toLowerCase().includes(q) ||
+          a.content.toLowerCase().includes(q)
+      );
+    }
+    if (statusFilter !== "all") {
+      if (statusFilter === "published") {
+        filtered = filtered.filter(a => a.isPublished);
+      } else if (statusFilter === "draft") {
+        filtered = filtered.filter(a => !a.isPublished);
+      }
+    }
+
+    return filtered;
+  }, [announcements, search, statusFilter]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const total = announcements.length;
+    const published = announcements.filter(a => a.isPublished).length;
+    const draft = announcements.filter(a => !a.isPublished).length;
+    const recent = announcements.length > 0 
+      ? announcements.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())[0]?.date
+      : null;
+    return { total, published, draft, recent };
+  }, [announcements]);
+
+  const closeModals = () => {
+    setShowAddForm(false);
+    setShowEditForm(false);
   };
 
   return (
     <div className="announcement-page">
-      <div className="headerWithButton">
-        <h1>Announcement Management</h1>
-        <div className="addAnnouncementBox">
-          <button className="actionButton" onClick={handleAdd}>Add</button>
+
+      {/* ── Page header ─────────────────────────────────── */}
+      <div className="ap-header">
+        <div className="ap-header-left">
+          <h1 className="ap-title">Announcement Management</h1>
+          <p className="ap-subtitle">Create, manage, and publish announcements</p>
+        </div>
+        <div className="ap-actions">
+          <button onClick={handleAdd} className="ap-btn ap-btn-primary">+ Add</button>
           <button 
-            className="actionButton" 
-            onClick={handleDelete}
-            disabled={selectedAnnouncements.length === 0}
-          >
-            Delete
-          </button>
-          <button 
-            className="actionButton" 
-            onClick={handleEdit}
+            onClick={handleEdit} 
+            className="ap-btn ap-btn-secondary"
             disabled={selectedAnnouncements.length !== 1}
           >
-            Edit
+            ✎ Edit
+          </button>
+          <button 
+            onClick={handleDelete} 
+            className="ap-btn ap-btn-danger"
+            disabled={selectedAnnouncements.length === 0}
+          >
+            🗑 Delete
           </button>
         </div>
       </div>
 
-      {/* Add/Edit Form */}
-      {(showAddForm || showEditForm) && (
-        <div className="modal-overlay" onClick={() => { setShowAddForm(false); setShowEditForm(false); }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{showAddForm ? 'Add New Announcement' : 'Edit Announcement'}</h3>
-              <button className="modal-close" onClick={() => { setShowAddForm(false); setShowEditForm(false); }}>×</button>
+      {/* ── Stats cards ─────────────────────────────────── */}
+      {announcements.length > 0 && (
+        <div className="ap-stats-row">
+          <div className="ap-stat-card">
+            <span className="ap-stat-value">{stats.total}</span>
+            <span className="ap-stat-label">Total Announcements</span>
+          </div>
+          <div className="ap-stat-card">
+            <span className="ap-stat-value">{stats.published}</span>
+            <span className="ap-stat-label">Published</span>
+          </div>
+          <div className="ap-stat-card">
+            <span className="ap-stat-value">{stats.draft}</span>
+            <span className="ap-stat-label">Drafts</span>
+          </div>
+          <div className="ap-stat-card">
+            <span className="ap-stat-value">{stats.recent ? formatDatePH(stats.recent, false) : '—'}</span>
+            <span className="ap-stat-label">Recently Updated</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Search & Filter ─────────────────────────────── */}
+      {announcements.length > 0 && (
+        <div className="ap-toolbar">
+          <div className="ap-search-wrap">
+            <span className="ap-search-icon">🔍</span>
+            <input
+              type="text"
+              className="ap-search"
+              placeholder="Search announcements..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button className="ap-clear-btn" onClick={() => setSearch("")}>×</button>
+            )}
+          </div>
+          <select
+            className="ap-status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All Status</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+      )}
+
+      {/* ── Announcements List ──────────────────────────── */}
+      <div className="ap-table-card">
+        {announcements.length === 0 ? (
+          <div className="ap-empty">
+            <span className="ap-empty-icon">📢</span>
+            <p>No announcements yet. Click "Add" to create your first announcement.</p>
+          </div>
+        ) : filteredAnnouncements.length === 0 ? (
+          <div className="ap-empty">
+            <span className="ap-empty-icon">🔍</span>
+            <p>No announcements match your search.</p>
+          </div>
+        ) : (
+          <>
+            <div className="ap-list-header">
+              <label className="ap-select-all">
+                <input
+                  type="checkbox"
+                  checked={selectedAnnouncements.length === filteredAnnouncements.length && filteredAnnouncements.length > 0}
+                  onChange={handleSelectAll}
+                />
+                Select All
+              </label>
+              <span className="ap-selected-count">
+                {selectedAnnouncements.length} of {filteredAnnouncements.length} selected
+              </span>
             </div>
-            <form onSubmit={handleSubmit} className="announcement-form">
-              <div className="form-group">
-                <label>Title:</label>
+
+            <div className="ap-list">
+              {filteredAnnouncements.map((announcement) => (
+                <div 
+                  key={announcement.id} 
+                  className={`ap-row ${selectedAnnouncements.includes(announcement.id) ? 'selected' : ''}`}
+                >
+                  <div className="ap-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedAnnouncements.includes(announcement.id)}
+                      onChange={() => handleCheckboxChange(announcement.id)}
+                    />
+                  </div>
+
+                  <div className="ap-row-content">
+                    <div className="ap-row-title-section">
+                      <h3 className="ap-row-title">{announcement.title}</h3>
+                      <p className="ap-row-preview">{announcement.content.substring(0, 100)}...</p>
+                    </div>
+
+                    <div className="ap-row-meta">
+                      <span className={`ap-status-badge ${announcement.isPublished ? 'published' : 'draft'}`}>
+                        {announcement.isPublished ? '● Published' : '● Draft'}
+                      </span>
+                      {announcement.lastEditedBy && (
+                        <span className="ap-edited-info">
+                          Edited by {announcement.lastEditedBy}
+                        </span>
+                      )}
+                      <span className="ap-date">
+                        {announcement.lastEditedDate ? formatDatePH(announcement.lastEditedDate, false) : formatDatePH(announcement.date, false)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Modal Form ──────────────────────────────── */}
+      {(showAddForm || showEditForm) && (
+        <div className="ap-modal-overlay" onClick={closeModals}>
+          <div className="ap-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="ap-modal-header">
+              <h3>{showAddForm ? 'Add New Announcement' : 'Edit Announcement'}</h3>
+              <button className="ap-modal-close" onClick={closeModals}>×</button>
+            </div>
+            <form onSubmit={handleSubmit} className="ap-form">
+              <div className="ap-form-group">
+                <label>Title *</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  placeholder="Announcement title"
                   required
                 />
               </div>
-              <div className="form-group">
-                <label>Content:</label>
+              <div className="ap-form-group">
+                <label>Content *</label>
                 <textarea
                   value={formData.content}
                   onChange={(e) => setFormData({...formData, content: e.target.value})}
-                  rows={5}
+                  rows={6}
+                  placeholder="Announcement content"
                   required
                 />
               </div>
-              <div className="form-group">
-                <label>Status:</label>
+              <div className="ap-form-group">
+                <label>Status</label>
                 <select
                   value={formData.isPublished ? 'published' : 'draft'}
                   onChange={(e) =>
@@ -213,78 +376,22 @@ const AnnouncementPage: React.FC = () => {
                     })
                   }
                 >
-                  <option value="published">Publish</option>
+                  <option value="published">Published</option>
                   <option value="draft">Draft</option>
                 </select>
               </div>
-              <div className="form-actions">
-                <button type="button" onClick={() => { setShowAddForm(false); setShowEditForm(false); }}>
+              <div className="ap-form-actions">
+                <button type="button" onClick={closeModals} className="ap-form-btn ap-form-btn-cancel">
                   Cancel
                 </button>
-                <button type="submit">
-                  {showAddForm ? 'Add Announcement' : 'Update Announcement'}
+                <button type="submit" className="ap-form-btn ap-form-btn-submit">
+                  {showAddForm ? 'Create Announcement' : 'Update Announcement'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      {/* Announcements List */}
-      <div className="announcementGrid">
-        {announcements.length === 0 ? (
-          <div className="no-announcements">
-            <p>No announcements found. Click "Add" to create your first announcement.</p>
-          </div>
-        ) : (
-          <>
-            <div className="announcement-controls">
-              <label className="select-all">
-                <input
-                  type="checkbox"
-                  checked={selectedAnnouncements.length === announcements.length && announcements.length > 0}
-                  onChange={handleSelectAll}
-                />
-                Select All
-              </label>
-              <span className="selected-count">
-                {selectedAnnouncements.length} selected
-              </span>
-            </div>
-            
-            <div className="announcements-list">
-              {announcements.map((announcement) => (
-                <div key={announcement.id} className="announcement-card">
-                  <div className="announcement-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={selectedAnnouncements.includes(announcement.id)}
-                      onChange={() => handleCheckboxChange(announcement.id)}
-                    />
-                  </div>
-                  <div className="announcement-content">
-                    <div className="announcement-header">
-                      <h3>{announcement.title}</h3>
-                      <div className="announcement-meta">
-                        <span className="date">{announcement.date}</span>
-                        {announcement.lastEditedBy && (
-                          <span className="edited-badge">
-                            Edited by {announcement.lastEditedBy} on {announcement.lastEditedDate}
-                          </span>
-                        )}
-                        <span className={`status-badge ${announcement.isPublished ? '' : 'draft'}`}>
-                          {announcement.isPublished ? 'Published' : 'Draft'}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="announcement-text">{announcement.content}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
     </div>
   );
 };

@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { api } from "../../services/api";
 import { TopScore } from "../../types/data";
 import type { User } from "../../types";
+import { generateAvatarUrl } from "../../utils/avatarUtils";
+import { parseBackendDate } from "../../utils/dateUtils";
 
 const TopBox: React.FC = () => {
     const [userScores, setUserScores] = useState<(TopScore & { last_seen?: string | null; user: User })[]>([]);
@@ -10,8 +12,9 @@ const TopBox: React.FC = () => {
 
     // Check if user is online
     const isOnline = (user: User): boolean => {
-        if (!user.last_seen) return false;
-        return new Date().getTime() - new Date(user.last_seen).getTime() < 10 * 60 * 1000;
+        const lastSeen = parseBackendDate(user.last_seen);
+        if (!lastSeen) return false;
+        return new Date().getTime() - lastSeen.getTime() < 10 * 60 * 1000;
     };
 
     useEffect(() => {
@@ -80,10 +83,13 @@ const TopBox: React.FC = () => {
                     <div className="listItem" key={user.id}>
                         <div className="user">
                             <div className="profile-container">
-                                <img src="/profile.svg" alt="" />
+                                <img 
+                                    src={generateAvatarUrl(user.username, 48)}
+                                    alt={`${user.username}'s avatar`}
+                                    className="user-avatar"
+                                />
                                 <span
-                                    className="status-dot"
-                                    style={{ background: isOnline(user.user) ? 'green' : 'gray' }}
+                                    className={`status-dot ${isOnline(user.user) ? 'online' : 'offline'}`}
                                 ></span>
                             </div>
                             <div className="userTexts">

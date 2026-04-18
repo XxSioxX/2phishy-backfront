@@ -1,11 +1,8 @@
-/**
- * Utility functions for consistent timezone handling
- */
 
 /**
- * Get current date in specified timezone
- * @param timezone - The timezone to use (default: Asia/Manila)
- * @returns Current date in YYYY-MM-DD format
+ * 
+ * @param timezone 
+ * @returns 
  */
 export const getCurrentDate = (timezone: string = 'Asia/Manila'): string => {
   return new Date().toLocaleDateString('en-PH', {
@@ -17,9 +14,9 @@ export const getCurrentDate = (timezone: string = 'Asia/Manila'): string => {
 };
 
 /**
- * Get current date and time in specified timezone
- * @param timezone - The timezone to use (default: Asia/Manila)
- * @returns Current date and time in specified timezone
+ * 
+ * @param timezone 
+ * @returns 
  */
 export const getCurrentDateTime = (timezone: string = 'Asia/Manila'): string => {
   return new Date().toLocaleString('en-PH', {
@@ -35,11 +32,11 @@ export const getCurrentDateTime = (timezone: string = 'Asia/Manila'): string => 
 };
 
 /**
- * Format a date string to specified timezone
- * @param dateString - The date string to format
- * @param includeTime - Whether to include time in the output
- * @param timezone - The timezone to use (default: Asia/Manila)
- * @returns Formatted date string in specified timezone
+ * 
+ * @param dateString 
+ * @param includeTime 
+ * @param timezone 
+ * @returns 
  */
 export const formatDate = (dateString: string, includeTime: boolean = false, timezone: string = 'Asia/Manila'): string => {
   if (!dateString) return 'N/A';
@@ -67,8 +64,26 @@ export const getCurrentDateTimePH = (): string => getCurrentDateTime('Asia/Manil
 export const formatDatePH = (dateString: string, includeTime: boolean = false): string => formatDate(dateString, includeTime, 'Asia/Manila');
 
 /**
- * Get current timestamp in Philippine Time
- * @returns Current timestamp as ISO string adjusted for Philippine Time
+ * 
+ * 
+ */
+export const parseBackendDate = (dateString?: string | null): Date | null => {
+  if (!dateString) return null;
+
+  const normalized = dateString.trim();
+  if (!normalized) return null;
+
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized);
+  const candidate = hasTimezone ? normalized : `${normalized}Z`;
+  const parsed = new Date(candidate);
+
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+};
+
+/**
+ * 
+ * @returns 
  */
 export const getCurrentTimestampPH = (): string => {
   const now = new Date();

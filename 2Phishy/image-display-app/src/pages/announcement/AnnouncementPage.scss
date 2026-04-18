@@ -1,475 +1,681 @@
 @use "../../styles/variables.scss" as *;
-@use "sass:color";
 
+// ─── Page shell ──────────────────────────────────────────────
 .announcement-page {
-  padding: 20px;
-  background-color: $soft-bg;
-  min-height: auto;
+  padding: 24px;
+  min-height: 79.1vh;
   color: $main-color;
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 
   @include mobile {
-    padding: 15px;
+    padding: 16px;
+    gap: 16px;
+  }
+}
+
+// ─── Header ──────────────────────────────────────────────────
+.ap-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  @include mobile {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .headerWithButton {
+  .ap-header-left {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ap-title {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: $main-color;
+
+    @include mobile {
+      font-size: 1.5rem;
+    }
+  }
+
+  .ap-subtitle {
+    margin: 0;
+    font-size: 0.9rem;
+    color: $soft-color;
+  }
+
+  .ap-actions {
+    display: flex;
+    gap: 8px;
     flex-wrap: wrap;
-    gap: 10px;
-
-    @include mobile {
-      margin-bottom: 15px;
-    }
-
-    h1 {
-      color: $main-color;
-      margin: 0;
-      font-size: 22px;
-
-      @include mobile {
-        font-size: 18px;
-        flex: 1;
-        min-width: 200px;
-      }
-    }
-
-    .addAnnouncementBox {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-
-      @include mobile {
-        width: 100%;
-        gap: 8px;
-      }
-
-      .actionButton {
-        background-color: $dark-bg;
-        color: $main-color;
-        border: 1px solid $dark-bg;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background-color 0.3s, border-color 0.3s;
-        white-space: nowrap;
-
-        @include mobile {
-          flex: 1;
-          padding: 10px 12px;
-          font-size: 12px;
-          min-width: 70px;
-        }
-
-        &:hover {
-          background-color: $soft-bg;
-          border-color: $main-color;
-        }
-
-        &:disabled {
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
-      }
-    }
-  }
-
-  .announcementGrid {
-    background-color: $dark-bg;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    margin-top: 20px;
-
-    @include mobile {
-      padding: 15px;
-      margin-top: 15px;
-    }
-
-    .no-announcements {
-      text-align: center;
-      padding: 40px;
-      color: $soft-color;
-      font-size: 1.1rem;
-
-      @include mobile {
-        padding: 30px 15px;
-        font-size: 1rem;
-      }
-    }
-
-    .announcement-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid $soft-bg;
-      flex-wrap: wrap;
-      gap: 10px;
-
-      @include mobile {
-        margin-bottom: 15px;
-        padding-bottom: 12px;
-      }
-
-      .select-all {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: $main-color;
-        cursor: pointer;
-        font-size: 14px;
-
-        @include mobile {
-          font-size: 12px;
-        }
-
-        input[type="checkbox"] {
-          margin: 0;
-          cursor: pointer;
-        }
-      }
-
-      .selected-count {
-        color: $soft-color;
-        font-size: 0.9rem;
-
-        @include mobile {
-          font-size: 0.8rem;
-        }
-      }
-    }
-
-    .announcements-list {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-
-      @include mobile {
-        gap: 12px;
-      }
-    }
-
-    .announcement-card {
-      display: flex;
-      gap: 15px;
-      padding: 15px;
-      background-color: $soft-bg;
-      border-radius: 8px;
-      border: 1px solid transparent;
-      transition: all 0.3s ease;
-
-      @include mobile {
-        gap: 10px;
-        padding: 12px;
-      }
-
-      &:hover {
-        border-color: $main-color;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      }
-
-      .announcement-checkbox {
-        display: flex;
-        align-items: flex-start;
-        padding-top: 5px;
-
-        @include mobile {
-          padding-top: 3px;
-        }
-
-        input[type="checkbox"] {
-          margin: 0;
-          transform: scale(1.2);
-          cursor: pointer;
-
-          @include mobile {
-            transform: scale(1);
-          }
-        }
-      }
-
-      .announcement-content {
-        flex: 1;
-        min-width: 0;
-
-        .announcement-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 10px;
-          gap: 10px;
-          flex-wrap: wrap;
-
-          @include mobile {
-            margin-bottom: 8px;
-            gap: 8px;
-          }
-
-          h3 {
-            color: $main-color;
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 600;
-
-            @include mobile {
-              font-size: 1rem;
-            }
-          }
-
-          .announcement-meta {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 5px;
-
-            @include mobile {
-              align-items: flex-start;
-              gap: 3px;
-            }
-
-            .date {
-              color: $soft-color;
-              font-size: 0.85rem;
-
-              @include mobile {
-                font-size: 0.75rem;
-              }
-            }
-
-            .status-badge {
-              background-color: #2ecc71;
-              color: white;
-              padding: 2px 8px;
-              border-radius: 12px;
-              font-size: 0.8rem;
-              font-weight: 500;
-
-              @include mobile {
-                padding: 2px 6px;
-                font-size: 0.7rem;
-              }
-
-              &.draft {
-                background-color: #95a5a6;
-              }
-            }
-
-            .edited-badge {
-              background-color: #3498db;
-              color: white;
-              padding: 2px 8px;
-              border-radius: 12px;
-              font-size: 0.8rem;
-              font-weight: 500;
-
-              @include mobile {
-                padding: 2px 6px;
-                font-size: 0.7rem;
-              }
-            }
-          }
-        }
-
-        .announcement-text {
-          color: $soft-color;
-          line-height: 1.5;
-          margin: 0;
-          font-size: 0.95rem;
-
-          @include mobile {
-            font-size: 0.9rem;
-          }
-        }
-      }
-    }
-  }
-
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-
-    @include mobile {
-      align-items: flex-end;
-    }
-  }
-
-  .modal-content {
-    background-color: $dark-bg;
-    border-radius: 12px;
-    padding: 0;
-    max-width: 500px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 
     @include mobile {
       width: 100%;
-      border-radius: 12px 12px 0 0;
-      max-height: 90vh;
+      gap: 6px;
+    }
+  }
+}
+
+// ─── Buttons ────────────────────────────────────────────────
+.ap-btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid $dark-color;
+  background: $dark-bg;
+  color: $main-color;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  @include mobile {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    flex: 1;
+  }
+
+  &:hover:not(:disabled) {
+    background: $soft-bg;
+    border-color: $main-color;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.ap-btn-primary {
+  background: linear-gradient(135deg, #4da3ff, #628cff);
+  border-color: transparent;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2d8fd9, #4a7be8);
+  }
+}
+
+.ap-btn-secondary {
+  background: $dark-bg;
+  border-color: $dark-color;
+
+  &:hover:not(:disabled) {
+    background: $soft-bg;
+    border-color: $main-color;
+  }
+}
+
+.ap-btn-danger {
+  background: $dark-bg;
+  border-color: $dark-color;
+
+  &:hover:not(:disabled) {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+    color: #e74c3c;
+  }
+}
+
+// ─── Stats cards ────────────────────────────────────────────
+.ap-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+
+  @include mobile {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+.ap-stat-card {
+  background: $soft-bg;
+  border: 1px solid $dark-color;
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+
+  @include mobile {
+    padding: 14px;
+  }
+
+  .ap-stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: $main-color;
+
+    @include mobile {
+      font-size: 1.5rem;
+    }
+  }
+
+  .ap-stat-label {
+    font-size: 0.8rem;
+    color: $soft-color;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  &:hover {
+    border-color: $main-color;
+    background: $dark-bg;
+  }
+}
+
+// ─── Toolbar (Search & Filter) ──────────────────────────────
+.ap-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  flex-wrap: wrap;
+
+  @include mobile {
+    gap: 10px;
+  }
+}
+
+.ap-search-wrap {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  @include mobile {
+    min-width: 100%;
+  }
+
+  .ap-search-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 1rem;
+    opacity: 0.6;
+  }
+
+  .ap-search {
+    width: 100%;
+    padding: 9px 12px 9px 40px;
+    border: 1px solid $dark-color;
+    border-radius: 8px;
+    background: $soft-bg;
+    color: $main-color;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+
+    &:focus {
+      border-color: $main-color;
     }
 
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px;
-      border-bottom: 1px solid $soft-bg;
+    &::placeholder {
+      color: $soft-color;
+    }
+  }
+
+  .ap-clear-btn {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    color: $soft-color;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $main-color;
+    }
+  }
+}
+
+.ap-status-filter {
+  padding: 9px 12px;
+  border: 1px solid $dark-color;
+  border-radius: 8px;
+  background: $soft-bg;
+  color: $main-color;
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+
+  @include mobile {
+    min-width: 120px;
+  }
+
+  &:focus {
+    border-color: $main-color;
+  }
+
+  option {
+    background: $dark-bg;
+    color: $main-color;
+  }
+}
+
+// ─── Table card container ───────────────────────────────────
+.ap-table-card {
+  background: $soft-bg;
+  border: 1px solid $dark-color;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ap-empty {
+  padding: 60px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  @include mobile {
+    padding: 40px 16px;
+  }
+
+  .ap-empty-icon {
+    font-size: 3rem;
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 0;
+    color: $soft-color;
+    font-size: 1rem;
+  }
+}
+
+// ─── List header (controls) ─────────────────────────────────
+.ap-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid $dark-color;
+  background: $dark-bg;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  @include mobile {
+    padding: 12px 16px;
+  }
+}
+
+.ap-select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: $main-color;
+  cursor: pointer;
+  font-size: 0.9rem;
+  white-space: nowrap;
+
+  @include mobile {
+    font-size: 0.85rem;
+  }
+
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+}
+
+.ap-selected-count {
+  color: $soft-color;
+  font-size: 0.85rem;
+
+  @include mobile {
+    font-size: 0.75rem;
+  }
+}
+
+// ─── List rows ──────────────────────────────────────────────
+.ap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ap-row {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+  align-items: flex-start;
+  border-bottom: 1px solid $dark-color;
+  transition: all 0.2s;
+  background: $soft-bg;
+
+  @include mobile {
+    gap: 10px;
+    padding: 12px 16px;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: $dark-bg;
+    cursor: pointer;
+  }
+
+  &.selected {
+    background: rgba(77, 163, 255, 0.08);
+    border-left: 3px solid #4da3ff;
+    padding-left: 17px;
+  }
+}
+
+.ap-checkbox {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+  flex-shrink: 0;
+
+  input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.ap-row-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ap-row-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .ap-row-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: $main-color;
+    line-height: 1.4;
+  }
+
+  .ap-row-preview {
+    margin: 0;
+    font-size: 0.85rem;
+    color: $soft-color;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+.ap-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+
+  @include mobile {
+    gap: 8px;
+    font-size: 0.75rem;
+  }
+}
+
+.ap-status-badge {
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-size: 0.8rem;
+
+  @include mobile {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+
+  &.published {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+  }
+
+  &.draft {
+    background: rgba(149, 165, 166, 0.15);
+    color: #95a5a6;
+  }
+}
+
+.ap-edited-info {
+  color: $soft-color;
+  white-space: nowrap;
+}
+
+.ap-date {
+  color: $soft-color;
+  white-space: nowrap;
+}
+
+// ─── Modal ──────────────────────────────────────────────────
+.ap-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+
+  @include mobile {
+    align-items: flex-end;
+  }
+}
+
+.ap-modal-content {
+  background: $dark-bg;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+
+  @include mobile {
+    width: 100%;
+    border-radius: 12px 12px 0 0;
+    max-height: 90vh;
+  }
+}
+
+.ap-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid $soft-bg;
+
+  @include mobile {
+    padding: 16px;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: $main-color;
+    font-weight: 600;
+
+    @include mobile {
+      font-size: 1rem;
+    }
+  }
+
+  .ap-modal-close {
+    background: none;
+    border: none;
+    color: $soft-color;
+    font-size: 1.8rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $main-color;
+    }
+  }
+}
+
+// ─── Form ───────────────────────────────────────────────────
+.ap-form {
+  padding: 20px;
+
+  @include mobile {
+    padding: 16px;
+  }
+
+  .ap-form-group {
+    margin-bottom: 20px;
+
+    @include mobile {
+      margin-bottom: 16px;
+    }
+
+    &:last-of-type {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: $main-color;
+      font-weight: 500;
+      font-size: 0.9rem;
 
       @include mobile {
-        padding: 15px;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+      }
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid $soft-bg;
+      border-radius: 8px;
+      background: $soft-bg;
+      color: $main-color;
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+
+      @include mobile {
+        padding: 9px 10px;
+        font-size: 0.85rem;
       }
 
-      h3 {
-        color: $main-color;
-        margin: 0;
-        font-size: 1.2rem;
-
-        @include mobile {
-          font-size: 1rem;
-        }
+      &:focus {
+        border-color: $main-color;
+        box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.1);
       }
 
-      .modal-close {
-        background: none;
-        border: none;
+      &::placeholder {
         color: $soft-color;
-        font-size: 24px;
-        cursor: pointer;
-        padding: 0;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        &:hover {
-          color: $main-color;
-        }
       }
     }
 
-    .announcement-form {
-      padding: 20px;
+    textarea {
+      resize: vertical;
+      min-height: 120px;
 
       @include mobile {
-        padding: 15px;
+        min-height: 100px;
       }
+    }
 
-      .form-group {
-        margin-bottom: 20px;
+    select {
+      cursor: pointer;
 
-        @include mobile {
-          margin-bottom: 15px;
-        }
-
-        label {
-          display: block;
-          color: $main-color;
-          margin-bottom: 8px;
-          font-weight: 500;
-          font-size: 14px;
-
-          @include mobile {
-            font-size: 13px;
-            margin-bottom: 6px;
-          }
-        }
-
-        input, textarea, select {
-          width: 100%;
-          padding: 12px;
-          border: 1px solid $soft-bg;
-          border-radius: 6px;
-          background-color: $soft-bg;
-          color: $main-color;
-          font-size: 14px;
-          font-family: inherit;
-
-          @include mobile {
-            padding: 10px;
-            font-size: 14px;
-          }
-
-          &:focus {
-            outline: none;
-            border-color: $main-color;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-          }
-
-          &::placeholder {
-            color: $soft-color;
-          }
-        }
-
-        textarea {
-          resize: vertical;
-          min-height: 100px;
-
-          @include mobile {
-            min-height: 80px;
-          }
-        }
-      }
-
-      .form-actions {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-        margin-top: 30px;
-
-        @include mobile {
-          gap: 8px;
-          margin-top: 20px;
-        }
-
-        button {
-          padding: 10px 20px;
-          border-radius: 5px;
-          border: none;
-          cursor: pointer;
-          font-size: 14px;
-          transition: all 0.3s;
-
-          @include mobile {
-            flex: 1;
-            padding: 12px;
-            font-size: 13px;
-          }
-
-          &.save-btn {
-            background-color: #2ecc71;
-            color: white;
-
-            &:hover {
-              background-color: #27ae60;
-            }
-          }
-
-          &.cancel-btn {
-            background-color: $soft-bg;
-            color: $main-color;
-
-            &:hover {
-              background-color: var(--main-bg);
-            }
-          }
-        }
+      option {
+        background: $dark-bg;
+        color: $main-color;
       }
     }
   }
 }
+
+.ap-form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 24px;
+
+  @include mobile {
+    gap: 8px;
+    margin-top: 20px;
+  }
+}
+
+.ap-form-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  @include mobile {
+    flex: 1;
+    padding: 11px 16px;
+    font-size: 0.85rem;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.ap-form-btn-cancel {
+  background: $soft-bg;
+  color: $main-color;
+  border: 1px solid $dark-color;
+
+  &:hover {
+    background: $dark-bg;
+  }
+}
+
+.ap-form-btn-submit {
+  background: linear-gradient(135deg, #4da3ff, #628cff);
+  color: white;
+  border: none;
+
+  &:hover {
+    background: linear-gradient(135deg, #2d8fd9, #4a7be8);
+  }
+}
+

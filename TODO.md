@@ -1,10 +1,8 @@
-- [x] Add collapsible functionality to Profile.tsx
-  - [x] Add state for section open/closed status
-  - [x] Add mobile detection logic
-  - [x] Add toggle functions for each section
-  - [x] Update JSX to include toggle buttons and conditional rendering
-- [x] Update profile.scss for collapsible styles
-  - [x] Add styles for toggle buttons
-  - [x] Add responsive styles for mobile
-  - [x] Improve layout for Full Score Profile (grid for topic scores)
-- [x] Test the changes on different screen sizes (servers started, code changes implemented)
+# Git Push Task: devAndre6.6
+
+## Steps:
+- [ ] Stage all changes: git add . && git add -A
+- [ ] Commit: git commit -m "Online Offline working and Fixed Bulletin"
+- [ ] Create/switch branch: git checkout -b devAndre6.6
+- [ ] Push: git push -u origin devAndre6.6
+- [ ] Verify: git status && git log --oneline -5

@@ -12,9 +12,44 @@ export interface AssessmentResult {
   timestamp: Date;
 }
 
+const resolveApiBaseUrl = (): string => {
+  const fromCraEnv = process.env.REACT_APP_API_BASE_URL;
+  const candidate = fromCraEnv || '/api';
+  const isBrowser = typeof window !== 'undefined' && typeof window.location !== 'undefined';
+
+  if (isBrowser) {
+    const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
+
+    // In deployed environments, always use same-origin /api and rely on reverse proxy routing.
+    if (!isLocalHost) {
+      return '/api';
+    }
+
+    try {
+      const candidateUrl = new URL(candidate, window.location.origin);
+
+      if ((candidate.startsWith('http://') || candidate.startsWith('https://')) && candidateUrl.host === window.location.host) {
+        return candidateUrl.pathname.replace(/\/+$/, '') || '/api';
+      }
+
+      if (window.location.protocol === 'https:' && candidate.startsWith('http://')) {
+        return candidate.replace('http://', 'https://').replace(/\/+$/, '');
+      }
+    } catch {
+      // Fall back to the raw value below.
+    }
+  }
+
+  if (candidate.includes('localhost') && candidate.startsWith('https')) {
+    return candidate.replace('https://', 'http://').replace(/\/+$/, '');
+  }
+
+  return candidate.replace(/\/+$/, '');
+};
+
 class GameAPI {
   private token: string | null = null;
-  private readonly baseUrl = `${process.env.REACT_APP_API_BASE_URL}/game`;
+  private readonly baseUrl = `${resolveApiBaseUrl()}/game`;
 
 
   setToken(token: string) {

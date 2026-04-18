@@ -1,12 +1,44 @@
 import { User, ChartBoxData } from '../types';
 
-let API_BASE_URL = process.env.REACT_APP_API_BASE_URL!;
-console.log("API BASE URL:", API_BASE_URL);
+const resolveApiBaseUrl = (): string => {
+    const fromCraEnv = process.env.REACT_APP_API_BASE_URL;
+    const candidate = fromCraEnv || '/api';
+    const isBrowser = typeof window !== 'undefined' && typeof window.location !== 'undefined';
 
-if (API_BASE_URL.includes('localhost') && API_BASE_URL.startsWith('https')) {
-    API_BASE_URL = API_BASE_URL.replace('https://', 'http://');
-    console.log("Converted to HTTP for localhost development:", API_BASE_URL);
-}
+    if (isBrowser) {
+        const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
+
+        // In deployed environments, always use same-origin /api and rely on reverse proxy routing.
+        if (!isLocalHost) {
+            return '/api';
+        }
+
+        try {
+            const candidateUrl = new URL(candidate, window.location.origin);
+
+            if ((candidate.startsWith('http://') || candidate.startsWith('https://')) && candidateUrl.host === window.location.host) {
+                return candidateUrl.pathname.replace(/\/+$/, '') || '/api';
+            }
+
+            if (window.location.protocol === 'https:' && candidate.startsWith('http://')) {
+                return candidate.replace('http://', 'https://').replace(/\/+$/, '');
+            }
+        } catch {
+            // Fall back to the raw value below.
+        }
+    }
+
+    // Keep URL assembly consistent with endpoint templates below.
+    if (candidate.includes('localhost') && candidate.startsWith('https')) {
+        return candidate.replace('https://', 'http://').replace(/\/+$/, '');
+    }
+
+    return candidate.replace(/\/+$/, '');
+};
+
+let API_BASE_URL = resolveApiBaseUrl();
+console.log('API BASE URL:', API_BASE_URL);
+
 
 
 
@@ -665,7 +697,7 @@ export const api = {
 
     // Posts endpoints
     async getPosts(): Promise<any[]> {
-        const response = await fetch(`${API_BASE_URL}/posts`, {
+        const response = await fetch(`${API_BASE_URL}/posts/`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) {
@@ -675,7 +707,7 @@ export const api = {
     },
 
     async createPost(postData: any): Promise<any> {
-        const response = await fetch(`${API_BASE_URL}/posts`, {
+        const response = await fetch(`${API_BASE_URL}/posts/`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(postData)

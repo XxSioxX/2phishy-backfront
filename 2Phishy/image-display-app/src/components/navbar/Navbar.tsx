@@ -5,6 +5,8 @@ import { api } from '../../services/api';
 import { useAuth } from "../../contexts/AuthContext";
 import { useMobileMenu } from "../../contexts/MobileMenuContext";
 import { ReportWithResolved, Announcement } from "../../types";
+import { generateAvatarUrl } from '../../utils/avatarUtils';
+import { parseBackendDate } from '../../utils/dateUtils';
 
 const Navbar = () => {
     const [showTooltip, setShowTooltip] = useState(false);
@@ -16,6 +18,15 @@ const Navbar = () => {
     }>({ reports: [], announcements: [] });
     const { user, isAuthenticated } = useAuth();
     const { toggleMobileMenu } = useMobileMenu();
+
+    const isCurrentUserOnline = (): boolean => {
+        if (!isAuthenticated || !user) return false;
+
+        const parsedLastSeen = parseBackendDate(user.last_seen);
+        if (!parsedLastSeen) return true;
+
+        return new Date().getTime() - parsedLastSeen.getTime() < 10 * 60 * 1000;
+    };
 
     // Calculate notification count from backend (with localStorage fallback)
     useEffect(() => {
@@ -174,7 +185,13 @@ const Navbar = () => {
                     <span>2Phishy</span>
                 </div>
                 <div className="user-mobile">
-                    <img src="user.svg" alt="" />
+                    <span className={`avatar-ring ${isCurrentUserOnline() ? 'online' : 'offline'}`}>
+                        <img 
+                            src={isAuthenticated && user?.username ? generateAvatarUrl(user.username, 36) : "/user.svg"} 
+                            alt="User Avatar" 
+                            className="user-avatar-mobile"
+                        />
+                    </span>
                     <span>{isAuthenticated ? user?.username || 'User' : 'Guest'}</span>
                 </div>
             </div>
@@ -252,7 +269,13 @@ const Navbar = () => {
                     )}
                 </div>
                 <div className="user">
-                    <img src="user.svg" alt="" />
+                    <span className={`avatar-ring ${isCurrentUserOnline() ? 'online' : 'offline'}`}>
+                        <img 
+                            src={isAuthenticated && user?.username ? generateAvatarUrl(user.username, 36) : "/user.svg"} 
+                            alt="User Avatar" 
+                            className="user-avatar"
+                        />
+                    </span>
                     <span>{isAuthenticated ? user?.username || 'User' : 'Guest'}</span>
                     {isAuthenticated && user?.role && (
                         <span className="user-role">({user.role})</span>
