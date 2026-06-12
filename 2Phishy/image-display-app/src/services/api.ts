@@ -1,6 +1,8 @@
 import { User, ChartBoxData } from '../types';
 
-let API_BASE_URL = process.env.REACT_APP_API_BASE_URL!;
+let API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  `${window.location.origin}/api`;
 console.log("API BASE URL:", API_BASE_URL);
 
 if (API_BASE_URL.includes('localhost') && API_BASE_URL.startsWith('https')) {

@@ -5,14 +5,13 @@ import {Tilemaps} from "phaser";
 import {gameAPI} from "../../helpers/game-api.ts";
 
 export class SFBLevel extends BaseIntegratedLevel {
-  private currentZone = 1;
+
   private correctDoors: Record<number, Phaser.GameObjects.Sprite[]> = {};
   private wrongDoors: Record<number, Phaser.GameObjects.Sprite[]> = {};
   private trapChests: Phaser.GameObjects.Sprite[] = [];
-  private currentCheckpoint = 0;
   private spawnedPlatforms: Phaser.GameObjects.Sprite[] = [];
-  private doorWallsLayer!:Tilemaps.TilemapLayer;
-
+  private doorWallsLayer!: Tilemaps.TilemapLayer;
+  private unlockedZone = 1;
 
   constructor() {
     super(LEVEL_CONFIGS.SFB);
@@ -20,15 +19,35 @@ export class SFBLevel extends BaseIntegratedLevel {
 
   async create() {
     const progress = await gameAPI.getUserProgress(this.userData.userId);
-    const savedZone = progress.data?.progress?.progress?.[this.config.topic]?.current_zone ?? 1;
-    this.currentZone = savedZone;
+    const savedProgress =
+        progress.data?.progress?.progress?.[this.config.topic];
+    console.log(
+        "SAVED PROGRESS",
+        savedProgress
+    );
+    this.unlockedZone =
+        savedProgress?.unlocked_zone ?? 1;
+
+    this.currentZone =
+        savedProgress?.current_zone ?? 0;
+
+    console.log(
+        "ZONE BEFORE SUPER",
+        this.currentZone
+    );
+
+
     await super.create();
-
-
-
-
+    this.initializeZoneProgress();
     this.createTrapAnimations();
     this.initDoors();
+    for (let z = 1; z < this.unlockedZone; z++) {
+
+        if (this.correctDoors[z]) {
+            this.openDoor(this.correctDoors[z]);
+        }
+
+    }
     this.initTrapChests();
 
   }
@@ -37,70 +56,50 @@ export class SFBLevel extends BaseIntegratedLevel {
 
     this.questionPoints = [];
 
-    const zones = this.distributeQuestionsByZone();
+    const questionList = this.questions;
 
     const allPoints = this.map.filterObjects(
-      'QuestionPoints',
-      obj => obj.name === 'QuestionPoint'
+        'QuestionPoints',
+        obj => obj.name === 'QuestionPoint'
     );
 
     const getZone = (obj: any) =>
-      obj.properties?.find((p: any) => p.name === "zone_number")?.value;
+        obj.properties?.find((p: any) => p.name === "zone_number")?.value;
 
     const zone1Points = allPoints.filter(p => getZone(p) === 1);
     const zone2Points = allPoints.filter(p => getZone(p) === 2);
     const zone3Points = allPoints.filter(p => getZone(p) === 3);
 
-    this.spawnZoneQuestions(zone1Points, zones.zone1, 0);
-    this.spawnZoneQuestions(zone2Points, zones.zone2, 2);
-    this.spawnZoneQuestions(zone3Points, zones.zone3, 6);
+    const zone1Questions = questionList.filter(q => q.zone === 1);
+    const zone2Questions = questionList.filter(q => q.zone === 2);
+    const zone3Questions = questionList.filter(q => q.zone === 3);
 
+    this.spawnZoneQuestions(zone1Points, zone1Questions);
+    this.spawnZoneQuestions(zone2Points, zone2Questions);
+    this.spawnZoneQuestions(zone3Points, zone3Questions);
   }
 
-  private distributeQuestionsByZone() {
-
-    const zone1Max = 2;
-    const zone2Max = 4;
-
-    const zone1 = this.questions.slice(0, zone1Max);
-
-    const zone2 = this.questions.slice(
-      zone1Max,
-      zone1Max + zone2Max
-    );
-
-    const zone3 = this.questions.slice(
-      zone1Max + zone2Max
-    );
-
-    return {
-      zone1,
-      zone2,
-      zone3
-    };
-  }
 
   private distributeKnowledgeByZone() {
 
-    const zone1Max = 2;
-    const zone2Max = 4;
+    const updatedKnowledgeList = this.knowledgeList.map((knowledge) => {
 
-    const zone1 = this.knowledgeList.slice(0, zone1Max);
+      const linkedQuestion = this.questions.find(
+          q => q.question_id === knowledge.question_id
+      );
 
-    const zone2 = this.knowledgeList.slice(
-      zone1Max,
-      zone1Max + zone2Max
-    );
+      return {
+        ...knowledge,
+        zone: linkedQuestion?.zone ?? 1,
+      };
+    });
 
-    const zone3 = this.knowledgeList.slice(
-      zone1Max + zone2Max
-    );
+    this.knowledgeList = updatedKnowledgeList;
 
-    return { zone1, zone2, zone3 };
-
+    return this.knowledgeList;
   }
 
-  private spawnZoneQuestions(points: any[], questions: any[], offset: number) {
+  private spawnZoneQuestions(points: any[], questions: any[]) {
 
     Phaser.Utils.Array.Shuffle(points);
 
@@ -109,12 +108,12 @@ export class SFBLevel extends BaseIntegratedLevel {
     selected.forEach((pt, index) => {
 
       const bottom = this.physics.add
-        .sprite(pt.x, pt.y, 'tiles_spr', 340)
-        .setScale(1.5);
+          .sprite(pt.x, pt.y, 'tiles_spr', 340)
+          .setScale(1.5);
 
       const top = this.physics.add
-        .sprite(pt.x, pt.y - 16, 'tiles_spr', 308)
-        .setScale(1.5);
+          .sprite(pt.x, pt.y - 16, 'tiles_spr', 308)
+          .setScale(1.5);
 
       this.tweens.add({
         targets: [bottom, top],
@@ -140,42 +139,181 @@ export class SFBLevel extends BaseIntegratedLevel {
 
       const pair = [bottom, top] as any;
 
-      pair.questionIndex = offset + index;
+      pair.questionData = questions[index];
+      pair.zone = questions[index].zone;
 
       this.questionPoints.push(pair);
-
     });
   }
 
+  protected onQuestionAnswered(result: any, zone: number): void {
+
+    const progress = this.zoneProgress[zone];
+
+    // Ignore repeated attempts
+    if (progress.answered.has(result.question_id)) {
+      return;
+    }
+
+    progress.answered.add(result.question_id);
+
+    if (!result.is_correct) {
+      progress.failed = true;
+    }
+
+    const allAnswered =
+      progress.answered.size >= progress.total;
+
+    if (!allAnswered) return;
+
+    // ZONE FAILED
+    if (progress.failed) {
+
+      console.log(`Zone ${zone} failed`);
+
+      this.currentZone = zone;
+
+      this.openDoor(this.wrongDoors[zone]);
+    }
+
+    // ZONE CLEARED
+    else {
+
+      console.log(`   Zone ${zone} cleared`);
+
+      const newZone = zone + 1;
+
+      this.currentZone = newZone;
+      this.unlockedZone = Math.max(this.unlockedZone, newZone);
+
+      this.openDoor(this.correctDoors[zone]);
+      const isFinalZone = zone === 3;
+
+      if (isFinalZone) {
+        void this.completeAssessment();
+        return;
+      }
+
+      gameAPI.updateCurrentZone({
+        userid: this.userData.userId,
+        topic: this.config.topic,
+        current_zone: newZone,
+        unlocked_zone: this.unlockedZone
+      }).catch(console.error);
+
+    }
+
+  }
+/*
+   protected onQuestionAnswered(result: any, context: any): void {
+     console.log("qIndex", context);
+     const isCorrect = result.is_correct;
+
+     const question = this.questions[context];
+     const zone = question.zone;
+
+     if (isCorrect) {
+
+       const newZone = zone + 1;
+
+       this.currentZone = newZone;
+
+       this.openDoor(this.correctDoors[zone]);
+
+       gameAPI.updateCurrentZone({
+         userid: this.userData.userId,
+         topic: this.config.topic,
+         current_zone: newZone
+       }).catch(console.error);
+
+     } else {
+       this.openDoor(this.wrongDoors[zone]);
+     }
+   }*/
+
+  private zoneProgress: Record<number, {
+  answered: Set<string>,
+  failed: boolean,
+  total: number
+}> = {};
+
   protected async startQuestionAtPoint(
     pointPair: any,
-    qIndex: number
+    questionData: any
   ): Promise<void> {
 
-    await super.startQuestionAtPoint(pointPair, qIndex);
+    this.inAssessment = true;
+    this.player.lockMovement();
 
-      const lastResult = this.assessmentResults[this.assessmentResults.length - 1];
-      const isCorrect = lastResult.is_correct;
-      const zoneIndex = this.getZoneIndexFromQuestion(qIndex);
+    this.tweens.add({
+      targets: pointPair,
+      scale: 1.7,
+      duration: 120,
+      yoyo: true,
+      ease: 'Quad.easeOut'
+    });
 
-      if (isCorrect) {
+    const q = questionData;
 
-        const newZone = zoneIndex + 1;
-        this.currentZone = newZone;
 
-        this.openDoor(this.correctDoors[zoneIndex + 1]);
+    this.currentZone = q.zone;
+    this.popup.mode = "learning";
+    this.popup.correctAnswer = q.answer;
 
-        gameAPI.updateCurrentZone({
-          userid: this.userData.userId,
-          topic: this.config.topic,
-          current_zone: newZone
-        }).catch(console.error);
+    this.popup.show(q.question, q.choices, async (choice) => {
 
-        } else {
+      const result = {
+        userid: this.userData.userId,
+        question_id: q.question_id,
+        user_answer: choice,
+        correct_answer: q.answer,
+        topic: this.config.topic,
 
-        this.openDoor(this.wrongDoors[zoneIndex + 1]);
+        subcategory: this.inferSubcat(q.question_id),
+        is_correct: choice === q.answer,
+        timestamp: new Date(),
+      };
+
+      this.assessmentResults.push(result);
+
+      this.onQuestionAnswered(result, q.zone);
+
+      try {
+
+        await this.submitAnswer({
+          question_id: result.question_id,
+          user_answer: result.user_answer,
+          correct_answer: result.correct_answer,
+          topic: result.topic,
+          subcategory: result.subcategory,
+          is_correct: result.is_correct,
+          timestamp: result.timestamp,
+        });
+
+        console.log("📡 Single question submitted");
+
+      } catch (err) {
+
+        console.error("❌ Failed to submit single question", err);
 
       }
+
+      pointPair.forEach((sprite: Phaser.GameObjects.Sprite) => {
+         sprite.disableBody(true, true);
+      });
+
+      this.inAssessment = false;
+      this.player.unlockMovement();
+
+      const total = this.totalquestions;
+
+      const answered =
+          Object.values(this.zoneProgress)
+              .reduce((sum, z) => sum + z.answered.size, 0);
+
+      this.game.events.emit('questions:update', total, answered);
+
+    });
   }
 
   private initDoors() {
@@ -227,8 +365,13 @@ export class SFBLevel extends BaseIntegratedLevel {
   }
 
   private openDoor(door: Phaser.GameObjects.Sprite[]) {
-
-    const OPEN = { topL: 453, topR: 454, botL: 485, botR: 486 };
+    if (!door) return;
+    const OPEN = {
+      topL: 453,
+      topR: 454,
+      botL: 485,
+      botR: 486
+    };
 
     door.forEach(sprite => {
 
@@ -238,19 +381,30 @@ export class SFBLevel extends BaseIntegratedLevel {
 
       const frame = sprite.frame.name;
 
-      if (frame === 450) sprite.setFrame(OPEN.topL);
-      if (frame === 451) sprite.setFrame(OPEN.topR);
-      if (frame === 482) sprite.setFrame(OPEN.botL);
-      if (frame === 483) sprite.setFrame(OPEN.botR);
+      // TOP HALF
+      if (frame === 450) {
+        sprite.setFrame(OPEN.topL);
+        sprite.setDepth(3);
+      }
 
-      this.tweens.add({
-        targets: sprite,
-        y: sprite.y - 32,
-        duration: 350,
-        ease: 'Quad.easeOut'
-      });
+      if (frame === 451) {
+        sprite.setFrame(OPEN.topR);
+        sprite.setDepth(3);
+      }
 
+      // BOTTOM HALF
+      if (frame === 482) {
+        sprite.setFrame(OPEN.botL);
+        sprite.setDepth(1);
+      }
+
+      if (frame === 483) {
+        sprite.setFrame(OPEN.botR);
+        sprite.setDepth(1);
+      }
     });
+
+    this.player.setDepth(2);
   }
 
   private createTrapAnimations() {
@@ -277,6 +431,10 @@ export class SFBLevel extends BaseIntegratedLevel {
     );
 
     trapObjects.forEach(obj => {
+      const chestZone =
+        obj.properties?.find(
+            (p: any) => p.name === "zone_number"
+        )?.value ?? this.currentZone;
 
       const chest = this.physics.add
         .sprite(obj.x, obj.y, 'tiles_spr', 659)
@@ -308,10 +466,39 @@ export class SFBLevel extends BaseIntegratedLevel {
           "That was a malicious link!",
           () => {
 
-            // 👇 TELEPORT HERE
-            this.teleportToZone(this.currentZone);
+        this.currentZone = chestZone;
 
-            this.player.unlockMovement();
+        const failedZone = chestZone;
+
+        this.resetZone(failedZone);
+
+        const spawn = this.getSpawnPoint(failedZone);
+
+        this.player.bodyRef().stop();
+
+        this.player.setVelocity(0, 0);
+
+        this.player.setPosition(
+            spawn.x,
+            spawn.y - 4
+        );
+
+        chest.anims.stop();
+        chest.setFrame(659);
+
+        this.player.setAlpha(0);
+
+        this.tweens.add({
+            targets: this.player,
+            alpha: 1,
+            duration: 250
+        });
+
+        this.player.unlockMovement();
+
+        this.time.delayedCall(1000, () => {
+            triggered = false;
+        });
           }
         );
 
@@ -323,7 +510,7 @@ export class SFBLevel extends BaseIntegratedLevel {
 
   }
 
-  private spawnDoor(obj: any, isCorrect: boolean) {
+  private spawnDoor(obj: any) {
 
     const x = obj.x;
     const y = obj.y;
@@ -371,6 +558,117 @@ export class SFBLevel extends BaseIntegratedLevel {
     return door;
   }
 
+
+  private closeDoor(door: Phaser.GameObjects.Sprite[]) {
+      if (!door) return;
+      const CLOSED = {
+          topL: 450,
+          topR: 451,
+          botL: 482,
+          botR: 483
+      };
+
+      door.forEach(sprite => {
+
+          const frame = sprite.frame.name;
+
+          // OPEN TOP
+          if (frame === 453) {
+              sprite.setFrame(CLOSED.topL);
+              sprite.setDepth(6);
+          }
+
+          if (frame === 454) {
+              sprite.setFrame(CLOSED.topR);
+              sprite.setDepth(6);
+          }
+
+          // OPEN BOTTOM
+          if (frame === 485) {
+              sprite.setFrame(CLOSED.botL);
+              sprite.setDepth(4);
+          }
+
+          if (frame === 486) {
+              sprite.setFrame(CLOSED.botR);
+              sprite.setDepth(4);
+          }
+
+          // re-enable collisions
+          this.physics.world.enable(sprite);
+
+          if (sprite.body) {
+              sprite.body.enable = true;
+          }
+
+      });
+
+      this.tweens.killTweensOf(door);
+
+      this.tweens.add({
+          targets: door,
+          alpha: 0.65,
+          duration: 650,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+      });
+
+  }
+
+  private resetZone(zone: number) {
+
+      console.log(`Resetting Zone ${zone}`);
+
+      const progress = this.zoneProgress[zone];
+
+      progress.answered.clear();
+      progress.failed = false;
+
+      if (this.wrongDoors[zone]) {
+          this.closeDoor(this.wrongDoors[zone]);
+      }
+
+      if (this.correctDoors[zone]) {
+          this.closeDoor(this.correctDoors[zone]);
+      }
+
+      this.questionPoints.forEach((pair: any) => {
+
+          const q = pair.questionData;
+
+          if (q.zone !== zone) return;
+
+          pair.forEach((sprite: Phaser.Physics.Arcade.Sprite) => {
+
+              sprite.enableBody(
+                  false,
+                  sprite.x,
+                  sprite.y,
+                  true,
+                  true
+              );
+
+              sprite.setAlpha(1);
+
+          });
+
+      });
+
+      const answered = Object.values(this.zoneProgress)
+        .reduce((sum, zoneProgress) => {
+          return sum + zoneProgress.answered.size;
+        }, 0);
+
+      this.game.events.emit(
+        'questions:update',
+        this.totalquestions,
+        answered
+      );
+
+  }
+
+
   protected initKnowledge(): void {
 
     const allPoints = this.map.filterObjects(
@@ -392,7 +690,11 @@ export class SFBLevel extends BaseIntegratedLevel {
       if (zones[z]) zones[z].push(p);
     });
 
-    const knowledgeZones = this.distributeKnowledgeByZone();
+    const knowledgeList = this.distributeKnowledgeByZone();
+
+    const zone1Knowledge = knowledgeList.filter(k => k.zone === 1);
+    const zone2Knowledge = knowledgeList.filter(k => k.zone === 2);
+    const zone3Knowledge = knowledgeList.filter(k => k.zone === 3);
 
     const spawnKnowledge = (points: any[], knowledgeList: any[]) => {
 
@@ -424,27 +726,103 @@ export class SFBLevel extends BaseIntegratedLevel {
 
     };
 
-    spawnKnowledge(zones[1], knowledgeZones.zone1);
-    spawnKnowledge(zones[2], knowledgeZones.zone2);
-    spawnKnowledge(zones[3], knowledgeZones.zone3);
+    spawnKnowledge(zones[1], zone1Knowledge);
+    spawnKnowledge(zones[2], zone2Knowledge);
+    spawnKnowledge(zones[3], zone3Knowledge);
 
   }
 
-  private teleportToZone(zone: number) {
 
-    const spawnObjects = this.map.filterObjects('SpawnPoint', () => true);
+  protected setupAssessmentCollision(): void {
 
-    const getZone = (obj: any) =>
-      obj.properties?.find((p: any) => p.name === "zone_number")?.value;
+    this.questionPoints.forEach((pointPair: any) => {
 
-    const spawn = spawnObjects.find(obj => Number(getZone(obj)) === zone);
+      this.physics.add.overlap(this.player, pointPair, () => {
 
-    if (!spawn) {
-      console.warn("No spawn for zone:", zone);
-      return;
+        if (this.inAssessment) return;
+
+        const questionData = pointPair.questionData;
+
+        this.startQuestionAtPoint(pointPair, questionData);
+
+      });
+
+    });
+
+  }
+
+  private initializeZoneProgress() {
+
+  const grouped: Record<number, any[]> = {};
+
+  this.questions.forEach(q => {
+
+    if (!grouped[q.zone]) {
+      grouped[q.zone] = [];
     }
 
-    this.player.setPosition(spawn.x, spawn.y - 4);
-  }
+    grouped[q.zone].push(q);
+
+  });
+
+  Object.keys(grouped).forEach(zoneKey => {
+
+    const zone = Number(zoneKey);
+
+    this.zoneProgress[zone] = {
+      answered: new Set(),
+      failed: false,
+      total: grouped[zone].length
+    };
+
+  });
 
 }
+
+}
+
+
+  /*private distributeQuestionsByZone() {
+
+    const zone1Max = 2;
+    const zone2Max = 4;
+
+    /* const zone1 = this.questions.slice(0, zone1Max);
+
+    const zone2 = this.questions.slice(
+      zone1Max,
+      zone1Max + zone2Max
+    );
+
+    const zone3 = this.questions.slice(
+      zone1Max + zone2Max
+    );
+
+    return {
+      zone1,
+      zone2,
+      zone3
+    };
+
+    const updatedQuestionList = this.questions.map((question, index) => {
+
+      let zone = 3;
+
+      if (index < zone1Max) {
+        zone = 1;
+      }
+      else if (index < zone1Max + zone2Max) {
+        zone = 2;
+      }
+
+      return {
+        ...question,
+        // add zone properties to be tracked
+        zone,
+        zone_order: index + 1,
+      };
+    });
+
+    this.questions = updatedQuestionList;
+    return this.questions;
+  }*/

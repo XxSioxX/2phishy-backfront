@@ -42,6 +42,10 @@ class GetUserTopic(GetUser):
 class TopicRequest(BaseModel):
     topic: Topics
 
+class UpdateQuestionListRequest(BaseModel):
+    userid: UUID
+    topic: Topics
+    question_list: list[dict]
 
 # Assessment session schemas
 class AssessmentSessionCreate(BaseModel):

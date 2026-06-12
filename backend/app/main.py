@@ -22,7 +22,7 @@ logger = get_logger("main")
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
-    logger.info("Starting lifespan")
+    logger.info("Starting lifespan Updated Lifespan")
     try:
         verify_mongo_connection()
     except Exception as e:

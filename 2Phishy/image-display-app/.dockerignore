@@ -3,5 +3,6 @@ node_modules
 .gitignore
 Dockerfile
 docker-compose*
-.env
+.env*
+!.env.production
 build

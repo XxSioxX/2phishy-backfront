@@ -16,12 +16,15 @@ class GameAPI {
   private token: string | null = null;
   private readonly baseUrl = `${process.env.REACT_APP_API_BASE_URL}/game`;
 
-
   setToken(token: string) {
     this.token = token;
+    console.log('BaseURL:', this.baseUrl);
   }
 
+
+
   private getHeaders() {
+
     return {
       'Content-Type': 'application/json',
       ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
@@ -114,7 +117,7 @@ class GameAPI {
   }) {
     console.log('Sending to /game/assessment/submit:', payload);
 
-    const response = await fetch(`${this.baseUrl}/assessment/submit`, {
+    const response = await fetch(`${this.baseUrl}/assessment/submit/`, {
       method: 'POST',
       mode: 'cors',
       headers: this.getHeaders(),
@@ -143,7 +146,7 @@ class GameAPI {
   }) {
     console.log('Sending to /game/question/submit/single', payload);
 
-    const response = await fetch(`${this.baseUrl}/question/submit/single`, {
+    const response = await fetch(`${this.baseUrl}/question/submit/single/`, {
       method: 'POST',
       mode: 'cors',
       headers: this.getHeaders(),
@@ -165,7 +168,7 @@ class GameAPI {
   }) {
     console.log('Marking topic completed:', payload);
 
-    const response = await fetch(`${this.baseUrl}/progress/complete`, {
+    const response = await fetch(`${this.baseUrl}/progress/complete/`, {
       method: 'POST',
       mode: 'cors',
       headers: this.getHeaders(),
@@ -192,7 +195,7 @@ class GameAPI {
 
     console.log('Sending to /game/generate/qlist:', payload);
 
-    const response = await fetch(`${this.baseUrl}/generate/qlist`, {
+    const response = await fetch(`${this.baseUrl}/generate/qlist/`, {
       method: 'POST',
       mode: 'cors',
       headers: this.getHeaders(),
@@ -217,7 +220,7 @@ class GameAPI {
 
     console.log('Sending to /game/generate/knowledgelist:', payload);
 
-    const response = await fetch(`${this.baseUrl}/generate/knowledgelist`, {
+    const response = await fetch(`${this.baseUrl}/generate/knowledgelist/`, {
       method: 'POST',
       mode: 'cors',
       headers: this.getHeaders(),
@@ -242,7 +245,7 @@ class GameAPI {
 
     console.log('Sending to /game/generate/qlist:', payload);
 
-    const response = await fetch(`${this.baseUrl}/generate/qlist`, {
+    const response = await fetch(`${this.baseUrl}/generate/qlist/`, {
       method: 'POST',
       mode: 'cors',
       headers: this.getHeaders(),
@@ -293,20 +296,31 @@ class GameAPI {
     userid: string;
     topic: string;
     current_zone: number;
+    unlocked_zone: number;
   }) {
+
     console.log('Updating current zone:', payload);
 
-    const response = await fetch(`${this.baseUrl}/progress/zone`, {
-      method: 'POST',
-      mode: 'cors',
-      headers: this.getHeaders(),
-      body: JSON.stringify(payload),
-    });
+    const response = await fetch(
+      `${this.baseUrl}/progress/zone/`,
+      {
+        method: 'POST',
+        mode: 'cors',
+        headers: this.getHeaders(),
+        body: JSON.stringify(payload),
+      }
+    );
 
     if (!response.ok) {
+
       const err = await response.text();
+
       console.error('updateCurrentZone error:', err);
-      throw new Error(`Failed to update current zone: ${err}`);
+
+      throw new Error(
+        `Failed to update current zone: ${err}`
+      );
+
     }
 
     return await response.json();
@@ -334,6 +348,29 @@ class GameAPI {
     return await response.json();
   }
 
+  /*async updateQuestionList(payload: {
+    userid: string;
+    topic: string;
+    question_list: any[];
+  }) {
+
+    console.log('Updating question list:', payload);
+
+    const response = await fetch(`${this.baseUrl}/questionlist/update/`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('updateQuestionList error:', err);
+      throw new Error(`Failed to update question list: ${err}`);
+    }
+
+    return await response.json();
+  } */
 
 
 

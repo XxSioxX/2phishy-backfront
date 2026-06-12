@@ -196,6 +196,36 @@ async def save_assessment_result(
 
     return str(user_doc["_id"])
 
+async def update_question_list(
+    db: AsyncIOMotorDatabase,
+    user_id: UUID,
+    topic: Topics,
+    question_list: list[dict],
+    collection_name: str = "initial_assessments"
+):
+
+    logger.info("Updating permanent question list")
+
+    collection = db[collection_name]
+
+    user_doc = await db_findby_id(db, user_id, collection_name)
+
+    if not user_doc:
+        raise Exception(f"No document found for user '{user_id}'")
+
+    await collection.update_one(
+        {"user_id": str(user_id)},
+        {
+            "$set": {
+                f"assessments.{topic.value}.question_map": question_list,
+                f"assessments.{topic.value}.question_map_updated_at": datetime.utcnow()
+            }
+        }
+    )
+
+    logger.info(f"Updated question list for topic '{topic.value}'")
+
+    return question_list
 
 async def ensure_initial_assessment_doc(
     db: AsyncIOMotorDatabase,
@@ -462,13 +492,35 @@ async def generate_question_list(
             if len(question_map) >= MIN_TOTAL_QUESTIONS:
                 break
 
-
-    # Shuffle the final list to mix questions from different subtopics
     random.shuffle(question_map)
     logger.info(f"Generated a final list of {len(question_map)} questions.")
 
     return question_map
 
+
+async def build_sfb_progression(question_map: list[dict]):
+    logger.info("Building SFB progression structure")
+
+    ZONE_1_MAX = 2
+    ZONE_2_MAX = 4
+
+    updated_questions = []
+    for index, question in enumerate(question_map):
+        zone = 3
+
+        if index < ZONE_1_MAX:
+            zone = 1
+        elif index < ZONE_1_MAX + ZONE_2_MAX:
+            zone = 2
+
+        updated_question = {
+            **question,
+
+            "zone": zone,
+            "zone_order": index + 1,
+        }
+        updated_questions.append(updated_question)
+    return updated_questions
 
 async def save_assessment_question_result(
         db: AsyncIOMotorDatabase,
@@ -648,31 +700,31 @@ async def save_popup_question_result(
     }
 
     if exists:
-        await db[collection_name].update_one(
-            {
-                "user_id": str(user_id),
-                f"progress.{topic_key}.answers.question_id": q_id
-            },
-            {
-                "$set": {
-                    f"progress.{topic_key}.answers.$.answer": q_answer,
-                    f"progress.{topic_key}.answers.$.is_correct": q_is_correct,
-                    f"progress.{topic_key}.answers.$.timestamp": responseItem.timestamp,
-                }
-            }
+        logger.info(
+            f"First answer already recorded for question '{q_id}'. "
+            "Ignoring retry answer."
         )
-    else:
-        await db[collection_name].update_one(
-            {"user_id": str(user_id)},
-            {"$push": {f"progress.{topic_key}.answers": payload_dict}}
-        )
+        return {
+            "saved": False,
+            "reason": "first_answer_already_recorded"
+        }
+
+    await db[collection_name].update_one(
+        {"user_id": str(user_id)},
+        {"$push": {f"progress.{topic_key}.answers": payload_dict}}
+    )
+
+    return {
+        "saved": True,
+        "question_id": q_id
+    }
 
 
 async def filter_unanswered_questions(
-        db: AsyncIOMotorDatabase,
-        user_id: UUID,
-        topic: Topics,
-        question_map: list[dict]
+    db: AsyncIOMotorDatabase,
+    user_id: UUID,
+    topic: Topics,
+    question_map: list[dict]
 ) -> list[dict]:
     progress_doc = await db["progress"].find_one(
         {"user_id": str(user_id)}
@@ -681,22 +733,35 @@ async def filter_unanswered_questions(
     if not progress_doc:
         return question_map
 
+    topic_key = topic.value if hasattr(topic, "value") else topic
+
     topic_progress = (
         progress_doc
         .get("progress", {})
-        .get(topic.value, {})
-        .get("answers", [])
+        .get(topic_key, {})
     )
 
+    # SFB retries are zone-based. All questions in the current and
+    # future zones must remain available regardless of first answers.
+    if topic_key == Topics.SFB_T.value:
+        current_zone = topic_progress.get("current_zone", 1)
+
+        return [
+            question
+            for question in question_map
+            if int(question.get("zone", 1)) >= current_zone
+        ]
+
     answered_ids = {
-        q.get("question_id")
-        for q in topic_progress
-        if "question_id" in q
+        answer.get("question_id")
+        for answer in topic_progress.get("answers", [])
+        if answer.get("question_id")
     }
 
     return [
-        q for q in question_map
-        if q.get("question_id") not in answered_ids
+        question
+        for question in question_map
+        if question.get("question_id") not in answered_ids
     ]
 
 async def mark_level_completed(
@@ -918,3 +983,32 @@ async def compute_overall_score(db, user_id, topic_question_maps):
         return 0
 
     return round((weighted_correct / total_weight) * 100, 2)
+
+async def update_current_zone_service(
+    db: AsyncIOMotorDatabase,
+    userid: str,
+    topic: str,
+    current_zone: int,
+    unlocked_zone: int
+):
+
+    result = await db.progress.update_one(
+        {"user_id": userid},
+        {
+            "$set": {
+                f"progress.{topic}.current_zone":
+                    current_zone,
+
+                f"progress.{topic}.unlocked_zone":
+                    unlocked_zone,
+
+                f"progress.{topic}.updated_at":
+                    datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+
+    return {
+        "updated": result.modified_count
+    }

@@ -1,7 +1,7 @@
 from typing import Dict, Any, List
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, Depends, status, Response, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.modules.game.schemas.gameschemas import (
@@ -11,6 +11,7 @@ from app.modules.game.schemas.gameschemas import (
     GetUserTopic,
     SingleResponseItem,
     TopicCompletionRequest,
+    UpdateQuestionListRequest,
     SocEngineeringSubmit
 )
 from app.modules.game.services.services import (
@@ -19,6 +20,7 @@ from app.modules.game.services.services import (
     save_assessment_result,
     db_findby_id,
     generate_question_list,
+    update_question_list,
     save_popup_question_result,
     save_assessment_question_result,
     ensure_initial_assessment_doc,
@@ -28,7 +30,9 @@ from app.modules.game.services.services import (
     interpret_trust,
     compute_topic_score,
     compute_overall_score,
-    compute_knowledge_score
+    compute_knowledge_score,
+    build_sfb_progression,
+    update_current_zone_service,
 )
 from app.modules.learning_path.services.learn_path_service import DefaultLearningEvaluator
 
@@ -222,33 +226,40 @@ async def mark_intro_seen(
     status_code=status.HTTP_200_OK
 )
 async def update_current_zone(
-    request: dict,  
+    request: dict,
     db: AsyncIOMotorDatabase = Depends(get_mongo_db)
 ):
+
     userid = request.get("userid")
     topic = request.get("topic")
-    zone = request.get("current_zone")
 
-    if userid is None or topic is None or zone is None:
-        raise HTTPException(status_code=400, detail="Missing required fields")
+    current_zone = request.get("current_zone")
+    unlocked_zone = request.get("unlocked_zone")
 
-    result = await db.progress.update_one(
-        {"user_id": userid},
-        {
-            "$set": {
-                f"progress.{topic}.current_zone": zone,
-                f"progress.{topic}.updated_at": datetime.utcnow()
-            }
-        },
-        upsert=True
+    if (
+        userid is None or
+        topic is None or
+        current_zone is None or
+        unlocked_zone is None
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Missing required fields"
+        )
+
+    result = await update_current_zone_service(
+        db=db,
+        userid=userid,
+        topic=topic,
+        current_zone=current_zone,
+        unlocked_zone=unlocked_zone
     )
 
     return StandardResponse(
         success=True,
         message="Current zone updated",
-        data={"updated": result.modified_count}
+        data=result
     )
-
 
 @router.post(
     "/data",
@@ -394,6 +405,13 @@ async def generate_user_question_list(
         logger.info("Creating question list")
         qmap = await generate_question_list(db, user_uuid, request.topic, request.collectionName)
 
+        try:
+           if request.topic == Topics.SFB_T:
+                qmap = await build_sfb_progression(qmap)
+        except Exception as e:
+            logger.error(f"Error in creating question list: {e}")
+
+
         logger.info(f"Successfully created question map: {qmap}, proceeding to updating document")
 
         await save_assessment_question_result(db, user_uuid, qmap, request.topic, request.collectionName)
@@ -414,7 +432,7 @@ async def generate_user_question_list(
             message="Successfully generated unanswered question list",
             data={
                 "questions": unanswered_qmap,
-                "questionsTotal": len(qmap)
+                "questionsTotal": len(unanswered_qmap)
             }
         )
 
@@ -426,6 +444,48 @@ async def generate_user_question_list(
             message="Failed to generate question list",
             data=None
         )
+
+@router.post(
+    "/questionlist/update/",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK
+)
+async def update_user_question_list(
+    request: UpdateQuestionListRequest,
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    response: Response = Response(),
+):
+    logger.info("Updating permanent question list")
+
+    try:
+
+        updated_questions = await update_question_list(
+            db=db,
+            user_id=request.userid,
+            topic=request.topic,
+            question_list=request.question_list,
+            collection_name="initial_assessments"
+        )
+
+        return StandardResponse(
+            success=True,
+            message="Question list updated successfully",
+            data={
+                "questions": updated_questions
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error updating question list: {e}")
+
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        return StandardResponse(
+            success=False,
+            message="Failed to update question list",
+            data=None
+        )
+
 
 @router.post(
     "/submit/se-submit/",
@@ -845,3 +905,4 @@ async def get_topic_performance(
             message=f"Failed to fetch topic performance: {str(e)}",
             data=[]
         )
+
