@@ -10,7 +10,7 @@ export interface LevelConfig {
   intro: {
     title: string
     description: string
-    dialogueId: string
+    dialogueId?: string
   }
 
   next: {

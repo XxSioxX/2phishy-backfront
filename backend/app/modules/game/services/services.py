@@ -522,6 +522,38 @@ async def build_sfb_progression(question_map: list[dict]):
         updated_questions.append(updated_question)
     return updated_questions
 
+
+async def build_ps_progression(question_map: list[dict]):
+    logger.info("Building Password Security progression structure")
+
+    if all(
+        int(question.get("zone", 0)) in {1, 2, 3, 4}
+        for question in question_map
+    ):
+        return question_map
+
+    zone_capacities = (2, 2, 2)
+    updated_questions = []
+
+    for index, question in enumerate(question_map):
+        if index < zone_capacities[0]:
+            zone = 1
+        elif index < sum(zone_capacities[:2]):
+            zone = 2
+        elif index < sum(zone_capacities):
+            zone = 3
+        else:
+            zone = 4
+
+        updated_questions.append({
+            **question,
+            "zone": zone,
+            "zone_order": index + 1,
+        })
+
+    return updated_questions
+
+
 async def save_assessment_question_result(
         db: AsyncIOMotorDatabase,
         user_id: UUID,

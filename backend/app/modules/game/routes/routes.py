@@ -32,6 +32,7 @@ from app.modules.game.services.services import (
     compute_overall_score,
     compute_knowledge_score,
     build_sfb_progression,
+    build_ps_progression,
     update_current_zone_service,
 )
 from app.modules.learning_path.services.learn_path_service import DefaultLearningEvaluator
@@ -408,6 +409,8 @@ async def generate_user_question_list(
         try:
            if request.topic == Topics.SFB_T:
                 qmap = await build_sfb_progression(qmap)
+           elif request.topic == Topics.PS_T:
+                qmap = await build_ps_progression(qmap)
         except Exception as e:
             logger.error(f"Error in creating question list: {e}")
 

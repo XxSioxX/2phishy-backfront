@@ -49,8 +49,8 @@ export const LEVEL_CONFIGS = {
     intro: {
       title: 'Level 2 — Password Security',
       description:
-        'Learn how attackers exploit weak passwords and how to defend against them.\n' +
-        'Open Knowledge Chests and face the Wards to test your understanding.',
+        'Explore each chamber, learn how passwords are attacked, and test a fictional password against its guardian.\n' +
+        'Defeat all four guardians to assemble your knight escort and unlock the next level.',
     },
 
     next: {
@@ -59,9 +59,9 @@ export const LEVEL_CONFIGS = {
     },
 
     inferSubcat: (id: string) => {
-      if (id.startsWith('ps_cup_')) return 'COMMPASS';
-      if (id.startsWith('ps_ps_')) return 'PASSSTREN';
-      if (id.startsWith('ps_mfa_')) return 'MULTIFACT';
+      if (id.startsWith('ps_commpass_')) return 'COMMPASS';
+      if (id.startsWith('ps_passstren_')) return 'PASSSTREN';
+      if (id.startsWith('ps_multifact_')) return 'MULTIFACT';
       return 'UNKNOWN';
     },
   } satisfies LevelConfig,

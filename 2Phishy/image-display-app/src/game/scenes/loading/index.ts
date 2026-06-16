@@ -26,7 +26,7 @@ export class LoadingScene extends Scene {
     // Load the tilemap JSON
     this.load.tilemapTiledJSON('assessmentlevel', 'tilemaps/tilesets/assessment-level.tmj');
     this.load.tilemapTiledJSON('SFBlevel', 'tilemaps/tilesets/SFB-level-1-ver4.tmj');
-    this.load.tilemapTiledJSON('PSlevel', 'tilemaps/tilesets/PS-level-2-ver1.tmj');
+    this.load.tilemapTiledJSON('PSlevel', 'tilemaps/tilesets/PS-level-2-ver2.tmj');
     this.load.tilemapTiledJSON('Mlevel', 'tilemaps/tilesets/M-level-3-ver1.tmj');
     this.load.tilemapTiledJSON('SElevel', 'tilemaps/tilesets/SE-level-4-ver1.tmj');
     this.load.tilemapTiledJSON('IRlevel', 'tilemaps/tilesets/IR-level-5-ver1.tmj');

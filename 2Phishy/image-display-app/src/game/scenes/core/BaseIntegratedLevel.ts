@@ -82,9 +82,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         const hasSeenIntro = topicProgress?.intro_seen === true;
 
         if (!hasSeenIntro) {
-
-          this.startIntroDialogue(this.config.intro.dialogueId, async () => {
-
+          const showIntroAndSave = async () => {
             this.showLevelIntroBanner(
               this.config.intro.title,
               this.config.intro.description
@@ -94,9 +92,16 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
               userid: this.userData.userId,
               topic: this.config.topic
             });
+          };
 
-          });
-
+          if (this.config.intro.dialogueId) {
+            this.startIntroDialogue(
+              this.config.intro.dialogueId,
+              showIntroAndSave
+            );
+          } else {
+            await showIntroAndSave();
+          }
         } else {
 
           this.showLevelIntroBanner(
