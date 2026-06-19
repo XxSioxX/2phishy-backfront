@@ -61,7 +61,7 @@
         .item {
             .listItem {
                 img {
-                    filter: invert(1);
+                    filter: var(--icon-filter);
                 }
             }
         }

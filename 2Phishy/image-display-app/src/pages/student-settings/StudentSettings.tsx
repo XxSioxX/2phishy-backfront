@@ -14,6 +14,10 @@ const StudentSettings: React.FC = () => {
     navigate("/login");
   };
 
+  const handlePrivacyPolicy = () => {
+    navigate("/privacy-policy");
+  };
+
   return (
     <div className="student-settings">
       <div className="student-settings-container">
@@ -29,7 +33,7 @@ const StudentSettings: React.FC = () => {
             </div>
             <div className="form-group">
               <label>Privacy</label>
-              <button className="settings-button">Privacy Policy</button>
+              <button className="settings-button" onClick={handlePrivacyPolicy}>Privacy Policy</button>
             </div>
             <div className="form-group">
               <label>Account</label>

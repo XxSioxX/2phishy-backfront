@@ -54,7 +54,7 @@
     .pieChartBox {
         .title {
             img {
-                filter: none;
+                filter: var(--icon-filter);
             }
         }
     }

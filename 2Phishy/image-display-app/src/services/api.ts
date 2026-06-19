@@ -245,6 +245,18 @@ export const api = {
         return data.data || [];
     },
 
+    async getUserPerformanceCategories(): Promise<any[]> {
+        const response = await fetch(`${API_BASE_URL}/game/score/users/performance-categories/`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch user performance categories');
+        }
+        const data = await response.json();
+        return data.data || [];
+    },
+
     
 
     async getChartData(): Promise<ChartBoxData> {

@@ -196,27 +196,133 @@
 
 .notification .custom-tooltip {
   position: absolute;
-  top: 30px;
+  top: 46px;
   right: 0;
-  background: $dark-bg;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)), $dark-bg;
   color: $main-color;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 16px;
+  border-radius: 18px;
   font-size: 13px;
   z-index: 10;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.28);
   border: 1px solid $dark-color;
-  min-width: 200px;
-  max-width: 300px;
-  max-height: 400px;
-  overflow-y: auto;
+  width: clamp(280px, 40vw, 420px);
+  max-width: calc(100vw - 24px);
+  max-height: min(72vh, 540px);
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  @include mobile {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    right: -6px;
+  }
 
   .tooltip-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
     font-weight: 600;
     margin-bottom: 8px;
     padding-bottom: 6px;
     border-bottom: 1px solid $dark-color;
-    color: #4a90e2;
+
+    .panel-eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: $soft-color;
+      margin-bottom: 4px;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      color: $main-color;
+    }
+
+    .panel-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: $soft-color;
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+
+      .live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #4caf50;
+        box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.18);
+      }
+    }
+  }
+
+  .panel-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 2px 0 0;
+
+    .summary-chip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+
+      .summary-label {
+        color: $soft-color;
+        font-size: 12px;
+      }
+
+      .summary-value {
+        color: $main-color;
+        font-weight: 700;
+      }
+    }
+  }
+
+  .notification-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 340px;
+    padding-right: 2px;
+    margin-right: -2px;
   }
 
   .tooltip-section {
@@ -262,16 +368,124 @@
       }
     }
 
+    .notification-card,
     .report-status-item {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      gap: 6px;
       font-size: 12px;
-      padding: 6px;
+      padding: 12px;
       color: $soft-color;
-      background: $soft-bg;
-      border-radius: 4px;
-      margin-bottom: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      margin-bottom: 0;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+
+      &:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      &.unread {
+        box-shadow: inset 0 0 0 1px rgba(74, 144, 226, 0.2);
+      }
+
+      &.tone-danger {
+        border-left: 3px solid #ef5350;
+      }
+
+      &.tone-warning {
+        border-left: 3px solid #ffb74d;
+      }
+
+      &.tone-info {
+        border-left: 3px solid #4a90e2;
+      }
+
+      &.tone-success {
+        border-left: 3px solid #52c41a;
+      }
+
+      .card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .card-badge,
+      .unread-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .card-badge {
+        background: rgba(255, 255, 255, 0.08);
+        color: $main-color;
+      }
+
+      .unread-pill {
+        background: rgba(74, 144, 226, 0.16);
+        color: #7bb2ff;
+      }
+
+      .card-title {
+        color: $main-color;
+        font-weight: 700;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+        line-height: 1.35;
+      }
+
+      .card-message {
+        color: $soft-color;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+      }
+
+      .card-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: $soft-color;
+        font-size: 11px;
+        flex-wrap: wrap;
+        line-height: 1.35;
+      }
+
+      .card-action {
+        display: inline-flex;
+        align-self: flex-start;
+        align-items: center;
+        gap: 6px;
+        color: #7bb2ff;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+
+        &::after {
+          content: '→';
+          font-size: 12px;
+          line-height: 1;
+        }
+      }
 
       .status-badge {
         display: flex;
@@ -301,19 +515,75 @@
       }
     }
 
-    .announcement-item {
-      background: $soft-bg;
-      padding: 8px;
-      border-radius: 4px;
-      margin-bottom: 6px;
-      border-left: 3px solid #faad14;
-
-      .announcement-badge {
-        font-weight: 600;
-        color: #faad14;
-        font-size: 12px;
-      }
+    .empty-notifications,
+    .panel-footer {
+      padding: 12px 4px 4px;
+      color: $soft-color;
+      font-size: 12px;
+      overflow-wrap: anywhere;
     }
+
+    .panel-footer {
+      border-top: 1px solid $dark-color;
+      margin-top: 14px;
+      padding-top: 12px;
+      text-align: center;
+    }
+
+    .empty-notifications {
+      text-align: center;
+      color: $main-color;
+      opacity: 0.9;
+      padding: 18px 8px 8px;
+    }
+
+    .notification-card .card-meta,
+    .notification-card .card-message,
+    .notification-card .card-title {
+      word-break: break-word;
+    }
+  }
+}
+
+.notification-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+
+  &:hover,
+  &.active {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+  }
+
+  .icon {
+    display: block;
+  }
+
+  span {
+    background: linear-gradient(180deg, #ff6b6b, #e11d48);
+    color: white;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translate(35%, -35%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
   }
 }
 
@@ -322,13 +592,13 @@
     .icons {
       .icon,
       .settings-link img {
-        filter: invert(1);
+        filter: var(--icon-filter);
       }
     }
 
     .user-mobile img,
     .icons .user img {
-      filter: invert(1);
+      filter: var(--icon-filter);
     }
   }
 }

@@ -1,23 +1,122 @@
 import "./navbar.scss";
-import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import { api } from '../../services/api';
 import { useAuth } from "../../contexts/AuthContext";
 import { useMobileMenu } from "../../contexts/MobileMenuContext";
-import { ReportWithResolved, Announcement } from "../../types";
+import { ReportWithResolved } from "../../types";
 import { generateAvatarUrl } from '../../utils/avatarUtils';
-import { parseBackendDate } from '../../utils/dateUtils';
+import { formatDatePH, parseBackendDate } from '../../utils/dateUtils';
+
+type NotificationKind = 'report' | 'announcement';
+type NotificationTone = 'danger' | 'warning' | 'info' | 'success';
+
+interface NotificationItem {
+    id: string;
+    kind: NotificationKind;
+    title: string;
+    message: string;
+    meta: string;
+    timestamp: string | null;
+    tone: NotificationTone;
+    readKey: string;
+}
 
 const Navbar = () => {
     const [showTooltip, setShowTooltip] = useState(false);
     const [notificationCount, setNotificationCount] = useState(0);
     const [notificationDetails, setNotificationDetails] = useState<{
-        reports: ReportWithResolved[];
-        announcements: Announcement[];
-        studentReportStatus?: ReportWithResolved[];
-    }>({ reports: [], announcements: [] });
+        reportItems: NotificationItem[];
+        announcementItems: NotificationItem[];
+        items: NotificationItem[];
+    }>({ reportItems: [], announcementItems: [], items: [] });
     const { user, isAuthenticated } = useAuth();
     const { toggleMobileMenu } = useMobileMenu();
+    const navigate = useNavigate();
+    const notificationRef = useRef<HTMLDivElement | null>(null);
+
+    const getNotificationStorageKey = () => {
+        const userIdentifier = user?.userid || user?.id?.toString() || user?.username || 'guest';
+        const userRole = user?.role || 'guest';
+        return `viewedNotifications:${userIdentifier}:${userRole}`;
+    };
+
+    const readViewedNotifications = () => {
+        try {
+            return JSON.parse(localStorage.getItem(getNotificationStorageKey()) || '{}');
+        } catch {
+            return {};
+        }
+    };
+
+    const getNotificationTimestamp = (item: Record<string, any>) => {
+        const parsedDate = parseBackendDate(
+            item.updatedAt || item.resolvedAt || item.createdAt || item.date || null
+        );
+        return parsedDate ? parsedDate.toISOString() : (item.updatedAt || item.resolvedAt || item.createdAt || item.date || null);
+    };
+
+    const formatNotificationDate = (timestamp: string | null) => {
+        if (!timestamp) return 'Recently';
+        const parsed = parseBackendDate(timestamp);
+        return parsed ? formatDatePH(parsed.toISOString(), true) : timestamp;
+    };
+
+    const createReportItem = (
+        report: ReportWithResolved & Record<string, any>,
+        role: 'admin' | 'student'
+    ): NotificationItem => {
+        const timestamp = getNotificationTimestamp(report);
+        const baseId = String(report.id || report._id || report.report_id || 'report');
+        const readKey = `report_${baseId}_${report.resolved ? 'resolved' : 'pending'}_${timestamp || 'no-time'}`;
+        const authorName = report.username || report.studentId || report.user_id || 'Student';
+        const cleanMessage = report.message || 'Report update available';
+        const shortMessage = cleanMessage.length > 72 ? `${cleanMessage.slice(0, 72)}...` : cleanMessage;
+
+        if (role === 'admin') {
+            return {
+                id: baseId,
+                kind: 'report',
+                title: report.resolved ? 'Resolved report' : 'New report received',
+                message: shortMessage,
+                meta: `${authorName} • ${report.status || 'No priority'}`,
+                timestamp,
+                tone: report.resolved ? 'success' : 'danger',
+                readKey,
+            };
+        }
+
+        return {
+            id: baseId,
+            kind: 'report',
+            title: report.resolved ? 'Your report was resolved' : 'Your report is being reviewed',
+            message: shortMessage,
+            meta: `Updated ${formatNotificationDate(timestamp)}`,
+            timestamp,
+            tone: report.resolved ? 'success' : 'warning',
+            readKey,
+        };
+    };
+
+    const createAnnouncementItem = (announcement: Record<string, any>, index: number): NotificationItem => {
+        const announcementId = String(announcement._id || announcement.id || announcement.slug || index);
+        const timestamp = getNotificationTimestamp(announcement);
+        const readKey = `announcement_${announcementId}_${timestamp || 'no-time'}`;
+        const title = announcement.title || announcement.subject || 'New announcement';
+        const message = announcement.content || announcement.message || 'A new announcement is available.';
+        const shortMessage = String(message).length > 84 ? `${String(message).slice(0, 84)}...` : String(message);
+
+        return {
+            id: announcementId,
+            kind: 'announcement',
+            title,
+            message: shortMessage,
+            meta: `Published ${formatNotificationDate(timestamp)}`,
+            timestamp,
+            tone: 'info',
+            readKey,
+        };
+    };
 
     const isCurrentUserOnline = (): boolean => {
         if (!isAuthenticated || !user) return false;
@@ -29,12 +128,13 @@ const Navbar = () => {
     };
 
     // Calculate notification count from backend (with localStorage fallback)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         const calculateNotifications = async () => {
             try {
                 let newNotificationsCount = 0;
-                let studentReports: ReportWithResolved[] = [];
-                let studentReportStatus: ReportWithResolved[] = [];
+                let reportItems: NotificationItem[] = [];
+                let announcementItems: NotificationItem[] = [];
 
                 // Try fetching reports from backend first
                 let allReports: any[] = [];
@@ -64,48 +164,65 @@ const Navbar = () => {
                     }
                 }
 
+                const currentUserId = user?.userid || user?.id?.toString() || '';
+                const currentUsername = user?.username || '';
+                const viewedNotifications = readViewedNotifications();
+
                 if (user && (user.role === 'admin' || user.role === 'super-admin')) {
-                    studentReports = reportsWithStatus.filter((r: ReportWithResolved) => !r.resolved);
-
-                    const viewedNotificationsData = localStorage.getItem('viewedNotifications') || '{}';
-                    const viewedNotifications = JSON.parse(viewedNotificationsData);
-                    newNotificationsCount = studentReports.filter((r: ReportWithResolved) => !viewedNotifications[`report_${r.id}`]).length;
+                    reportItems = reportsWithStatus
+                        .filter((r: ReportWithResolved) => !r.resolved)
+                        .sort((a: ReportWithResolved, b: ReportWithResolved) => {
+                            const aTime = new Date(getNotificationTimestamp(a as Record<string, any>) || 0).getTime();
+                            const bTime = new Date(getNotificationTimestamp(b as Record<string, any>) || 0).getTime();
+                            return bTime - aTime;
+                        })
+                        .map((report: ReportWithResolved) => createReportItem(report as ReportWithResolved & Record<string, any>, 'admin'));
                 } else if (user && user.role === 'student') {
-                    studentReportStatus = reportsWithStatus.filter((report: ReportWithResolved) => report.username === user.username);
-
-                    const viewedNotificationsData = localStorage.getItem('viewedNotifications') || '{}';
-                    const viewedNotifications = JSON.parse(viewedNotificationsData);
-                    newNotificationsCount = studentReportStatus.filter((r: ReportWithResolved) => r.resolved && !viewedNotifications[`report_${r.id}`]).length;
+                    reportItems = reportsWithStatus
+                        .filter((report: ReportWithResolved & Record<string, any>) => {
+                            const reportUserId = report.studentId || report.user_id || report.userId;
+                            return (
+                                (reportUserId && String(reportUserId) === currentUserId) ||
+                                (currentUsername && report.username === currentUsername)
+                            );
+                        })
+                        .sort((a: ReportWithResolved, b: ReportWithResolved) => {
+                            const aTime = new Date(getNotificationTimestamp(a as Record<string, any>) || 0).getTime();
+                            const bTime = new Date(getNotificationTimestamp(b as Record<string, any>) || 0).getTime();
+                            return bTime - aTime;
+                        })
+                        .map((report: ReportWithResolved) => createReportItem(report as ReportWithResolved & Record<string, any>, 'student'));
                 }
 
                 // Announcements: try backend then fallback
-                let publishedAnnouncements: Announcement[] = [];
+                let publishedAnnouncements: any[] = [];
                 try {
                     const backendAnnouncements = await api.getAnnouncements();
                     publishedAnnouncements = Array.isArray(backendAnnouncements)
-                        ? backendAnnouncements.filter((a: Announcement) => a.isPublished && !a.isScheduled)
+                        ? backendAnnouncements.filter((a: any) => a.isPublished && !a.isScheduled)
                         : [];
                 } catch (e) {
                     const storedAnnouncements = localStorage.getItem('adminAnnouncements');
                     if (storedAnnouncements) {
                         const adminAnnouncements = JSON.parse(storedAnnouncements);
-                        publishedAnnouncements = adminAnnouncements.filter((announcement: Announcement) =>
+                        publishedAnnouncements = adminAnnouncements.filter((announcement: any) =>
                             announcement.isPublished && !announcement.isScheduled
                         );
                     }
                 }
 
-                // Count NEW announcements (not viewed yet)
-                const viewedNotificationsData = localStorage.getItem('viewedNotifications') || '{}';
-                const viewedNotifications = JSON.parse(viewedNotificationsData);
-                const newAnnouncementsCount = publishedAnnouncements.filter((_, index: number) => !viewedNotifications[`announcement_${index}`]).length;
-                newNotificationsCount += newAnnouncementsCount;
+                announcementItems = publishedAnnouncements.map((announcement: any, index: number) =>
+                    createAnnouncementItem(announcement, index)
+                );
+
+                const items = [...reportItems, ...announcementItems];
+                newNotificationsCount = items.filter((item) => !viewedNotifications[item.readKey]).length;
 
                 setNotificationCount(newNotificationsCount);
                 setNotificationDetails({
-                    reports: studentReports,
-                    announcements: publishedAnnouncements,
-                    studentReportStatus: studentReportStatus
+                    reportItems,
+                    announcementItems,
+                    items
                 });
             } catch (e) {
                 console.error('Failed to calculate notifications:', e);
@@ -123,8 +240,28 @@ const Navbar = () => {
         };
 
         window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+        const refreshInterval = window.setInterval(() => {
+            if (isAuthenticated && user) {
+                calculateNotifications();
+            }
+        }, 30000);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.clearInterval(refreshInterval);
+        };
     }, [isAuthenticated, user]);
+
+    useEffect(() => {
+        const handleOutsideClick = (event: MouseEvent) => {
+            if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+                setShowTooltip(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleOutsideClick);
+        return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }, []);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -141,31 +278,39 @@ const Navbar = () => {
     };
 
     const handleNotificationClick = () => {
+        const storageKey = getNotificationStorageKey();
+        const viewedNotifications = readViewedNotifications();
+
         // Mark all notifications as viewed
-        const viewedNotifications = JSON.parse(localStorage.getItem('viewedNotifications') || '{}');
-        
-        // Mark reports as viewed
-        notificationDetails.reports.forEach((report: ReportWithResolved) => {
-            viewedNotifications[`report_${report.id}`] = true;
+        notificationDetails.items.forEach((item: NotificationItem) => {
+            viewedNotifications[item.readKey] = true;
         });
         
-        // Mark student reports as viewed
-        notificationDetails.studentReportStatus?.forEach((report: ReportWithResolved) => {
-            if (report.resolved) {
-                viewedNotifications[`report_${report.id}`] = true;
-            }
-        });
-        
-        // Mark announcements as viewed
-        notificationDetails.announcements.forEach((_, index: number) => {
-            viewedNotifications[`announcement_${index}`] = true;
-        });
-        
-        localStorage.setItem('viewedNotifications', JSON.stringify(viewedNotifications));
+        localStorage.setItem(storageKey, JSON.stringify(viewedNotifications));
         
         // Update badge count
         setNotificationCount(0);
+        setShowTooltip((prev) => !prev);
     };
+
+    const handleNotificationItemClick = (item: NotificationItem) => {
+        const storageKey = getNotificationStorageKey();
+        const viewedNotifications = readViewedNotifications();
+        viewedNotifications[item.readKey] = true;
+        localStorage.setItem(storageKey, JSON.stringify(viewedNotifications));
+
+        setNotificationCount((prev) => Math.max(0, prev - 1));
+        setShowTooltip(false);
+
+        if (item.kind === 'report') {
+            navigate(user?.role === 'student' ? '/student-report' : '/report');
+            return;
+        }
+
+        navigate(user?.role === 'student' ? '/student-announcement' : '/announcement');
+    };
+
+    const viewedNotifications = readViewedNotifications();
 
 
 
@@ -199,71 +344,99 @@ const Navbar = () => {
                 <img 
                     src="/expand.svg" 
                     className="icon" 
+                    alt="Toggle fullscreen"
                     onClick={toggleFullscreen}
                     style={{ cursor: 'pointer' }}
                     title="Toggle Fullscreen (F11)"
                 />
                 <div
+                    ref={notificationRef}
                     className="notification"
-                    onMouseEnter={() => setShowTooltip(true)}
-                    onMouseLeave={() => setShowTooltip(false)}
-                    onClick={handleNotificationClick}
-                    style={{ position: "relative", cursor: "pointer" }}
+                    style={{ position: "relative" }}
                 >
-                    <img src="/notifications.svg" className="icon" />
-                    {notificationCount > 0 && (
-                        <span>{notificationCount}</span>
-                    )}
+                    <button
+                        type="button"
+                        className={`notification-trigger ${showTooltip ? 'active' : ''}`}
+                        onClick={handleNotificationClick}
+                        aria-label="Notifications"
+                        aria-expanded={showTooltip}
+                    >
+                        <img src="/notifications.svg" className="icon" alt="Notifications" />
+                        {notificationCount > 0 && (
+                            <span>{notificationCount}</span>
+                        )}
+                    </button>
                     {showTooltip && (
-                        <div className="custom-tooltip">
-                            {notificationCount > 0 ? (
+                        <div className="custom-tooltip notification-panel">
+                            <div className="tooltip-header">
                                 <div>
-                                    <div className="tooltip-header">
-                                        {notificationCount} New Notification{notificationCount !== 1 ? 's' : ''}
+                                    <div className="panel-eyebrow">Live updates</div>
+                                    <div className="panel-title">
+                                        {notificationCount > 0
+                                            ? `${notificationCount} unread notification${notificationCount !== 1 ? 's' : ''}`
+                                            : notificationDetails.items.length > 0
+                                                ? 'All notifications are read'
+                                                : 'No notifications yet'}
                                     </div>
-                                    {/* Admin/Super-admin see reports */}
-                                    {user && (user.role === 'admin' || user.role === 'super-admin') && notificationDetails.reports.length > 0 && (
-                                        <div className="tooltip-section">
-                                            <div className="tooltip-section-title">📋 Reports ({notificationDetails.reports.length})</div>
-                                            {notificationDetails.reports.map((report: ReportWithResolved) => (
-                                                <div key={report.id} className="report-item">
-                                                    <div className="report-type">{report.type || 'Report'}</div>
-                                                    <div className="report-message">{report.message.substring(0, 40)}...</div>
-                                                    <div className="report-meta">From: {report.username} | {report.status}</div>
-                                                </div>
-                                            ))}
+                                </div>
+                                <div className="panel-status">
+                                    <span className="live-dot" />
+                                    Dashboard feed
+                                </div>
+                            </div>
+
+                            <div className="panel-summary">
+                                <div className="summary-chip">
+                                    <span className="summary-label">Reports</span>
+                                    <span className="summary-value">{notificationDetails.reportItems.length}</span>
+                                </div>
+                                <div className="summary-chip">
+                                    <span className="summary-label">Announcements</span>
+                                    <span className="summary-value">{notificationDetails.announcementItems.length}</span>
+                                </div>
+                            </div>
+
+                            {notificationDetails.items.length > 0 ? (
+                                <div className="notification-feed">
+                                    {notificationDetails.items.map((item) => {
+                                        return (
+                                        <div
+                                            key={item.readKey}
+                                            className={`notification-card tone-${item.tone} ${!viewedNotifications[item.readKey] ? 'unread' : 'read'}`}
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() => handleNotificationItemClick(item)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter' || event.key === ' ') {
+                                                    event.preventDefault();
+                                                    handleNotificationItemClick(item);
+                                                }
+                                            }}
+                                        >
+                                            <div className="card-top">
+                                                <div className="card-badge">{item.kind === 'report' ? 'Report' : 'Announcement'}</div>
+                                                {!viewedNotifications[item.readKey] && <span className="unread-pill">New</span>}
+                                            </div>
+                                            <div className="card-title">{item.title}</div>
+                                            <div className="card-message">{item.message}</div>
+                                            <div className="card-meta">
+                                                <span>{item.meta}</span>
+                                                <span>{formatNotificationDate(item.timestamp)}</span>
+                                            </div>
+                                            <div className="card-action">Open details</div>
                                         </div>
-                                    )}
-                                    {/* Students see their own report status */}
-                                    {user && user.role === 'student' && notificationDetails.studentReportStatus && notificationDetails.studentReportStatus.length > 0 && (
-                                        <div className="tooltip-section">
-                                            <div className="tooltip-section-title">📋 Your Reports</div>
-                                            {notificationDetails.studentReportStatus.map((report: ReportWithResolved) => (
-                                                <div key={report.id} className="report-status-item">
-                                                    <div className="status-badge">
-                                                        <span className="status-icon">{report.resolved ? '✓' : '⏳'}</span>
-                                                        <span className={`status-text ${report.resolved ? 'resolved' : 'pending'}`}>
-                                                            {report.resolved ? 'Resolved' : 'Pending'}
-                                                        </span>
-                                                    </div>
-                                                    <span className="report-text">{report.message.substring(0, 30)}...</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {notificationDetails.announcements.length > 0 && (
-                                        <div className="tooltip-section">
-                                            <div className="tooltip-section-title">📢 Announcements ({notificationDetails.announcements.length})</div>
-                                            {notificationDetails.announcements.map((_, index: number) => (
-                                                <div key={`announcement_${index}`} className="announcement-item">
-                                                    <div className="announcement-badge">New Announcement #{index + 1}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                        );
+                                    })}
                                 </div>
                             ) : (
-                                'No new notifications'
+                                <div className="empty-notifications">
+                                    Everything is up to date.
+                                </div>
+                            )}
+                            {notificationDetails.items.length > 0 && (
+                                <div className="panel-footer">
+                                    <span>Auto-refreshes every 30 seconds.</span>
+                                </div>
                             )}
                         </div>
                     )}

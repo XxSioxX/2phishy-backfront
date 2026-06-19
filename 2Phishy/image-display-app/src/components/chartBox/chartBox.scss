@@ -50,7 +50,7 @@
 [data-theme="light"] {
     .chartBox {
         .userIcon {
-            filter: none;
+            filter: var(--icon-filter);
         }
     }
 }

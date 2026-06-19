@@ -770,6 +770,106 @@ async def get_topic_performance(
 
 
 @router.get(
+    "/score/users/performance-categories/",
+    response_model=StandardResponse[List[Dict[str, Any]]],
+    status_code=status.HTTP_200_OK
+)
+async def get_user_performance_categories(
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    response: Response = Response(),
+):
+    """Get overall student performance buckets for the admin dashboard."""
+    logger.info("Fetching user performance categories for admin dashboard...")
+
+    try:
+        progress_docs = await db["progress"].find({}).to_list(None)
+
+        category_counts = {
+            "Excellent": 0,
+            "Good": 0,
+            "Needs Improvement": 0,
+        }
+        completed_users = 0
+
+        for doc in progress_docs:
+            progress_data = doc.get("progress", {})
+
+            if not progress_data:
+                continue
+
+            total_correct = 0
+            total_questions = 0
+            completed_all_levels = True
+
+            for topic in Topics:
+                topic_data = progress_data.get(topic.value, {})
+
+                if not isinstance(topic_data, dict) or not topic_data.get("level_completed", False):
+                    completed_all_levels = False
+                    break
+
+                answers = topic_data.get("answers", [])
+                if not isinstance(answers, list) or len(answers) == 0:
+                    completed_all_levels = False
+                    break
+
+                for answer_data in answers:
+                    if not isinstance(answer_data, dict):
+                        continue
+
+                    total_questions += 1
+                    if answer_data.get("is_correct", False):
+                        total_correct += 1
+
+            if not completed_all_levels or total_questions == 0:
+                continue
+
+            completed_users += 1
+            score_percentage = (total_correct / total_questions) * 100
+
+            if score_percentage >= 80:
+                category_counts["Excellent"] += 1
+            elif score_percentage >= 60:
+                category_counts["Good"] += 1
+            else:
+                category_counts["Needs Improvement"] += 1
+
+        if completed_users == 0:
+            category_percentages = {
+                "Excellent": 0,
+                "Good": 0,
+                "Needs Improvement": 0,
+            }
+        else:
+            category_percentages = {
+                name: round((count / completed_users) * 100, 2)
+                for name, count in category_counts.items()
+            }
+
+        performance_categories = [
+            {"name": "Excellent (80-100%)", "value": category_percentages["Excellent"], "color": "#4CAF50"},
+            {"name": "Good (60-79%)", "value": category_percentages["Good"], "color": "#FFB74D"},
+            {"name": "Needs Improvement", "value": category_percentages["Needs Improvement"], "color": "#E57373"},
+        ]
+
+        logger.info(f"Successfully calculated performance categories for {completed_users} completed users")
+        return StandardResponse(
+            success=True,
+            message="User performance categories retrieved",
+            data=performance_categories,
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching user performance categories: {e}", exc_info=True)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message=f"Failed to fetch user performance categories: {str(e)}",
+            data=[]
+        )
+
+
+@router.get(
     "/admin/quiz-insights",
     response_model=StandardResponse[List[Dict[str, Any]]],
     status_code=status.HTTP_200_OK

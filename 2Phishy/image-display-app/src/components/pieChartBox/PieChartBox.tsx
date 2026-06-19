@@ -1,25 +1,40 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import "./pieChartBox.scss";
 
-const data = [
-    { name: 'Mobile', value: 400, color: "#0088FE" },
-    { name: 'Desktop', value: 300, color: "#00C49F" },
-    { name: 'Laptop', value: 300, color: "#FFBB28" },
-    { name: 'Tablet', value: 200, color: "#FF8042" },
-  ];
+interface PieChartBoxItem {
+    name: string;
+    value: number;
+    color: string;
+}
 
-const PieChartBox = () => {
+interface PieChartBoxProps {
+    title: string;
+    icon: string;
+    data: PieChartBoxItem[];
+}
+
+const defaultData: PieChartBoxItem[] = [
+    { name: "Excellent", value: 40, color: "#4CAF50" },
+    { name: "Good", value: 35, color: "#FFB74D" },
+    { name: "Needs Improvement", value: 25, color: "#E57373" },
+];
+
+const PieChartBox: React.FC<PieChartBoxProps> = ({
+    title,
+    icon,
+    data = defaultData,
+}) => {
     return (
         <div className="pieChartBox">
              <div className="title">
-             <img src="/laptop.svg" alt="" />
-            <h1>Devices Used</h1>
+             <img src={icon} alt="" />
+            <h1>{title}</h1>
             </div>
             <div className="chart">
                 <ResponsiveContainer width="99%" height={300}>
                     <PieChart>
                         <Tooltip
-                            contentStyle={{background:"white", borderRadius:"5px"}} />
+                            contentStyle={{background:"var(--soft-bg)", borderRadius:"5px", border: "1px solid var(--dark-color)"}} />
                         <Pie
                         data={data}
                         innerRadius={"70%"}
