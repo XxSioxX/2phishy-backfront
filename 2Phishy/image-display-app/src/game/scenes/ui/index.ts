@@ -4,6 +4,8 @@ export class UIScene extends Phaser.Scene {
   private player!: Player;
   private questionText!: Phaser.GameObjects.Text;
   private totalQuestions = 0;
+  private healthContainer?: Phaser.GameObjects.Container;
+  private healthIcons: Phaser.GameObjects.Sprite[] = [];
 
 
   constructor() {
@@ -21,6 +23,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     this.registerQuestionEvents();
+    this.registerHealthEvents();
     this.input.addPointer(2);
 
     this.cameras.main.setScroll(0, 0);
@@ -48,6 +51,33 @@ export class UIScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off('questions:init', initHandler);
       this.game.events.off('questions:update', updateHandler);
+    });
+  }
+
+  private registerHealthEvents() {
+    const initHandler = (current: number, max: number) => {
+      this.createHealthUI(max);
+      this.updateHealthUI(current);
+    };
+
+    const updateHandler = (current: number) => {
+      this.updateHealthUI(current);
+    };
+
+    const hideHandler = () => {
+      this.healthContainer?.destroy(true);
+      this.healthContainer = undefined;
+      this.healthIcons = [];
+    };
+
+    this.game.events.on('health:init', initHandler);
+    this.game.events.on('health:update', updateHandler);
+    this.game.events.on('health:hide', hideHandler);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off('health:init', initHandler);
+      this.game.events.off('health:update', updateHandler);
+      this.game.events.off('health:hide', hideHandler);
     });
   }
 
@@ -194,6 +224,58 @@ export class UIScene extends Phaser.Scene {
     this.questionText.height + paddingY
   );
 }
+
+  private createHealthUI(maxHealth: number) {
+    const heartCount = Math.ceil(maxHealth / 2);
+
+    this.healthContainer?.destroy(true);
+
+    this.healthContainer = this.add.container(172, 116)
+      .setScrollFactor(0)
+      .setDepth(10002);
+
+    const bg = this.add.rectangle(
+      0,
+      0,
+      148,
+      42,
+      0x111111,
+      0.9
+    )
+      .setStrokeStyle(3, 0xffffff)
+      .setOrigin(0.5);
+
+    const label = this.add.text(-48, 0, 'HP', {
+      fontSize: '18px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    this.healthIcons = Array.from({ length: heartCount }).map((_, index) => {
+      return this.add.sprite(-8 + index * 28, 0, 'tiles_spr', 530)
+        .setScale(1.4);
+    });
+
+    this.healthContainer.add([bg, label, ...this.healthIcons]);
+  }
+
+  private updateHealthUI(currentHealth: number) {
+    this.healthIcons.forEach((heart, index) => {
+      const heartHealth = currentHealth - index * 2;
+
+      if (heartHealth >= 2) {
+        heart.setFrame(530);
+        return;
+      }
+
+      if (heartHealth === 1) {
+        heart.setFrame(531);
+        return;
+      }
+
+      heart.setFrame(532);
+    });
+  }
 
 
 
