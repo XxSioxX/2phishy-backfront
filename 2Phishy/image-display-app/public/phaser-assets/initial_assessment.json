@@ -273,7 +273,7 @@
     {
       "assessment_id": "incidentresponse-initassess-001",
       "question_id": "ir_steps_001",
-      "subcat": "IRSteps",
+      "subcat": "IRSTEPS",
       "question": "What is the first step when a cybersecurity incident is detected?",
       "choices": [
         "Back up all data",
@@ -286,7 +286,7 @@
     {
       "assessment_id": "incidentresponse-initassess-002",
       "question_id": "ir_steps_002",
-      "subcat": "IRSteps",
+      "subcat": "IRSTEPS",
       "question": "Which of the following is considered a good preparation step before a cyber incident?",
       "choices": [
         "Ignore suspicious emails",
@@ -299,7 +299,7 @@
     {
       "assessment_id": "incidentresponse-initassess-003",
       "question_id": "ir_steps_003",
-      "subcat": "IRSteps",
+      "subcat": "IRSTEPS",
       "question": "What is the purpose of isolating the affected system during an incident?",
       "choices": [
         "To speed up the internet",
@@ -312,7 +312,7 @@
     {
       "assessment_id": "incidentresponse-initassess-004",
       "question_id": "ir_steps_004",
-      "subcat": "IRSteps",
+      "subcat": "IRSTEPS",
       "question": "What should a user do after a cyber incident has been resolved?",
       "choices": [
         "Reinstall all applications",
@@ -325,7 +325,7 @@
     {
       "assessment_id": "incidentresponse-initassess-005",
       "question_id": "ir_steps_005",
-      "subcat": "IRSteps",
+      "subcat": "IRSTEPS",
       "question": "Why is changing passwords important after an incident?",
       "choices": [
         "To make the system faster",
@@ -338,7 +338,7 @@
     {
       "assessment_id": "incidentresponse-initassess-006",
       "question_id": "ir_response_001",
-      "subcat": "IRResponse",
+      "subcat": "IRRESPONSE",
       "question": "Why should even regular users have a personal incident response plan?",
       "choices": [
         "To create more passwords",
