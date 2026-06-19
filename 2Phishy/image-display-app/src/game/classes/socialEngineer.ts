@@ -10,7 +10,7 @@ export class SocialEngineer extends Enemy {
   private spawnY: number;
   private detectionRadius = 200;
   private engageRadius = 32;
-  private state: 'idle' | 'chasing' | 'returning' | 'talking' = 'idle';
+  private behaviorState: 'idle' | 'chasing' | 'returning' | 'talking' = 'idle';
 
 
   constructor(
@@ -32,8 +32,11 @@ export class SocialEngineer extends Enemy {
     this.getBody().setCollideWorldBounds(true);
   }
 
-  preUpdate(time: number, delta: number): void {
-    super.preUpdate(time, delta);
+  preUpdate(_time: number, _delta: number): void {
+    if (!this.target?.active) {
+      this.setVelocity(0);
+      return;
+    }
 
     const distToPlayer = Phaser.Math.Distance.Between(
       this.x,
@@ -51,14 +54,14 @@ export class SocialEngineer extends Enemy {
 
     const speed = 80;
 
-    switch (this.state) {
+    switch (this.behaviorState) {
 
       case 'idle':
 
         this.setVelocity(0);
 
         if (distToPlayer < this.detectionRadius) {
-          this.state = 'chasing';
+          this.behaviorState = 'chasing';
         }
 
         break;
@@ -66,13 +69,13 @@ export class SocialEngineer extends Enemy {
       case 'chasing':
 
         if (distToPlayer > this.detectionRadius) {
-          this.state = 'returning';
+          this.behaviorState = 'returning';
           break;
         }
 
         if (distToPlayer <= this.engageRadius) {
 
-          this.state = 'talking';
+          this.behaviorState = 'talking';
           this.setVelocity(0);
 
           this.scene.events.emit('SE_DIALOGUE_START', {
@@ -108,7 +111,7 @@ export class SocialEngineer extends Enemy {
       case 'returning':
 
         if (distToSpawn <= 5) {
-          this.state = 'idle';
+          this.behaviorState = 'idle';
           this.setVelocity(0);
           break;
         }

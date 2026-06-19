@@ -8,12 +8,15 @@ export class Player extends Actor {
   private keyA: Phaser.Input.Keyboard.Key;
   private keyS: Phaser.Input.Keyboard.Key;
   private keyD: Phaser.Input.Keyboard.Key;
+  private keyShift: Phaser.Input.Keyboard.Key;
   private keySpace!: Input.Keyboard.Key;
   private frozen = false;
   private questionValue!: Text;
   private totalQuestions = 0;
   private remainingQuestions = 0;
   private movementLocked = false;
+  private readonly walkSpeed = 110;
+  private readonly sprintSpeed = 170;
 
   public moveUp = false;
   public moveDown = false;
@@ -35,6 +38,9 @@ export class Player extends Actor {
       this.scene.input.keyboard?.addKey('S') ?? ({ isDown: false } as Phaser.Input.Keyboard.Key);
     this.keyD =
       this.scene.input.keyboard?.addKey('D') ?? ({ isDown: false } as Phaser.Input.Keyboard.Key);
+    this.keyShift = this.scene.input.keyboard.addKey(
+      Input.Keyboard.KeyCodes.SHIFT
+    );
 
     // Attack
     this.keySpace = this.scene.input.keyboard.addKey(32);
@@ -80,26 +86,27 @@ export class Player extends Actor {
     const left = this.keyA?.isDown || this.moveLeft;
     const down = this.keyS?.isDown || this.moveDown;
     const right = this.keyD?.isDown || this.moveRight;
+    const speed = this.keyShift.isDown ? this.sprintSpeed : this.walkSpeed;
 
     if (up) {
-      this.body.velocity.y = -110;
+      this.body.velocity.y = -speed;
       !this.anims.isPlaying && this.anims.play('run', true);
     }
 
     if (left) {
-      this.body.velocity.x = -110;
+      this.body.velocity.x = -speed;
       this.checkFlip();
       this.getBody().setOffset(48, 15);
       !this.anims.isPlaying && this.anims.play('run', true);
     }
 
     if (down) {
-      this.body.velocity.y = 110;
+      this.body.velocity.y = speed;
       !this.anims.isPlaying && this.anims.play('run', true);
     }
 
     if (right) {
-      this.body.velocity.x = 110;
+      this.body.velocity.x = speed;
       this.checkFlip();
       this.getBody().setOffset(15, 15);
       !this.anims.isPlaying && this.anims.play('run', true);

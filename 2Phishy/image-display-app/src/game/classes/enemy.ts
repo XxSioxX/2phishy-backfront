@@ -19,6 +19,11 @@ export class Enemy extends Actor {
   }
 
   protected moveTowardTarget(): void {
+    if (!this.target?.active) {
+      this.getBody().setVelocity(0);
+      return;
+    }
+
     const dist = Phaser.Math.Distance.Between(
       this.x,
       this.y,
@@ -48,7 +53,7 @@ export class Enemy extends Actor {
     }
   }
 
-  preUpdate(): void {
+  preUpdate(_time: number, _delta: number): void {
     this.moveTowardTarget();
   }
 }
