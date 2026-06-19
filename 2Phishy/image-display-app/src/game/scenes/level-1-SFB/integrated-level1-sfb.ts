@@ -1,6 +1,5 @@
 import { BaseIntegratedLevel } from '../core/BaseIntegratedLevel';
 import { LEVEL_CONFIGS } from '../core/LevelConfigurations';
-import {Player} from "../../classes/player.ts";
 import {Tilemaps} from "phaser";
 import {gameAPI} from "../../helpers/game-api.ts";
 
@@ -12,6 +11,7 @@ export class SFBLevel extends BaseIntegratedLevel {
   private spawnedPlatforms: Phaser.GameObjects.Sprite[] = [];
   private doorWallsLayer!: Tilemaps.TilemapLayer;
   private unlockedZone = 1;
+  private allCorrectDoorsOpened = false;
 
   constructor() {
     super(LEVEL_CONFIGS.SFB);
@@ -63,20 +63,34 @@ export class SFBLevel extends BaseIntegratedLevel {
         obj => obj.name === 'QuestionPoint'
     );
 
-    const getZone = (obj: any) =>
-        obj.properties?.find((p: any) => p.name === "zone_number")?.value;
+    const zone1Points = allPoints.filter(
+      p => this.getObjectNumberProperty(p, 'zone_number') === 1
+    );
+    const zone2Points = allPoints.filter(
+      p => this.getObjectNumberProperty(p, 'zone_number') === 2
+    );
+    const zone3Points = allPoints.filter(
+      p => this.getObjectNumberProperty(p, 'zone_number') === 3
+    );
 
-    const zone1Points = allPoints.filter(p => getZone(p) === 1);
-    const zone2Points = allPoints.filter(p => getZone(p) === 2);
-    const zone3Points = allPoints.filter(p => getZone(p) === 3);
+    const zone1Questions = questionList.filter(q => Number(q.zone) === 1);
+    const zone2Questions = questionList.filter(q => Number(q.zone) === 2);
+    const zone3Questions = questionList.filter(q => Number(q.zone) === 3);
 
-    const zone1Questions = questionList.filter(q => q.zone === 1);
-    const zone2Questions = questionList.filter(q => q.zone === 2);
-    const zone3Questions = questionList.filter(q => q.zone === 3);
+    const spawnedQuestions = [
+      ...this.spawnZoneQuestions(zone1Points, zone1Questions),
+      ...this.spawnZoneQuestions(zone2Points, zone2Questions),
+      ...this.spawnZoneQuestions(zone3Points, zone3Questions),
+    ];
 
-    this.spawnZoneQuestions(zone1Points, zone1Questions);
-    this.spawnZoneQuestions(zone2Points, zone2Questions);
-    this.spawnZoneQuestions(zone3Points, zone3Questions);
+    if (spawnedQuestions.length < questionList.length) {
+      console.warn(
+        `SFB has ${questionList.length} playable questions but only ${spawnedQuestions.length} matching zone question points. Trimming to spawned questions.`
+      );
+    }
+
+    this.questions = spawnedQuestions;
+    this.totalquestions = spawnedQuestions.length;
   }
 
 
@@ -99,13 +113,15 @@ export class SFBLevel extends BaseIntegratedLevel {
     return this.knowledgeList;
   }
 
-  private spawnZoneQuestions(points: any[], questions: any[]) {
+  private spawnZoneQuestions(points: any[], questions: any[]): any[] {
 
     Phaser.Utils.Array.Shuffle(points);
 
     const selected = points.slice(0, questions.length);
+    const spawnedQuestions = questions.slice(0, selected.length);
 
     selected.forEach((pt, index) => {
+      const question = spawnedQuestions[index];
 
       const bottom = this.physics.add
           .sprite(pt.x, pt.y, 'tiles_spr', 340)
@@ -139,16 +155,25 @@ export class SFBLevel extends BaseIntegratedLevel {
 
       const pair = [bottom, top] as any;
 
-      pair.questionData = questions[index];
-      pair.zone = questions[index].zone;
+      pair.questionData = question;
+      pair.zone = Number(question.zone);
 
       this.questionPoints.push(pair);
     });
+
+    return spawnedQuestions;
   }
 
   protected onQuestionAnswered(result: any, zone: number): void {
 
     const progress = this.zoneProgress[zone];
+    if (!progress) {
+      console.warn(`No SFB zone progress for zone ${zone}; checking completion.`);
+      if (this.hasAnsweredEveryQuestionCorrectly()) {
+        this.openAllCorrectDoorsAndComplete();
+      }
+      return;
+    }
 
     // Ignore repeated attempts
     if (progress.answered.has(result.question_id)) {
@@ -159,6 +184,11 @@ export class SFBLevel extends BaseIntegratedLevel {
 
     if (!result.is_correct) {
       progress.failed = true;
+    }
+
+    if (this.hasAnsweredEveryQuestionCorrectly()) {
+      this.openAllCorrectDoorsAndComplete();
+      return;
     }
 
     const allAnswered =
@@ -203,6 +233,54 @@ export class SFBLevel extends BaseIntegratedLevel {
 
     }
 
+  }
+
+  private hasAnsweredEveryQuestionCorrectly(): boolean {
+    const progressList = Object.values(this.zoneProgress);
+
+    if (progressList.length === 0) {
+      return false;
+    }
+
+    const total = progressList.reduce((sum, progress) => sum + progress.total, 0);
+    const answered = progressList.reduce(
+      (sum, progress) => sum + progress.answered.size,
+      0
+    );
+
+    return (
+      total > 0 &&
+      answered >= total &&
+      progressList.every(progress =>
+        !progress.failed && progress.answered.size >= progress.total
+      )
+    );
+  }
+
+  private openAllCorrectDoorsAndComplete(): void {
+    if (this.allCorrectDoorsOpened) return;
+
+    this.allCorrectDoorsOpened = true;
+    const finalZone = Math.max(
+      3,
+      ...Object.keys(this.correctDoors).map(Number)
+    );
+
+    this.currentZone = finalZone;
+    this.unlockedZone = Math.max(this.unlockedZone, finalZone + 1);
+
+    Object.values(this.correctDoors).forEach(door => {
+      this.openDoor(door);
+    });
+
+    gameAPI.updateCurrentZone({
+      userid: this.userData.userId,
+      topic: this.config.topic,
+      current_zone: this.currentZone,
+      unlocked_zone: this.unlockedZone
+    }).catch(console.error);
+
+    void this.completeAssessment();
   }
 /*
    protected onQuestionAnswered(result: any, context: any): void {
@@ -254,9 +332,18 @@ export class SFBLevel extends BaseIntegratedLevel {
     });
 
     const q = questionData;
+    if (!q) {
+      console.warn('SFB question marker has no question data; disabling marker.');
+      pointPair.forEach((sprite: Phaser.Physics.Arcade.Sprite) => {
+        sprite.disableBody(true, true);
+      });
+      this.inAssessment = false;
+      this.player.unlockMovement();
+      return;
+    }
 
 
-    this.currentZone = q.zone;
+    this.currentZone = Number(q.zone);
     this.popup.mode = "learning";
     this.popup.correctAnswer = q.answer;
 
@@ -332,10 +419,8 @@ export class SFBLevel extends BaseIntegratedLevel {
 
     correctDoorObjects.forEach(obj => {
 
-      const getZone = (obj: any) =>
-        obj.properties?.find((p: any) => p.name === "zone_number")?.value;
-
-      const zone = Number(getZone(obj));
+      const zone = this.getObjectNumberProperty(obj, 'zone_number');
+      if (!zone) return;
       const door = this.spawnDoor(obj, true);
 
       door.forEach(sprite => {
@@ -348,10 +433,8 @@ export class SFBLevel extends BaseIntegratedLevel {
 
     wrongDoorObjects.forEach(obj => {
 
-      const getZone = (obj: any) =>
-        obj.properties?.find((p: any) => p.name === "zone_number")?.value;
-
-      const zone = Number(getZone(obj));
+      const zone = this.getObjectNumberProperty(obj, 'zone_number');
+      if (!zone) return;
       const door = this.spawnDoor(obj, false);
 
       door.forEach(sprite => {
@@ -431,10 +514,10 @@ export class SFBLevel extends BaseIntegratedLevel {
     );
 
     trapObjects.forEach(obj => {
-      const chestZone =
-        obj.properties?.find(
-            (p: any) => p.name === "zone_number"
-        )?.value ?? this.currentZone;
+      const configuredZone = this.getObjectNumberProperty(
+        obj,
+        'zone_number'
+      );
 
       const chest = this.physics.add
         .sprite(obj.x, obj.y, 'tiles_spr', 659)
@@ -466,13 +549,19 @@ export class SFBLevel extends BaseIntegratedLevel {
           "That was a malicious link!",
           () => {
 
-        this.currentZone = chestZone;
-
-        const failedZone = chestZone;
+        const failedZone = this.resolveTrapZone(configuredZone);
+        this.currentZone = failedZone;
 
         this.resetZone(failedZone);
 
         const spawn = this.getSpawnPoint(failedZone);
+
+        gameAPI.updateCurrentZone({
+          userid: this.userData.userId,
+          topic: this.config.topic,
+          current_zone: failedZone,
+          unlocked_zone: this.unlockedZone
+        }).catch(console.error);
 
         this.player.bodyRef().stop();
 
@@ -621,6 +710,10 @@ export class SFBLevel extends BaseIntegratedLevel {
       console.log(`Resetting Zone ${zone}`);
 
       const progress = this.zoneProgress[zone];
+      if (!progress) {
+          console.warn(`Cannot reset SFB zone ${zone}; no zone progress exists.`);
+          return;
+      }
 
       progress.answered.clear();
       progress.failed = false;
@@ -668,6 +761,22 @@ export class SFBLevel extends BaseIntegratedLevel {
 
   }
 
+  private resolveTrapZone(configuredZone: number): number {
+    const knownZones = Object.keys(this.zoneProgress)
+      .map(Number)
+      .filter(zone => Number.isFinite(zone));
+
+    const candidates = [
+      configuredZone,
+      this.currentZone,
+      this.unlockedZone,
+      knownZones[0],
+      1,
+    ];
+
+    return candidates.find(zone => Boolean(this.zoneProgress[zone])) ?? 1;
+  }
+
 
   protected initKnowledge(): void {
 
@@ -676,17 +785,14 @@ export class SFBLevel extends BaseIntegratedLevel {
       obj => obj.name === 'KnowledgePoint'
     );
 
-    const getZone = (obj: any) =>
-      obj.properties?.find((p: any) => p.name === "zone_number")?.value;
-
-    const zones = {
+    const zones: Record<number, any[]> = {
       1: [],
       2: [],
       3: []
     };
 
     allPoints.forEach(p => {
-      const z = getZone(p);
+      const z = this.getObjectNumberProperty(p, 'zone_number');
       if (zones[z]) zones[z].push(p);
     });
 
