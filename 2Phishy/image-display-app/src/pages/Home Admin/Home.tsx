@@ -17,6 +17,7 @@ const Home = () => {
     const [activeParticipantsData, setActiveParticipantsData] = useState<any>(null);
     const [newUsersData, setNewUsersData] = useState<any>(null);
     const [topicPerformanceData, setTopicPerformanceData] = useState<any[]>([]);
+    const [userPerformanceCategoriesData, setUserPerformanceCategoriesData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showWeeklyModal, setShowWeeklyModal] = useState(false);
@@ -35,18 +36,20 @@ const Home = () => {
                 setError(null);
 
                 // Fetch all dashboard data in parallel
-                const [userStatsData, activeParticipantsData, newUsersData, users, topicPerformance] = await Promise.all([
+                const [userStatsData, activeParticipantsData, newUsersData, users, topicPerformance, userPerformanceCategories] = await Promise.all([
                     api.getUserStats(),
                     api.getActiveParticipantsOverTime('week'), // Default to weekly view for active participants
                     api.getNewUsersOverTime('week'), // Default to weekly view for new users
                     api.getUsers(), // Get all users for weekly stats
-                    api.getTopicPerformance() // Get topic performance data
+                    api.getTopicPerformance(), // Get topic performance data
+                    api.getUserPerformanceCategories() // Get overall student performance categories
                 ]);
 
                 setUserStats(userStatsData);
                 setActiveParticipantsData(activeParticipantsData);
                 setNewUsersData(newUsersData);
                 setTopicPerformanceData(topicPerformance);
+                setUserPerformanceCategoriesData(userPerformanceCategories);
 
                 // Initialize weekly stats from users data
                 const stats = initializeWeeklyStats(users);
@@ -123,6 +126,16 @@ const Home = () => {
         ]
     };
 
+    const pieChartBoxUserPerformance = {
+        title: "User Performance Categories",
+        icon: "/person4.svg",
+        data: userPerformanceCategoriesData.length > 0 ? userPerformanceCategoriesData : [
+            { name: "Excellent (80-100%)", value: 40, color: "#4CAF50" },
+            { name: "Good (60-79%)", value: 35, color: "#FFB74D" },
+            { name: "Needs Improvement", value: 25, color: "#E57373" },
+        ],
+    };
+
     if (loading) {
         return (
             <div className="home">
@@ -196,7 +209,7 @@ const Home = () => {
                 />
             </div>
             <div className="box box3"><ChartBox icon={""} {...chartBoxQuizRate}/></div>
-            <div className="box box4"><PieChartBox/></div>
+            <div className="box box4"><PieChartBox {...pieChartBoxUserPerformance}/></div>
             <div className="box box5"><ChartBox {...chartBoxActiveParticipants}/></div>
             <div className="box box6"><BarChartBox {...barChartBoxUserTopics} onViewAll={() => setShowTopicModal(true)}/></div>
         </div>

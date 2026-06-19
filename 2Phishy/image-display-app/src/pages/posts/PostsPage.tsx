@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
+import { formatDatePH } from "../../utils/dateUtils";
 import "./PostsPage.scss";
 
 interface Post {
@@ -15,6 +16,37 @@ interface Post {
   created_by_role: string;
 }
 
+type BulletinFilter = "all" | "important" | "general" | "updates";
+type BulletinCategory = "Important" | "Update" | "General" | "Notice";
+
+const IMPORTANT_KEYWORDS = ["important", "urgent", "alert", "warning", "security", "password", "breach"];
+const UPDATE_KEYWORDS = ["update", "updated", "maintenance", "release", "feature", "system", "upgrade", "patch"];
+const NOTICE_KEYWORDS = ["notice", "reminder", "event", "schedule", "advisory", "tips", "questions"];
+
+const getBulletinCategory = (post: Post): BulletinCategory => {
+  const source = `${post.title} ${post.content} ${post.category}`.toLowerCase();
+
+  if (IMPORTANT_KEYWORDS.some((keyword) => source.includes(keyword))) {
+    return "Important";
+  }
+
+  if (UPDATE_KEYWORDS.some((keyword) => source.includes(keyword))) {
+    return "Update";
+  }
+
+  if (NOTICE_KEYWORDS.some((keyword) => source.includes(keyword))) {
+    return "Notice";
+  }
+
+  return "General";
+};
+
+const getPreviewText = (content: string, maxLength: number = 120) => {
+  const trimmed = content.trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${trimmed.slice(0, maxLength).trimEnd()}...`;
+};
+
 const BulletinPage = () => {
   const { user } = useAuth();
   const userRole = user?.role?.toLowerCase() || '';
@@ -26,9 +58,7 @@ const BulletinPage = () => {
   const [showPostModal, setShowPostModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const [filterDate, setFilterDate] = useState<string>('');
-  const [filterTopic, setFilterTopic] = useState<string>('');
-  const [filterUserType, setFilterUserType] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<BulletinFilter>('all');
   const [searchText, setSearchText] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 10;
@@ -41,11 +71,7 @@ const BulletinPage = () => {
 
   const [formErrors, setFormErrors] = useState<any>({});
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getPosts();
@@ -62,7 +88,11 @@ const BulletinPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
 
   const resetForm = () => {
     setFormData({ title: '', topic: '', content: '' });
@@ -78,19 +108,58 @@ const BulletinPage = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Enhanced filtering with search
-  const filteredPosts = posts.filter(post => {
-    const matchesDate = !filterDate || new Date(post.created_at).toDateString() === new Date(filterDate).toDateString();
-    const matchesTopic = !filterTopic || post.category.toLowerCase().includes(filterTopic.toLowerCase());
-    const role = post.created_by_role.toLowerCase();
-    const matchesUserType = filterUserType === 'all' || filterUserType.toLowerCase() === role;
-    const matchesSearch = !searchText || 
-      post.title.toLowerCase().includes(searchText.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchText.toLowerCase()) ||
-      post.created_by.toLowerCase().includes(searchText.toLowerCase());
+  const publishedPosts = useMemo(() => (
+    posts
+      .filter((post) => post.status?.toLowerCase() === 'published')
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  ), [posts]);
 
-    return matchesDate && matchesTopic && matchesUserType && matchesSearch && post.status === 'published';
-  });
+  const enhancedPosts = useMemo(() => (
+    publishedPosts.map((post) => ({
+      ...post,
+      bulletinCategory: getBulletinCategory(post),
+      preview: getPreviewText(post.content),
+    }))
+  ), [publishedPosts]);
+
+  const filteredPosts = useMemo(() => {
+    const term = searchText.trim().toLowerCase();
+
+    return enhancedPosts.filter((post) => {
+      const matchesCategory =
+        categoryFilter === 'all' ||
+        (categoryFilter === 'important' && post.bulletinCategory === 'Important') ||
+        (categoryFilter === 'general' && post.bulletinCategory === 'General') ||
+        (categoryFilter === 'updates' && post.bulletinCategory === 'Update');
+
+      const matchesSearch =
+        !term ||
+        [post.title, post.content, post.created_by, post.category, post.bulletinCategory]
+          .some((field) => field.toLowerCase().includes(term));
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [enhancedPosts, categoryFilter, searchText]);
+
+  const stats = useMemo(() => {
+    const now = new Date();
+    const weekAgo = new Date();
+    weekAgo.setDate(now.getDate() - 7);
+
+    const latestPost = enhancedPosts[0];
+    const thisWeek = enhancedPosts.filter((post) => new Date(post.created_at) >= weekAgo).length;
+    const importantNotices = enhancedPosts.filter(
+      (post) => post.bulletinCategory === 'Important' || post.bulletinCategory === 'Notice'
+    ).length;
+
+    return {
+      total: enhancedPosts.length,
+      latestTitle: latestPost?.title || '—',
+      latestDate: latestPost ? formatDatePH(latestPost.created_at, false) : 'No announcements',
+      thisWeek,
+      importantNotices,
+    };
+  }, [enhancedPosts]);
 
   const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
   const startIndex = (currentPage - 1) * postsPerPage;
@@ -135,79 +204,78 @@ const BulletinPage = () => {
   };
 
   const handleClearFilters = () => {
-    setFilterDate('');
-    setFilterTopic('');
-    setFilterUserType('all');
+    setCategoryFilter('all');
     setSearchText('');
     setCurrentPage(1);
   };
 
-  if (loading) return <div className="loading">Loading bulletin...</div>;
-
   return (
     <div className="posts-page">
-      <div className="headerWithButton">
-        <h2>Bulletin Board</h2>
-        <div className="action-buttons">
-          <button className="action-btn" onClick={handleAdd}>+ New Post</button>
+      <div className="bp-header">
+        <div className="bp-header-left">
+          <h1 className="bp-title">Bulletin Board</h1>
+          <p className="bp-subtitle">Latest announcements and updates for users</p>
+        </div>
+        <div className="bp-actions">
+          <button className="bp-btn bp-btn-secondary" onClick={fetchPosts}>Refresh Feed</button>
+          <button className="bp-btn bp-btn-primary" onClick={handleAdd}>+ New Post</button>
         </div>
       </div>
 
-      <div className="filters-section">
-        <div className="search-box" style={{display: 'none'}}>
+      <div className="bp-stats-row">
+        <div className="bp-stat-card">
+          <span className="bp-stat-value">{stats.total}</span>
+          <span className="bp-stat-label">Total Announcements</span>
+        </div>
+        <div className="bp-stat-card bp-stat-card-highlight">
+          <span className="bp-stat-value bp-stat-text" title={stats.latestTitle}>{stats.latestTitle}</span>
+          <span className="bp-stat-label">Latest Announcement • {stats.latestDate}</span>
+        </div>
+        <div className="bp-stat-card">
+          <span className="bp-stat-value">{stats.thisWeek}</span>
+          <span className="bp-stat-label">Announcements This Week</span>
+        </div>
+        <div className="bp-stat-card">
+          <span className="bp-stat-value">{stats.importantNotices}</span>
+          <span className="bp-stat-label">Important Notices</span>
+        </div>
+      </div>
+
+      <div className="bp-toolbar">
+        <div className="bp-search-wrap">
+          <span className="bp-search-icon">🔍</span>
           <input
             type="text"
-            placeholder="Search posts by title, content, or author..."
+            placeholder="Search announcements by title or keywords..."
             value={searchText}
             onChange={(e) => {
               setSearchText(e.target.value);
               setCurrentPage(1);
             }}
-            className="search-input"
+            className="bp-search"
           />
+          {searchText && (
+            <button className="bp-clear-btn" onClick={() => { setSearchText(''); setCurrentPage(1); }}>×</button>
+          )}
         </div>
 
-        <div className="filters">
-          <input
-            type="date"
-            value={filterDate}
-            onChange={(e) => {
-              setFilterDate(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="filter-input"
-            title="Filter by date"
-          />
+        <div className="bp-toolbar-actions">
           <select
-            value={filterTopic}
+            value={categoryFilter}
             onChange={(e) => {
-              setFilterTopic(e.target.value);
+              setCategoryFilter(e.target.value as BulletinFilter);
               setCurrentPage(1);
             }}
-            className="filter-select"
-            title="Filter by topic"
+            className="bp-filter"
+            title="Filter by category"
           >
-            <option value="">All Topics</option>
-            <option value="Tips">Tips</option>
-            <option value="Learnings">Learnings</option>
-            <option value="Questions">Questions</option>
-          </select>
-          <select
-            value={filterUserType}
-            onChange={(e) => {
-              setFilterUserType(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="filter-select"
-            title="Filter by user type"
-          >
-            <option value="all">All Users</option>
-            <option value="admin">Admin</option>
-            <option value="super-admin">Super Admin</option>
-            <option value="student">Student</option>
+            <option value="all">All</option>
+            <option value="important">Important</option>
+            <option value="general">General</option>
+            <option value="updates">Updates</option>
           </select>
           <button 
-            className="clear-filters-btn" 
+            className="bp-btn bp-btn-secondary" 
             onClick={handleClearFilters}
             title="Clear all filters"
           >
@@ -215,40 +283,60 @@ const BulletinPage = () => {
           </button>
         </div>
 
-        <div className="filter-info">
-          <span>{filteredPosts.length} post{filteredPosts.length !== 1 ? 's' : ''} found</span>
+        <div className="bp-filter-info">
+          <span>{filteredPosts.length} announcement{filteredPosts.length !== 1 ? 's' : ''} found</span>
         </div>
       </div>
 
-      <div className="bulletin-board">
-        {paginatedPosts.length === 0 ? (
-          <div className="no-posts">
-            <p>No bulletins found.</p>
-            <p style={{fontSize: '0.9rem', marginTop: '10px'}}>Try adjusting your filters or create a new post!</p>
+      <div className="bp-feed-card">
+        {loading ? (
+          <div className="bp-empty">
+            <span className="bp-empty-icon">⏳</span>
+            <p>Loading bulletin posts...</p>
+          </div>
+        ) : paginatedPosts.length === 0 ? (
+          <div className="bp-empty">
+            <span className="bp-empty-icon">📭</span>
+            <p>
+              {enhancedPosts.length === 0
+                ? 'No announcements available right now.'
+                : 'No announcements match your current search or filter.'}
+            </p>
           </div>
         ) : (
-          paginatedPosts.map(post => (
-            <div
+          <div className="bp-grid">
+            {paginatedPosts.map(post => (
+            <article
               key={post.post_id}
-              className="bulletin-item"
+              className="bp-card"
               onClick={() => { setSelectedPost(post); setShowPostModal(true); }}
             >
-              <div className="bulletin-header">
-                <span className="title">{post.title}</span>
-                <span className="topic-badge">{post.category}</span>
+              <div className="bp-card-header">
+                <div className="bp-card-title-wrap">
+                  <span className="bp-card-icon">📢</span>
+                  <h3 className="bp-card-title">{post.title}</h3>
+                </div>
+                <span className={`bp-badge ${post.bulletinCategory.toLowerCase()}`}>{post.bulletinCategory}</span>
               </div>
-              <div className="bulletin-content-preview">
-                {post.content.substring(0, 80)}...
-              </div>
-              <div className="bulletin-footer">
-                <div className="bulletin-meta">
-                  <span className="bulletin-author">By {post.created_by}</span>
-                  <span className="bulletin-role">({post.created_by_role})</span>
-                  <span className="bulletin-date">{new Date(post.created_at).toLocaleDateString()}</span>
+
+              <p className="bp-card-preview">{post.preview}</p>
+
+              <div className="bp-card-footer">
+                <div className="bp-meta-row">
+                  <span className="bp-meta-label">Category:</span>
+                  <span className="bp-meta-value">{post.category}</span>
+                </div>
+                <div className="bp-meta-row">
+                  <span className="bp-meta-label">Posted by:</span>
+                  <span className="bp-meta-value">{post.created_by}</span>
+                </div>
+                <div className="bp-meta-row">
+                  <span className="bp-meta-label">Date:</span>
+                  <span className="bp-meta-value">{formatDatePH(post.created_at, false)}</span>
                 </div>
                 {username && (post.created_by === username || ['admin','super-admin'].includes(userRole)) && (
                   <button
-                    className="delete-btn"
+                    className="bp-delete-btn"
                     onClick={(e) => { e.stopPropagation(); handleDelete(post.post_id); }}
                     title="Delete this post"
                   >
@@ -256,26 +344,27 @@ const BulletinPage = () => {
                   </button>
                 )}
               </div>
-            </div>
-          ))
+            </article>
+          ))}
+          </div>
         )}
       </div>
 
       {totalPages > 1 && (
-        <div className="pagination">
+        <div className="bp-pagination">
           <button 
             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
             disabled={currentPage === 1}
-            className="pagination-btn"
+            className="bp-pagination-btn"
           >
             ← Previous
           </button>
-          <div className="page-info">
+          <div className="bp-page-info">
             <span>Page {currentPage} of {totalPages}</span>
             <select 
               value={currentPage} 
               onChange={(e) => setCurrentPage(Number(e.target.value))}
-              className="page-select"
+              className="bp-page-select"
             >
               {Array.from({length: totalPages}, (_, i) => i + 1).map(page => (
                 <option key={page} value={page}>Go to {page}</option>
@@ -285,7 +374,7 @@ const BulletinPage = () => {
           <button 
             onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} 
             disabled={currentPage === totalPages}
-            className="pagination-btn"
+            className="bp-pagination-btn"
           >
             Next →
           </button>
@@ -293,70 +382,70 @@ const BulletinPage = () => {
       )}
 
       {showPostModal && selectedPost && (
-        <div className="modal-overlay" onClick={() => setShowPostModal(false)}>
-          <div className="modal-content post-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="post-header">
+        <div className="bp-modal-overlay" onClick={() => setShowPostModal(false)}>
+          <div className="bp-modal-content bp-post-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="bp-post-header">
               <div>
-                <span className="title">{selectedPost.title}</span>
-                <span className="topic-badge-modal">{selectedPost.category}</span>
+                <span className="bp-post-title">{selectedPost.title}</span>
+                <span className={`bp-badge ${getBulletinCategory(selectedPost).toLowerCase()}`}>{getBulletinCategory(selectedPost)}</span>
               </div>
-              <span className="date">{new Date(selectedPost.created_at).toLocaleDateString()}</span>
+              <span className="bp-post-date">{formatDatePH(selectedPost.created_at, false)}</span>
             </div>
-            <div className="post-author">By {selectedPost.created_by} <span className="role-badge">({selectedPost.created_by_role})</span></div>
-            <div className="post-content">{selectedPost.content}</div>
-            <button className="close-btn" onClick={() => setShowPostModal(false)}>Close</button>
+            <div className="bp-post-author">Posted by {selectedPost.created_by} <span className="bp-role-badge">({selectedPost.created_by_role})</span></div>
+            <div className="bp-post-content">{selectedPost.content}</div>
+            <button className="bp-close-btn" onClick={() => setShowPostModal(false)}>Close</button>
           </div>
         </div>
       )}
 
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal-content form-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="bp-modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="bp-modal-content bp-form-modal" onClick={(e) => e.stopPropagation()}>
             <h3>Add New Post</h3>
-            <p style={{color: '#888', fontSize: '0.9rem'}}>Share your bulletin with all users</p>
+            <p className="bp-modal-subtext">Share your bulletin with all users</p>
             
-            <div className="form-group">
+            <div className="bp-form-group">
               <label>Title *</label>
               <input
                 type="text"
                 placeholder="Enter post title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className={formErrors.title ? 'input-error' : ''}
+                className={formErrors.title ? 'bp-input-error' : ''}
               />
-              {formErrors.title && <span className="error-msg">{formErrors.title}</span>}
+              {formErrors.title && <span className="bp-error-msg">{formErrors.title}</span>}
             </div>
 
-            <div className="form-group">
+            <div className="bp-form-group">
               <label>Topic *</label>
               <select
                 value={formData.topic}
                 onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-                className={formErrors.topic ? 'input-error' : ''}
+                className={formErrors.topic ? 'bp-input-error' : ''}
               >
                 <option value="">Select a topic</option>
                 <option value="Tips">Tips</option>
                 <option value="Learnings">Learnings</option>
                 <option value="Questions">Questions</option>
               </select>
-              {formErrors.topic && <span className="error-msg">{formErrors.topic}</span>}
+              {formErrors.topic && <span className="bp-error-msg">{formErrors.topic}</span>}
             </div>
 
-            <div className="form-group">
+            <div className="bp-form-group">
               <label>Content *</label>
               <textarea
                 placeholder="Write your post content here..."
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className={formErrors.content ? 'input-error' : ''}
+                className={formErrors.content ? 'bp-input-error' : ''}
               />
-              {formErrors.content && <span className="error-msg">{formErrors.content}</span>}
-              <span className="char-count">{formData.content.length} characters</span>
+              {formErrors.content && <span className="bp-error-msg">{formErrors.content}</span>}
+              <span className="bp-char-count">{formData.content.length} characters</span>
             </div>
 
-            <div className="modal-buttons">
-              <button className="cancel-btn" onClick={() => setShowAddModal(false)}>Cancel</button>
-              <button className="save-btn" onClick={handleSaveAdd}>Post</button>
+            <div className="bp-modal-buttons">
+              <button className="bp-cancel-btn" onClick={() => setShowAddModal(false)}>Cancel</button>
+              <button className="bp-save-btn" onClick={handleSaveAdd}>Post</button>
             </div>
           </div>
         </div>

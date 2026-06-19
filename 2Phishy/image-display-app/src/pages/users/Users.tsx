@@ -19,6 +19,8 @@ const Users = () => {
   const [userToChangeRole, setUserToChangeRole] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('student');
   const [roleChangeLoading, setRoleChangeLoading] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Check if user is online (last seen within last 60 seconds, or is the current user)
   const isUserOnline = (userToCheck?: any, lastSeen?: string | null): boolean => {
@@ -189,6 +191,36 @@ const Users = () => {
     setUserToChangeRole(null);
   };
 
+  const getExpandKey = (targetUser: User): string => {
+    const idKey = getUserIdString(targetUser).trim();
+    if (idKey) return idKey;
+    // Fallback: username+email composite (no index — index shifts when search filters change)
+    return `${targetUser.username || 'user'}::${targetUser.email || 'noemail'}`;
+  };
+
+  const toggleUserExpanded = (expandKey: string) => {
+    setExpandedUserId((prev) => (prev === expandKey ? null : expandKey));
+  };
+
+  const filteredUsers = users.filter((targetUser) => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return true;
+
+    const idText = (targetUser.userid || targetUser.id || '').toString().toLowerCase();
+    const usernameText = (targetUser.username || '').toLowerCase();
+    const emailText = (targetUser.email || '').toLowerCase();
+    const roleText = (targetUser.role || '').toLowerCase();
+    const statusText = (targetUser.account_status || '').toLowerCase();
+
+    return (
+      idText.includes(query) ||
+      usernameText.includes(query) ||
+      emailText.includes(query) ||
+      roleText.includes(query) ||
+      statusText.includes(query)
+    );
+  });
+
   if (loading) {
     return (
       <div className="users">
@@ -213,9 +245,18 @@ const Users = () => {
     <div className="users">
       <div className="users-header">
         <h1>User Management</h1>
-        <button onClick={fetchUsers} className="refresh-btn">
-          Refresh
-        </button>
+        <div className="header-actions">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <button onClick={fetchUsers} className="refresh-btn">
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Success Message */}
@@ -226,72 +267,93 @@ const Users = () => {
         </div>
       )}
 
-      {users.length === 0 ? (
+      {filteredUsers.length === 0 ? (
         <div className="no-users">
-          <p>No users found</p>
+          <p>{users.length === 0 ? 'No users found' : 'No matching users found'}</p>
         </div>
       ) : (
         <div className="users-grid">
-          {users.map((targetUser) => (
-            <div key={targetUser.userid || targetUser.id} className="user-card">
-              <div className="user-info">
-                <div className="user-header">
+          {filteredUsers.map((targetUser) => {
+            const expandKey = getExpandKey(targetUser);
+            return (
+            <div
+              key={expandKey}
+              className={`user-card ${expandedUserId === expandKey ? 'expanded' : ''}`}
+            >
+              <button
+                className="user-summary"
+                onClick={() => toggleUserExpanded(expandKey)}
+                aria-expanded={expandedUserId === expandKey}
+              >
+                <div className="user-summary-left">
                   <h3>{targetUser.username}</h3>
-                  <span className={`status-dot ${isUserOnline(targetUser, targetUser.last_seen) ? 'online' : 'offline'}`}></span>
+                  <p className="email">{targetUser.email}</p>
                 </div>
-                <p className="email">{targetUser.email}</p>
-                <p className="user-id">ID: {targetUser.userid || targetUser.id}</p>
-                <p className="user-role">Role: {targetUser.role || 'N/A'}</p>
-                <p className="account-status">Status: {targetUser.account_status || 'N/A'}</p>
-                <p className="last-login">
-                  Last Seen: {formatDatePH(targetUser.last_seen || '', true)}
-                </p>
-              </div>
-              <div className="user-actions">
-                {user.role === 'super-admin' && targetUser.role !== 'super-admin' && (
-                  <>
-                    <button
-                      className="change-role-btn"
-                      onClick={() => handleChangeRoleClick(targetUser)}
-                      disabled={roleChangeLoading}
-                    >
-                      Change Role
-                    </button>
-                    <button
-                      className={`deactivate-btn ${targetUser.account_status === 'suspended' ? 'activate' : ''}`}
-                      onClick={() => handleDeactivate(targetUser)}
-                      disabled={deactivateLoading === (targetUser.userid || targetUser.id?.toString())}
-                    >
-                      {deactivateLoading === (targetUser.userid || targetUser.id?.toString()) ? (
-                        <>
-                          <span className="loading-spinner"></span>
-                          {targetUser.account_status === 'suspended' ? 'Activating...' : 'Deactivating...'}
-                        </>
-                      ) : (
-                        targetUser.account_status === 'suspended' ? 'Activate' : 'Deactivate'
-                      )}
-                    </button>
-                  </>
-                )}
-                {user.role === 'super-admin' && (
-                  <button
-                    className="delete-btn"
-                    onClick={() => handleDeleteClick(targetUser)}
-                    disabled={deleteLoading === (targetUser.userid || targetUser.id?.toString())}
-                  >
-                    {deleteLoading === (targetUser.userid || targetUser.id?.toString()) ? (
+                <div className="user-summary-right">
+                  <span className={`status-dot ${isUserOnline(targetUser, targetUser.last_seen) ? 'online' : 'offline'}`}></span>
+                  <span className="summary-status">{targetUser.account_status || 'N/A'}</span>
+                  <span className={`expand-arrow ${expandedUserId === expandKey ? 'open' : ''}`}>▶</span>
+                </div>
+              </button>
+
+              {expandedUserId === expandKey && (
+                <>
+                  <div className="user-info">
+                    <p className="user-id">ID: {targetUser.userid || targetUser.id}</p>
+                    <p className="user-role">Role: {targetUser.role || 'N/A'}</p>
+                    <p className="account-status">Status: {targetUser.account_status || 'N/A'}</p>
+                    <p className="last-login">
+                      Last Seen: {formatDatePH(targetUser.last_seen || '', true)}
+                    </p>
+                  </div>
+                  <div className="user-actions" onClick={(e) => e.stopPropagation()}>
+                    {user.role === 'super-admin' && targetUser.role !== 'super-admin' && (
                       <>
-                        <span className="loading-spinner"></span>
-                        Deleting...
+                        <button
+                          className="change-role-btn"
+                          onClick={() => handleChangeRoleClick(targetUser)}
+                          disabled={roleChangeLoading}
+                        >
+                          Change Role
+                        </button>
+                        <button
+                          className={`deactivate-btn ${targetUser.account_status === 'suspended' ? 'activate' : ''}`}
+                          onClick={() => handleDeactivate(targetUser)}
+                          disabled={deactivateLoading === (targetUser.userid || targetUser.id?.toString())}
+                        >
+                          {deactivateLoading === (targetUser.userid || targetUser.id?.toString()) ? (
+                            <>
+                              <span className="loading-spinner"></span>
+                              {targetUser.account_status === 'suspended' ? 'Activating...' : 'Deactivating...'}
+                            </>
+                          ) : (
+                            targetUser.account_status === 'suspended' ? 'Activate' : 'Deactivate'
+                          )}
+                        </button>
                       </>
-                    ) : (
-                      'Delete'
                     )}
-                  </button>
-                )}
-              </div>
+                    {user.role === 'super-admin' && (
+                      <button
+                        className="delete-btn"
+                        onClick={() => handleDeleteClick(targetUser)}
+                        disabled={deleteLoading === (targetUser.userid || targetUser.id?.toString())}
+                      >
+                        {deleteLoading === (targetUser.userid || targetUser.id?.toString()) ? (
+                          <>
+                            <span className="loading-spinner"></span>
+                            Deleting...
+                          </>
+                        ) : (
+                          'Delete'
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

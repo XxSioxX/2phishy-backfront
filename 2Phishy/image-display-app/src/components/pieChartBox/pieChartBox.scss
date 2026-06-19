@@ -12,7 +12,7 @@
         img{
                 width: 30px;
                 height: 30px;
-                filter:invert(1);
+            filter: invert(1);
         }
     }
 
@@ -45,6 +45,16 @@
                     border-radius: 50%;
                     height: 10px;
                 }
+            }
+        }
+    }
+}
+
+[data-theme="light"] {
+    .pieChartBox {
+        .title {
+            img {
+                filter: var(--icon-filter);
             }
         }
     }

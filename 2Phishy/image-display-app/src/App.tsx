@@ -32,6 +32,7 @@ import StudentAnnouncement from "./pages/student-announcement/StudentAnnouncemen
 import DateTimeDisplay from "./components/DateTimeDisplay/DateTimeDisplay";
 import ForgotPassword from "./pages/forgot-password/ForgotPassword";
 import ResetPassword from "./pages/reset-password/ResetPassword";
+import PrivacyPolicy from "./pages/privacy-policy/PrivacyPolicy";
 
 
 const LayoutContent: React.FC = () => {
@@ -128,6 +129,10 @@ const App: React.FC = () => {
         {
           path: "/student-announcement",
           element: <RouteGuard allowedRoles={['student']}><StudentAnnouncement /></RouteGuard>
+        },
+        {
+          path: "/privacy-policy",
+          element: <PrivacyPolicy />
         }
       ]
     },

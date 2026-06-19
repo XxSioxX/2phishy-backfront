@@ -1,76 +1,391 @@
 @use "../../styles/variables.scss" as *;
 
+// ─── Score colour tokens ──────────────────────────────────────────
+$score-high:   #2ecc71;
+$score-mid:    #f39c12;
+$score-low:    #e74c3c;
+$score-high-bg: rgba(46, 204, 113, 0.12);
+$score-mid-bg:  rgba(243, 156, 18, 0.12);
+$score-low-bg:  rgba(231, 76, 60, 0.12);
+
+// ─── Page shell ──────────────────────────────────────────────────
 .quiz-insights-page {
-  padding: 20px;
-  background-color: $soft-bg;
+  padding: 24px;
   min-height: 79.1vh;
   color: $main-color;
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.qi-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 
-  .header {
+  .qi-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .qi-title {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: $main-color;
+  }
+
+  .qi-subtitle {
+    margin: 0;
+    font-size: 0.9rem;
+    color: $soft-color;
+  }
+}
+.qi-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1px solid $dark-color;
+  background: $dark-bg;
+  color: $main-color;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+
+  &:hover {
+    background: $soft-bg;
+    border-color: $main-color;
+  }
+
+  &.qi-btn-refresh {
+    white-space: nowrap;
+  }
+}
+.qi-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.qi-stat-card {
+  background: $soft-bg;
+  border: 1px solid $dark-color;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .qi-stat-value {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: $main-color;
+    line-height: 1;
+  }
+
+  .qi-stat-label {
+    font-size: 0.78rem;
+    color: $soft-color;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &.qi-stat-score {
+    &.high .qi-stat-value { color: $score-high; }
+    &.mid  .qi-stat-value { color: $score-mid; }
+    &.low  .qi-stat-value { color: $score-low; }
+  }
+}
+.qi-toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+
+  .qi-search-wrap {
+    flex: 1 1 260px;
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
 
-    h2 {
-      color: $main-color;
-      margin: 0;
-      font-size: 2rem;
-      font-weight: bold;
+    .qi-search-icon {
+      position: absolute;
+      left: 11px;
+      font-size: 0.85rem;
+      pointer-events: none;
     }
 
-    .refresh-btn {
-      background-color: $dark-bg;
-      color: $main-color;
-      border: 1px solid $dark-bg;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-      transition: background-color 0.3s, border-color 0.3s;
-      &:hover {
-        background-color: $soft-bg;
-        border-color: $main-color;
-      }
-    }
-  }
-
-  .quiz-insights-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    background: $dark-bg;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.12);
-    border: 2px solid $main-bg;
-
-    th, td {
-      padding: 14px 20px;
-      text-align: left;
-      color: $main-color;
-    }
-    th {
+    .qi-search {
+      width: 100%;
+      padding: 9px 36px 9px 34px;
+      border-radius: 8px;
+      border: 1px solid $dark-color;
       background: $soft-bg;
+      color: $main-color;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+
+      &::placeholder { color: $soft-color; }
+      &:focus { border-color: $main-color; }
+    }
+
+    .qi-clear-btn {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
       color: $soft-color;
-      font-weight: 600;
-      font-size: 1.05rem;
-      border-bottom: 1px solid $main-bg;
-    }
-    tr:nth-child(even) td {
-      background: $soft-bg;
-    }
-    tr {
-      border-bottom: 1px solid $main-bg;
-      transition: background 0.2s, box-shadow 0.2s;
-      &:hover td {
-        background: var(--main-bg);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-        outline: 2px solid var(--soft-color);
-        cursor: pointer;
-      }
+      font-size: 1.1rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 2px;
+      &:hover { color: $main-color; }
     }
   }
-} 
+
+  .qi-topic-filter {
+    flex: 0 1 220px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid $dark-color;
+    background: $soft-bg;
+    color: $main-color;
+    font-size: 0.9rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    &:focus { border-color: $main-color; }
+    option { background: $soft-bg; }
+  }
+}
+.qi-table-card {
+  background: $soft-bg;
+  border: 1px solid $dark-color;
+  border-radius: 12px;
+  overflow: hidden;
+  .qi-table-meta {
+    padding: 10px 20px;
+    font-size: 0.82rem;
+    color: $soft-color;
+    border-bottom: 1px solid $dark-color;
+
+    strong { color: $main-color; }
+  }
+  .qi-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+.qi-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9rem;
+
+  thead tr {
+    background: $dark-bg;
+  }
+
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    color: $soft-color;
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 2px solid $dark-color;
+    white-space: nowrap;
+
+    &.sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s;
+      &:hover { color: $main-color; }
+    }
+  }
+
+  td {
+    padding: 13px 16px;
+    color: $main-color;
+    border-bottom: 1px solid $dark-color;
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr {
+    transition: background 0.15s;
+    &:hover td {
+      background: $dark-bg;
+    }
+  }
+}
+.sort-icon {
+  margin-left: 4px;
+  font-size: 0.75rem;
+  &.inactive { opacity: 0.35; }
+  &.active { opacity: 1; }
+}
+.td-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid $soft-color;
+    flex-shrink: 0;
+  }
+}
+
+.td-topic {
+  white-space: nowrap;
+
+  .topic-icon {
+    margin-right: 7px;
+    font-size: 1rem;
+  }
+}
+
+.td-correct {
+  .correct-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &.high { background: $score-high-bg; color: $score-high; }
+    &.mid  { background: $score-mid-bg;  color: $score-mid; }
+    &.low  { background: $score-low-bg;  color: $score-low; }
+  }
+}
+
+.td-score {
+  min-width: 180px;
+
+  .score-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .score-bar-track {
+    flex: 1;
+    height: 7px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+    min-width: 60px;
+  }
+
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+
+    &.high { background: $score-high; }
+    &.mid  { background: $score-mid; }
+    &.low  { background: $score-low; }
+  }
+
+  .score-value {
+    font-weight: 700;
+    font-size: 0.9rem;
+    min-width: 38px;
+    text-align: right;
+    white-space: nowrap;
+
+    &.high { color: $score-high; }
+    &.mid  { color: $score-mid; }
+    &.low  { color: $score-low; }
+  }
+
+  .score-label-badge {
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+
+    &.high { background: $score-high-bg; color: $score-high; }
+    &.mid  { background: $score-mid-bg;  color: $score-mid; }
+    &.low  { background: $score-low-bg;  color: $score-low; }
+  }
+}
+
+.td-date {
+  white-space: nowrap;
+  color: $soft-color;
+  font-size: 0.85rem;
+
+  .no-date { color: $dark-color; }
+}
+.qi-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: $soft-color;
+
+  .qi-empty-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 12px;
+  }
+}
+
+.qi-loading-state,
+.qi-error-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 80px 20px;
+  color: $soft-color;
+}
+
+.qi-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid $dark-color;
+  border-top-color: $main-color;
+  border-radius: 50%;
+  animation: qi-spin 0.8s linear infinite;
+}
+
+@keyframes qi-spin {
+  to { transform: rotate(360deg); }
+}
+
+.qi-error-icon {
+  font-size: 2rem;
+  color: $score-low;
+}
+
+.qi-error-state h3 {
+  margin: 0;
+  color: $main-color;
+}
+[data-theme="light"] {
+  .score-bar-track {
+    background: rgba(0, 0, 0, 0.08);
+  }
+}
+ 

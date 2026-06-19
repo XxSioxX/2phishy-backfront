@@ -3,6 +3,8 @@ import "./settings.scss";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import * as XLSX from "xlsx";
+import { api } from "../../services/api";
 
 const Settings: React.FC = () => {
   const { logout } = useAuth();
@@ -12,6 +14,39 @@ const Settings: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  const handlePrivacyPolicy = () => {
+    navigate("/privacy-policy");
+  };
+
+  const handleUserManagementExport = async () => {
+    try {
+      const users = await api.getUsers();
+
+      const rows = users.map((user) => ({
+        Username: user.username || "",
+        Email: user.email || "",
+        "Date Created": user.created_at
+          ? new Date(user.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
+          : "",
+        Active: user.account_status === "active" ? "Yes" : "No",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+      const fileDate = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `2phishy-users-${fileDate}.xlsx`);
+    } catch (error) {
+      console.error("Failed to export users:", error);
+      alert("Failed to export users. Please try again.");
+    }
   };
 
   return (
@@ -25,10 +60,10 @@ const Settings: React.FC = () => {
               <button className="settings-button">Data management</button>
             </div>
             <div className="form-group">
-              <button className="settings-button">User management</button>
+              <button className="settings-button" onClick={handleUserManagementExport}>User management</button>
             </div>
             <div className="form-group">
-              <button className="settings-button">Privacy Policy</button>
+              <button className="settings-button" onClick={handlePrivacyPolicy}>Privacy Policy</button>
             </div>
           </div>
           <div className="settings-section">

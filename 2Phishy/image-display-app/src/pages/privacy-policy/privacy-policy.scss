@@ -1,0 +1,89 @@
+@use "../../styles/variables.scss" as *;
+
+.privacyPolicyPage {
+  padding: 24px;
+  min-height: 100%;
+  background: $main-bg;
+  color: $main-color;
+
+  @include mobile {
+    padding: 16px;
+  }
+}
+
+.privacyPolicyCard {
+  max-width: 980px;
+  margin: 0 auto;
+  background: $soft-bg;
+  border: 1px solid $dark-color;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+
+  @include mobile {
+    padding: 20px;
+    border-radius: 14px;
+  }
+
+  section {
+    margin-top: 24px;
+
+    h2 {
+      font-size: 1.15rem;
+      color: $main-color;
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 1rem;
+      color: $soft-color;
+      margin: 14px 0 8px;
+    }
+
+    p,
+    li {
+      line-height: 1.7;
+      color: $soft-color;
+    }
+
+    ul {
+      margin-left: 20px;
+      padding-left: 8px;
+    }
+  }
+}
+
+.privacyPolicyHeader {
+  padding-bottom: 20px;
+  border-bottom: 1px solid $dark-color;
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.78rem;
+    color: $soft-color;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    color: $main-color;
+    margin-bottom: 8px;
+  }
+
+  .lastUpdated {
+    color: $soft-color;
+  }
+}
+
+.notice {
+  background: $dark-bg;
+  border: 1px solid $dark-color;
+  border-radius: 14px;
+  padding: 18px;
+  margin-top: 28px;
+
+  h2 {
+    margin-bottom: 10px;
+  }
+}

@@ -37,7 +37,6 @@ const TopicPerformanceModal: React.FC<TopicPerformanceModalProps> = ({ isOpen, o
         </div>
 
         <div className="modal-body">
-          {/* Summary Statistics */}
           <div className="summary-stats">
             <div className="stat-card">
               <div className="stat-label">Total Topics</div>
@@ -56,8 +55,6 @@ const TopicPerformanceModal: React.FC<TopicPerformanceModalProps> = ({ isOpen, o
               <div className="stat-value">{highestScore}%</div>
             </div>
           </div>
-
-          {/* Enlarged Chart */}
           <div className="chart-container">
             <h3>Topic Performance Overview</h3>
             <ResponsiveContainer width="100%" height={400}>
@@ -93,13 +90,11 @@ const TopicPerformanceModal: React.FC<TopicPerformanceModalProps> = ({ isOpen, o
               </BarChart>
             </ResponsiveContainer>
           </div>
-
-          {/* Topic Details */}
           <div className="topic-details">
             <h3>Topic Breakdown</h3>
             <div className="topics-list">
               {topicData
-                .sort((a, b) => a.score - b.score) // Sort by lowest score first
+                .sort((a, b) => a.score - b.score) 
                 .map((topic, index) => (
                 <div key={topic.name} className="topic-item">
                   <div className="topic-header">

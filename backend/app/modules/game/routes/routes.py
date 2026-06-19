@@ -40,7 +40,9 @@ from app.modules.learning_path.services.learn_path_service import DefaultLearnin
 
 from app.utils.logger import get_logger
 from app.core.database_mongo import get_mongo_db
+from app.core.database_postgres import get_db
 from app.core.standard_response import StandardResponse
+from sqlalchemy.orm import Session
 
 from datetime import datetime
 
@@ -778,17 +780,12 @@ async def get_top_user_scores(
                 continue
 
             try:
-                # Get a quick estimate based on progress data
-                # Instead of computing full scores, use available progress metrics
                 progress_data = doc.get("progress", {})
-
-                # Calculate simple average from available topic progress
                 total_correct = 0
                 total_questions = 0
 
                 for topic_name, topic_data in progress_data.items():
                     if isinstance(topic_data, dict):
-                        # Count answered questions
                         answers = topic_data.get("answers", [])
                         if isinstance(answers, list):
                             for answer_data in answers:
@@ -797,23 +794,19 @@ async def get_top_user_scores(
                                     if answer_data.get("is_correct", False):
                                         total_correct += 1
 
-                # Use total correct answers as progressive score
                 score = total_correct
-
                 user_scores.append({
                     "user_id": user_id,
                     "overall_knowledge_score": score
                 })
             except Exception as e:
                 logger.error(f"Error computing score for user {user_id}: {e}")
-                # Add user with 0 score rather than skipping
                 user_scores.append({
                     "user_id": user_id,
                     "overall_knowledge_score": 0
                 })
                 continue
 
-        # Sort by score descending and limit results
         user_scores.sort(key=lambda x: x["overall_knowledge_score"], reverse=True)
         top_scores = user_scores[:limit]
 
@@ -847,7 +840,6 @@ async def get_topic_performance(
     logger.info("Fetching topic performance data (where students struggle)...")
 
     try:
-        # Get all progress documents
         progress_docs = await db["progress"].find({}).to_list(None)
 
         if not progress_docs:
@@ -857,20 +849,15 @@ async def get_topic_performance(
                 message="No student data available",
                 data=[]
             )
-
-        # Initialize topic scores
         topic_scores = {topic.value: [] for topic in Topics}
 
         for doc in progress_docs:
             try:
                 progress_data = doc.get("progress", {})
 
-                # Process each topic
                 for topic in Topics:
                     topic_name = topic.value
                     topic_data = progress_data.get(topic_name, {})
-
-                    # Count correct and total answers for this topic
                     total_correct = 0
                     total_questions = 0
 
@@ -881,8 +868,6 @@ async def get_topic_performance(
                                 total_questions += 1
                                 if answer_data.get("is_correct", False):
                                     total_correct += 1
-
-                    # Calculate score for this topic if questions were answered
                     if total_questions > 0:
                         score_percentage = (total_correct / total_questions) * 100
                         topic_scores[topic_name].append(score_percentage)
@@ -891,7 +876,6 @@ async def get_topic_performance(
                 logger.warning(f"Error processing user doc: {e}")
                 continue
 
-        # Calculate average score for each topic
         topic_performance = []
         for topic in Topics:
             topic_name = topic.value
@@ -902,7 +886,6 @@ async def get_topic_performance(
             else:
                 avg_score = 0
 
-            # Store short name for display
             short_names = {
                 "Safe Browsing Practices": "Safe Browsing",
                 "Password Security": "Password Security",

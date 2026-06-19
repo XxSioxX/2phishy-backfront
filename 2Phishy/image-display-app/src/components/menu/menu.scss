@@ -55,3 +55,15 @@
         }
     }
 }
+
+[data-theme="light"] {
+    .menu {
+        .item {
+            .listItem {
+                img {
+                    filter: var(--icon-filter);
+                }
+            }
+        }
+    }
+}

@@ -18,9 +18,11 @@
   }
 
   .modal-content {
-    background: #1a1a1a;
+    background: $dark-bg;
     border-radius: 8px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid $dark-color;
+    color: $main-color;
     width: 100%;
     max-width: 800px;
     max-height: 90vh;
@@ -39,7 +41,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 20px;
-      border-bottom: 1px solid #333;
+      border-bottom: 1px solid $dark-color;
       flex-shrink: 0;
 
       @include mobile {
@@ -60,7 +62,7 @@
         background: none;
         border: none;
         font-size: 24px;
-        color: #999;
+        color: $soft-color;
         cursor: pointer;
         padding: 0;
         width: 30px;
@@ -70,7 +72,7 @@
         justify-content: center;
 
         &:hover {
-          color: #fff;
+          color: $main-color;
         }
       }
     }
@@ -97,15 +99,15 @@
         }
 
         .stat-card {
-          background: #222;
+          background: $soft-bg;
           padding: 15px;
           border-radius: 6px;
-          border: 1px solid #333;
+          border: 1px solid $dark-color;
           text-align: center;
 
           .stat-label {
             font-size: 12px;
-            color: #999;
+            color: $soft-color;
             margin-bottom: 8px;
             text-transform: uppercase;
           }
@@ -119,10 +121,10 @@
       }
 
       .chart-container {
-        background: #222;
+        background: $soft-bg;
         padding: 20px;
         border-radius: 6px;
-        border: 1px solid #333;
+        border: 1px solid $dark-color;
         margin-bottom: 30px;
 
         @include mobile {
@@ -159,9 +161,9 @@
           gap: 8px;
 
           .week-item {
-            border: 1px solid #333;
+            border: 1px solid $dark-color;
             border-radius: 6px;
-            background: #222;
+            background: $soft-bg;
             overflow: hidden;
 
             .week-header {
@@ -169,7 +171,7 @@
               padding: 15px;
               background: none;
               border: none;
-              color: #fff;
+              color: $main-color;
               cursor: pointer;
               display: flex;
               justify-content: space-between;
@@ -181,11 +183,11 @@
               }
 
               &:hover {
-                background: #333;
+                background: $dark-bg;
               }
 
               &.expanded {
-                background: #333;
+                background: $dark-bg;
               }
 
               .week-title {
@@ -205,14 +207,14 @@
               .expand-icon {
                 flex: 0 0 auto;
                 font-size: 12px;
-                color: #999;
+                color: $soft-color;
               }
             }
 
             .week-details-content {
               padding: 0 15px 15px 15px;
-              background: #1a1a1a;
-              border-top: 1px solid #333;
+              background: $dark-bg;
+              border-top: 1px solid $dark-color;
 
               @include mobile {
                 padding: 0 12px 12px 12px;
@@ -226,7 +228,7 @@
                 font-size: 13px;
 
                 .detail-label {
-                  color: #999;
+                  color: $soft-color;
                   font-weight: 500;
                 }
 
@@ -243,7 +245,7 @@
 
     .modal-footer {
       padding: 20px;
-      border-top: 1px solid #333;
+      border-top: 1px solid $dark-color;
       display: flex;
       justify-content: flex-end;
       gap: 10px;
@@ -255,16 +257,16 @@
 
       .btn-close {
         padding: 10px 20px;
-        background: #333;
-        color: #fff;
-        border: none;
+        background: $soft-bg;
+        color: $main-color;
+        border: 1px solid $dark-color;
         border-radius: 4px;
         cursor: pointer;
         font-weight: 500;
         transition: background-color 0.2s;
 
         &:hover {
-          background: #444;
+          background: $dark-bg;
         }
       }
     }

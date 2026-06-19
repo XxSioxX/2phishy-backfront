@@ -3,6 +3,8 @@ import "./profile.scss";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
 import { formatDatePH } from "../../utils/dateUtils";
+import OverallScoreRing from "./components/OverallScoreRing";
+import TopicScoreCard from "./components/TopicScoreCard";
 
 const Profile: React.FC = () => {
   const { user, login } = useAuth();
@@ -16,9 +18,18 @@ const Profile: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [scoreProfile, setScoreProfile] = useState<any>(null);
   const [loadingScores, setLoadingScores] = useState(true);
-  const [accountOpen, setAccountOpen] = useState(true);
-  const [personalOpen, setPersonalOpen] = useState(true);
-  const [scoreOpen, setScoreOpen] = useState(true);
+  const [accountOpen, setAccountOpen] = useState<boolean>(() => {
+    const v = localStorage.getItem('profile_accountOpen');
+    return v !== null ? v === 'true' : true;
+  });
+  const [personalOpen, setPersonalOpen] = useState<boolean>(() => {
+    const v = localStorage.getItem('profile_personalOpen');
+    return v !== null ? v === 'true' : true;
+  });
+  const [scoreOpen, setScoreOpen] = useState<boolean>(() => {
+    const v = localStorage.getItem('profile_scoreOpen');
+    return v !== null ? v === 'true' : true;
+  });
 
   useEffect(() => {
     const fetchScoreProfile = async () => {
@@ -42,12 +53,11 @@ const Profile: React.FC = () => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       if (mobile) {
-        setPersonalOpen(false);
-        setScoreOpen(false);
-      } else {
-        setPersonalOpen(true);
-        setScoreOpen(true);
+        // Auto-collapse on mobile — only if no saved preference exists
+        if (localStorage.getItem('profile_personalOpen') === null) setPersonalOpen(false);
+        if (localStorage.getItem('profile_scoreOpen') === null) setScoreOpen(false);
       }
+      // On desktop: respect user's saved preference (do not force open)
     };
 
     checkMobile();
@@ -131,9 +141,15 @@ const Profile: React.FC = () => {
     setIsEditing(false);
   };
 
-  const toggleAccount = () => setAccountOpen(!accountOpen);
-  const togglePersonal = () => setPersonalOpen(!personalOpen);
-  const toggleScore = () => setScoreOpen(!scoreOpen);
+  const toggleAccount = () => { const v = !accountOpen; setAccountOpen(v); localStorage.setItem('profile_accountOpen', String(v)); };
+  const togglePersonal = () => { const v = !personalOpen; setPersonalOpen(v); localStorage.setItem('profile_personalOpen', String(v)); };
+  const toggleScore = () => { const v = !scoreOpen; setScoreOpen(v); localStorage.setItem('profile_scoreOpen', String(v)); };
+
+  const parseScore = (value: unknown): number => {
+    const parsedValue = Number(value);
+    if (!Number.isFinite(parsedValue)) return 0;
+    return Math.max(0, Math.min(100, Math.round(parsedValue)));
+  };
 
   if (!user) {
     return (
@@ -164,18 +180,15 @@ const Profile: React.FC = () => {
         )}
 
         <div className="profile-sections">
-          <div className="profile-section">
+          <div className={`profile-section ${accountOpen ? 'open' : 'collapsed'}`}>
             <div className="section-header">
               <h2>Account Information</h2>
-              <button className="toggle-button" onClick={toggleAccount}>
-                <img
-                  src="/expand.svg"
-                  alt="toggle"
-                  className={`toggle-icon ${accountOpen ? 'open' : ''}`}
-                />
+              <button className="toggle-button" onClick={toggleAccount} aria-expanded={accountOpen}>
+                <span className={`toggle-arrow ${accountOpen ? 'open' : ''}`} aria-hidden="true">▶</span>
               </button>
             </div>
-            <div className="section-content" style={{ display: accountOpen ? 'block' : 'none' }}>
+            {accountOpen && (
+            <div className="section-content">
               <div className="user-details">
               <div className="detail-item">
                 <label>User ID:</label>
@@ -211,20 +224,18 @@ const Profile: React.FC = () => {
               )}
             </div>
             </div>
+            )}
           </div>
 
-          <div className="profile-section">
+          <div className={`profile-section ${personalOpen ? 'open' : 'collapsed'}`}>
             <div className="section-header">
               <h2>Personal Information</h2>
-              <button className="toggle-button" onClick={togglePersonal}>
-                <img
-                  src="/expand.svg"
-                  alt="toggle"
-                  className={`toggle-icon ${personalOpen ? 'open' : ''}`}
-                />
+              <button className="toggle-button" onClick={togglePersonal} aria-expanded={personalOpen}>
+                <span className={`toggle-arrow ${personalOpen ? 'open' : ''}`} aria-hidden="true">▶</span>
               </button>
             </div>
-            <div className="section-content" style={{ display: personalOpen ? 'block' : 'none' }}>
+            {personalOpen && (
+            <div className="section-content">
               {user.role === 'student' ? (
               // Read-only view for students
               <div className="user-details">
@@ -317,51 +328,49 @@ const Profile: React.FC = () => {
               </>
             )}
             </div>
+            )}
           </div>
 
-          <div className="profile-section">
+          <div className={`profile-section ${scoreOpen ? 'open' : 'collapsed'}`}>
             <div className="section-header">
               <h2>Full Score Profile</h2>
-              <button className="toggle-button" onClick={toggleScore}>
-                <img
-                  src="/expand.svg"
-                  alt="toggle"
-                  className={`toggle-icon ${scoreOpen ? 'open' : ''}`}
-                />
+              <button className="toggle-button" onClick={toggleScore} aria-expanded={scoreOpen}>
+                <span className={`toggle-arrow ${scoreOpen ? 'open' : ''}`} aria-hidden="true">▶</span>
               </button>
             </div>
-            <div className="section-content" style={{ display: scoreOpen ? 'block' : 'none' }}>
+            {scoreOpen && (
+            <div className="section-content">
               {loadingScores ? (
               <div className="loading-message">Loading scores...</div>
             ) : scoreProfile ? (
               <div className="score-details">
-                {scoreProfile.overall_knowledge_score !== undefined && (
-                  <div className="detail-item">
-                    <label>Overall Knowledge Score:</label>
-                    <span className="score-value">{scoreProfile.overall_knowledge_score}</span>
+                <div className="score-overview">
+                  {scoreProfile.overall_knowledge_score !== undefined && (
+                    <OverallScoreRing score={parseScore(scoreProfile.overall_knowledge_score)} />
+                  )}
+                  <div className="score-meta-cards">
+                    {scoreProfile.trust_grade && (
+                      <div className="detail-item metric-card">
+                        <label>Trust Grade</label>
+                        <span className="trust-grade">{scoreProfile.trust_grade}</span>
+                      </div>
+                    )}
+                    {scoreProfile.trust_level && (
+                      <div className="detail-item metric-card">
+                        <label>Trust Level</label>
+                        <span className="trust-level">{scoreProfile.trust_level}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {scoreProfile.trust_grade && (
-                  <div className="detail-item">
-                    <label>Trust Grade:</label>
-                    <span className="trust-grade">{scoreProfile.trust_grade}</span>
-                  </div>
-                )}
-                {scoreProfile.trust_level && (
-                  <div className="detail-item">
-                    <label>Trust Level:</label>
-                    <span className="trust-level">{scoreProfile.trust_level}</span>
-                  </div>
-                )}
+                </div>
                 {scoreProfile.per_topic_scores && Object.keys(scoreProfile.per_topic_scores).length > 0 && (
                   <div className="topic-scores">
-                    <h3>Topic Scores:</h3>
-                    {Object.entries(scoreProfile.per_topic_scores).map(([topic, score]: [string, any]) => (
-                      <div key={topic} className="topic-score-item">
-                        <label>{topic}:</label>
-                        <span>{score}%</span>
-                      </div>
-                    ))}
+                    <h3>Topic Performance</h3>
+                    <div className="topic-score-grid">
+                      {Object.entries(scoreProfile.per_topic_scores).map(([topic, score]: [string, any]) => (
+                        <TopicScoreCard key={topic} topic={topic} score={parseScore(score)} />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -369,6 +378,7 @@ const Profile: React.FC = () => {
               <div className="no-scores-message">No score data available.</div>
             )}
             </div>
+            )}
           </div>
         </div>
       </div>
