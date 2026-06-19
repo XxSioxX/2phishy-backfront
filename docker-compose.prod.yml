@@ -38,7 +38,7 @@ services:
 
 
   backend:
-    image: localhost:5000/backend:latest-dev
+    image: ${REGISTRY:-localhost:5000}/backend:${TAG:-latest-dev}
     ports:
       - "${BACKEND_PORT}:8000"
     env_file:
@@ -55,7 +55,7 @@ services:
       - redis
 
   frontend:
-    image: localhost:5000/frontend:latest-dev
+    image: ${REGISTRY:-localhost:5000}/frontend:${TAG:-latest-dev}
     ports:
       - "${FRONTEND_PORT}:80"
     depends_on:
