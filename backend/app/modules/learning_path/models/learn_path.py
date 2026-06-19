@@ -27,6 +27,7 @@ class Subtopic(Enum):
     # M_T
     MALTYPE = "MALTYPE"
     MALINFECT = "MALINFECT"
+    MALINFOSYM = "MALINFOSYM"
 
     # SE_T
     SOCENGTYPE = "SOCENGTYPE"

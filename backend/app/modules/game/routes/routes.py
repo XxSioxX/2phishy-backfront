@@ -33,6 +33,7 @@ from app.modules.game.services.services import (
     compute_knowledge_score,
     build_sfb_progression,
     build_ps_progression,
+    build_ir_progression,
     update_current_zone_service,
 )
 from app.modules.learning_path.services.learn_path_service import DefaultLearningEvaluator
@@ -411,6 +412,8 @@ async def generate_user_question_list(
                 qmap = await build_sfb_progression(qmap)
            elif request.topic == Topics.PS_T:
                 qmap = await build_ps_progression(qmap)
+           elif request.topic == Topics.IR_T:
+                qmap = await build_ir_progression(qmap)
         except Exception as e:
             logger.error(f"Error in creating question list: {e}")
 
@@ -428,6 +431,25 @@ async def generate_user_question_list(
             qmap
         )
 
+        topic_key = request.topic.value if hasattr(request.topic, "value") else request.topic
+        progress_doc = await db["progress"].find_one({"user_id": str(user_uuid)})
+        topic_progress = (
+            progress_doc
+            .get("progress", {})
+            .get(topic_key, {})
+        ) if progress_doc else {}
+        answers = topic_progress.get("answers", [])
+        answered_total = len({
+            answer.get("question_id")
+            for answer in answers
+            if answer.get("question_id")
+        })
+        correct_answered_total = len({
+            answer.get("question_id")
+            for answer in answers
+            if answer.get("question_id") and answer.get("is_correct") is True
+        })
+
         logger.info(f"Remaining Unanswered questions: {unanswered_qmap}")
         logger.info(f"questionsTotal: {len(qmap)}")
         return StandardResponse(
@@ -435,7 +457,11 @@ async def generate_user_question_list(
             message="Successfully generated unanswered question list",
             data={
                 "questions": unanswered_qmap,
-                "questionsTotal": len(unanswered_qmap)
+                "questionsTotal": len(unanswered_qmap),
+                "questionMapTotal": len(qmap),
+                "answeredTotal": answered_total,
+                "correctAnsweredTotal": correct_answered_total,
+                "levelCompleted": topic_progress.get("level_completed") is True
             }
         )
 

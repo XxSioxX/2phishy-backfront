@@ -416,8 +416,26 @@ async def generate_question_list(
         return []
 
     if "question_map" in topic_assessment and topic_assessment["question_map"]:
-        logger.info(f"Question map already exists for topic '{topic.value}' — skipping generation.")
-        return topic_assessment["question_map"]
+        existing_question_map = topic_assessment["question_map"]
+        valid_question_ids = {
+            question.get("question_id")
+            for questions in qb_questions.values()
+            for question in questions
+        }
+        invalid_questions = [
+            question
+            for question in existing_question_map
+            if question.get("question_id") not in valid_question_ids
+        ]
+
+        if not invalid_questions:
+            logger.info(f"Question map already exists for topic '{topic.value}' - skipping generation.")
+            return existing_question_map
+
+        logger.warning(
+            f"Discarding stale question map for topic '{topic.value}'. "
+            f"Invalid question ids: {[question.get('question_id') for question in invalid_questions]}"
+        )
 
     priority_info = topic_assessment.get("subcat_priority", [])
     if len(priority_info) < 2 or not isinstance(priority_info[1], dict):
@@ -429,8 +447,16 @@ async def generate_question_list(
     for subcat_key, priority in subcat_priorities.items():
         num_to_select = QUESTIONS_PER_PRIORITY.get(priority.upper(), 1)
 
+        # Keep older Malware assessment records compatible with the current
+        # question-base key.
+        question_pool_key = (
+            "MALINFOSYM"
+            if subcat_key == "MALINFECT" and "MALINFOSYM" in qb_questions
+            else subcat_key
+        )
+
         # Get the available questions for this subtopic from the loaded knowledge base
-        available_questions = qb_questions.get(subcat_key)
+        available_questions = qb_questions.get(question_pool_key)
 
         if available_questions:
             actual_num_to_select = min(num_to_select, len(available_questions))
@@ -474,7 +500,13 @@ async def generate_question_list(
                 if priority.upper() != level:
                     continue
 
-                available_questions = qb_questions.get(subcat_key, [])
+                question_pool_key = (
+                    "MALINFOSYM"
+                    if subcat_key == "MALINFECT" and "MALINFOSYM" in qb_questions
+                    else subcat_key
+                )
+
+                available_questions = qb_questions.get(question_pool_key, [])
 
                 # Filter out already selected
                 remaining_questions = [
@@ -501,22 +533,29 @@ async def generate_question_list(
 async def build_sfb_progression(question_map: list[dict]):
     logger.info("Building SFB progression structure")
 
-    ZONE_1_MAX = 2
-    ZONE_2_MAX = 4
+    question_count = len(question_map)
+
+    if question_count >= 3:
+        zone_sequence = [1, 2, 3]
+
+        for zone, max_count in ((1, 2), (2, 4)):
+            while (
+                len(zone_sequence) < question_count
+                and zone_sequence.count(zone) < max_count
+            ):
+                zone_sequence.append(zone)
+
+        while len(zone_sequence) < question_count:
+            zone_sequence.append(3)
+    else:
+        zone_sequence = [1 for _ in range(question_count)]
 
     updated_questions = []
     for index, question in enumerate(question_map):
-        zone = 3
-
-        if index < ZONE_1_MAX:
-            zone = 1
-        elif index < ZONE_1_MAX + ZONE_2_MAX:
-            zone = 2
-
         updated_question = {
             **question,
 
-            "zone": zone,
+            "zone": zone_sequence[index],
             "zone_order": index + 1,
         }
         updated_questions.append(updated_question)
@@ -533,6 +572,37 @@ async def build_ps_progression(question_map: list[dict]):
         return question_map
 
     zone_capacities = (2, 2, 2)
+    updated_questions = []
+
+    for index, question in enumerate(question_map):
+        if index < zone_capacities[0]:
+            zone = 1
+        elif index < sum(zone_capacities[:2]):
+            zone = 2
+        elif index < sum(zone_capacities):
+            zone = 3
+        else:
+            zone = 4
+
+        updated_questions.append({
+            **question,
+            "zone": zone,
+            "zone_order": index + 1,
+        })
+
+    return updated_questions
+
+
+async def build_ir_progression(question_map: list[dict]):
+    logger.info("Building Incident Response progression structure")
+
+    if all(
+        int(question.get("zone", 0)) in {1, 2, 3, 4}
+        for question in question_map
+    ):
+        return question_map
+
+    zone_capacities = (4, 2, 2)
     updated_questions = []
 
     for index, question in enumerate(question_map):
@@ -732,6 +802,43 @@ async def save_popup_question_result(
     }
 
     if exists:
+        previous_answers = (
+            exists
+            .get("progress", {})
+            .get(topic_key, {})
+            .get("answers", [])
+        )
+        previous_answer = next(
+            (
+                answer
+                for answer in previous_answers
+                if answer.get("question_id") == q_id
+            ),
+            None
+        )
+
+        if previous_answer and previous_answer.get("is_correct") is False and q_is_correct is True:
+            logger.info(
+                f"Updating previous incorrect answer for question '{q_id}' "
+                "with a later correct retry."
+            )
+            await db[collection_name].update_one(
+                {
+                    "user_id": str(user_id),
+                    f"progress.{topic_key}.answers.question_id": q_id
+                },
+                {
+                    "$set": {
+                        f"progress.{topic_key}.answers.$": payload_dict
+                    }
+                }
+            )
+            return {
+                "saved": True,
+                "question_id": q_id,
+                "reason": "corrected_previous_answer"
+            }
+
         logger.info(
             f"First answer already recorded for question '{q_id}'. "
             "Ignoring retry answer."
@@ -772,6 +879,9 @@ async def filter_unanswered_questions(
         .get("progress", {})
         .get(topic_key, {})
     )
+
+    if topic_progress.get("level_completed") is True:
+        return []
 
     # SFB retries are zone-based. All questions in the current and
     # future zones must remain available regardless of first answers.
