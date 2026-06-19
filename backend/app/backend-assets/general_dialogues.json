@@ -17,13 +17,13 @@
         { "id": "3", "text": "Where... am I?" },
         { "id": "4", "text": "I remember logging in." },
         { "id": "5", "text": "A message. A warning." },
-        { "id": "6", "text": "Then—" },
+        { "id": "6", "text": "Then-" },
         { "id": "7", "text": "Everything went dark." },
-        { "id": "8", "text": "This place... it doesn’t feel real." },
-        { "id": "9", "text": "Or maybe... it’s too real." },
+        { "id": "8", "text": "This place... it does not feel real." },
+        { "id": "9", "text": "Or maybe... it feels too real." },
         { "id": "10", "text": "Someone brought me here." },
         { "id": "11", "text": "And I need to figure out why." },
-        { "id": "12", "text": "Before it's too late.", "end": true }
+        { "id": "12", "text": "Before it is too late.", "end": true }
       ]
     },
     {
@@ -37,17 +37,74 @@
         "typeSpeed": 25
       },
       "nodes": [
-        { "id": "1", "text": "This isn’t my room..." },
-        { "id": "2", "text": "Stone walls. Torches. And symbols carved into the floor." },
-        { "id": "3", "text": "This feels like some kind of trial." },
-        { "id": "4", "text": "That staff... it’s reacting to something nearby." },
-        { "id": "5", "text": "Those glowing markers ahead..." },
-        { "id": "6", "text": "They’re not random." },
-        { "id": "7", "text": "If this place is testing me..." },
-        { "id": "8", "text": "Then something is judging me." },
-        { "id": "9", "text": "Whatever brought me here..." },
-        { "id": "10", "text": "It’s watching." },
-        { "id": "11", "text": "And it expects answers.", "end": true }
+        { "id": "1", "text": "The room shifts again." },
+        { "id": "2", "text": "Same stone. Same silence." },
+        { "id": "3", "text": "Those markers are waiting for answers." },
+        { "id": "4", "text": "This place checks what I know before it opens the next path." },
+        { "id": "5", "text": "I need to read carefully." },
+        { "id": "6", "text": "Guessing will only make this harder.", "end": true }
+      ]
+    },
+    {
+      "id": "level1_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "..." },
+        { "id": "2", "text": "So this is how it works." },
+        { "id": "3", "text": "Those markers were not random." },
+        { "id": "4", "text": "Each one tested what I would trust." },
+        { "id": "5", "text": "What I would ignore." },
+        { "id": "6", "text": "And what I would check first." },
+        { "id": "7", "text": "More paths. More traps." },
+        { "id": "8", "text": "Nothing here is placed by accident." },
+        { "id": "9", "text": "If something looks harmless..." },
+        { "id": "10", "text": "I still need to inspect it.", "end": true }
+      ]
+    },
+    {
+      "id": "level2_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "The air feels heavier here." },
+        { "id": "2", "text": "These guardians are not guarding doors." },
+        { "id": "3", "text": "They are guarding habits." },
+        { "id": "4", "text": "Weak passwords. Reused passwords. Missing second factors." },
+        { "id": "5", "text": "If I need to type a password here, it must be fictional." },
+        { "id": "6", "text": "No real secrets. Not in a place built to test me." },
+        { "id": "7", "text": "Beat the guardians. Clear the path.", "end": true }
+      ]
+    },
+    {
+      "id": "level3_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "This chamber is infected." },
+        { "id": "2", "text": "Those things are not just wandering." },
+        { "id": "3", "text": "If they touch me, my HP drops." },
+        { "id": "4", "text": "Wrong answers hurt too." },
+        { "id": "5", "text": "The door will stay locked until every threat is handled." },
+        { "id": "6", "text": "Keep distance. Read the notes. Quarantine the malware.", "end": true }
       ]
     }
   ]

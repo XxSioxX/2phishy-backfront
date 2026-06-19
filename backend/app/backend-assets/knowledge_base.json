@@ -356,11 +356,21 @@
             "question_id": "ir_steps_004",
             "knowledge_content": "Reviewing what caused an incident helps strengthen defenses and prevent similar issues in the future."
           },
-          {
-            "knowledge_id": "kb_ir_steps_005",
-            "question_id": "ir_steps_005",
-            "knowledge_content": "Changing credentials after an incident helps ensure that stolen or exposed passwords can no longer be used."
-          }
+            {
+              "knowledge_id": "kb_ir_steps_005",
+              "question_id": "ir_steps_005",
+              "knowledge_content": "Changing credentials after an incident helps ensure that stolen or exposed passwords can no longer be used."
+            },
+            {
+              "knowledge_id": "kb_ir_steps_006",
+              "question_id": "ir_steps_006",
+              "knowledge_content": "Documenting an incident preserves evidence, supports investigation, and helps improve future response plans."
+            },
+            {
+              "knowledge_id": "kb_ir_steps_007",
+              "question_id": "ir_steps_007",
+              "knowledge_content": "Deleting logs during an incident can destroy evidence and make it harder to understand what happened."
+            }
         ]
       },
       {
@@ -387,11 +397,21 @@
             "question_id": "ir_response_004",
             "knowledge_content": "Analyzing incidents after they occur helps improve defenses and response strategies over time."
           },
-          {
-            "knowledge_id": "kb_ir_response_005",
-            "question_id": "ir_response_005",
-            "knowledge_content": "Understanding common threats allows faster recognition and more effective handling of security incidents."
-          }
+            {
+              "knowledge_id": "kb_ir_response_005",
+              "question_id": "ir_response_005",
+              "knowledge_content": "Understanding common threats allows faster recognition and more effective handling of security incidents."
+            },
+            {
+              "knowledge_id": "kb_ir_response_006",
+              "question_id": "ir_response_006",
+              "knowledge_content": "A post-incident review measures what worked, what failed, and how the response process should improve."
+            },
+            {
+              "knowledge_id": "kb_ir_response_007",
+              "question_id": "ir_response_007",
+              "knowledge_content": "Predefined communication channels reduce confusion and help responders coordinate during active incidents."
+            }
         ]
       }
     ]
