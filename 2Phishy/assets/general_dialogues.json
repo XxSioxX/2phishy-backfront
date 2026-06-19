@@ -17,13 +17,13 @@
         { "id": "3", "text": "Where... am I?" },
         { "id": "4", "text": "I remember logging in." },
         { "id": "5", "text": "A message. A warning." },
-        { "id": "6", "text": "Then—" },
+        { "id": "6", "text": "Then-" },
         { "id": "7", "text": "Everything went dark." },
-        { "id": "8", "text": "This place... it doesn’t feel real." },
-        { "id": "9", "text": "Or maybe... it’s too real." },
+        { "id": "8", "text": "This place... it does not feel real." },
+        { "id": "9", "text": "Or maybe... it feels too real." },
         { "id": "10", "text": "Someone brought me here." },
         { "id": "11", "text": "And I need to figure out why." },
-        { "id": "12", "text": "Before it's too late.", "end": true }
+        { "id": "12", "text": "Before it is too late.", "end": true }
       ]
     },
     {
@@ -37,18 +37,12 @@
         "typeSpeed": 25
       },
       "nodes": [
-        { "id": "1", "text": " " },
-        { "id": "2", "text": "This isn’t my room..." },
-        { "id": "3", "text": "Stone walls. Torches. And symbols carved into the floor." },
-        { "id": "4", "text": "This feels like some kind of trial." },
-        { "id": "5", "text": "That staff... it’s reacting to something nearby." },
-        { "id": "6", "text": "Those glowing markers ahead..." },
-        { "id": "7", "text": "They’re not random." },
-        { "id": "8", "text": "If this place is testing me..." },
-        { "id": "9", "text": "Then something is judging me." },
-        { "id": "10", "text": "Whatever brought me here..." },
-        { "id": "11", "text": "It’s watching." },
-        { "id": "12", "text": "And it expects answers.", "end": true }
+        { "id": "1", "text": "The room shifts again." },
+        { "id": "2", "text": "Same stone. Same silence." },
+        { "id": "3", "text": "Those markers are waiting for answers." },
+        { "id": "4", "text": "This place checks what I know before it opens the next path." },
+        { "id": "5", "text": "I need to read carefully." },
+        { "id": "6", "text": "Guessing will only make this harder.", "end": true }
       ]
     },
     {
@@ -64,21 +58,112 @@
       "nodes": [
         { "id": "1", "text": "..." },
         { "id": "2", "text": "So this is how it works." },
-        { "id": "3", "text": "Those markers… they weren’t random." },
-        { "id": "4", "text": "Each one was testing what I’d do." },
-        { "id": "5", "text": "What I’d trust." },
-        { "id": "6", "text": "What I’d ignore." },
-        { "id": "7", "text": "And now…" },
-        { "id": "8", "text": "This place is changing." },
-        { "id": "9", "text": "More paths. More traps." },
-        { "id": "10", "text": "Nothing here is placed by accident." },
-        { "id": "11", "text": "If something looks harmless…" },
-        { "id": "12", "text": "It probably isn’t." },
-        { "id": "13", "text": "I need to be careful." },
-        { "id": "14", "text": "Check everything." },
-        { "id": "15", "text": "Trust nothing too quickly." },
-        { "id": "16", "text": "Because whatever this is…" },
-        { "id": "17", "text": "It’s getting harder.", "end": true }
+        { "id": "3", "text": "Those markers were not random." },
+        { "id": "4", "text": "Each one tested what I would trust." },
+        { "id": "5", "text": "What I would ignore." },
+        { "id": "6", "text": "And what I would check first." },
+        { "id": "7", "text": "More paths. More traps." },
+        { "id": "8", "text": "Nothing here is placed by accident." },
+        { "id": "9", "text": "If something looks harmless..." },
+        { "id": "10", "text": "I still need to inspect it.", "end": true }
+      ]
+    },
+    {
+      "id": "level2_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "The air feels heavier here." },
+        { "id": "2", "text": "These guardians are not guarding doors." },
+        { "id": "3", "text": "They are guarding habits." },
+        { "id": "4", "text": "Weak passwords. Reused passwords. Missing second factors." },
+        { "id": "5", "text": "If I need to type a password here, it must be fictional." },
+        { "id": "6", "text": "No real secrets. Not in a place built to test me." },
+        { "id": "7", "text": "Beat the guardians. Clear the path.", "end": true }
+      ]
+    },
+    {
+      "id": "level3_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "This chamber is infected." },
+        { "id": "2", "text": "Those things are not just wandering." },
+        { "id": "3", "text": "If they touch me, my HP drops." },
+        { "id": "4", "text": "Wrong answers hurt too." },
+        { "id": "5", "text": "The door will stay locked until every threat is handled." },
+        { "id": "6", "text": "Keep distance. Read the notes. Quarantine the malware.", "end": true }
+      ]
+    },
+    {
+      "id": "level5_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "This room feels different." },
+        { "id": "2", "text": "The fragments are not just memories. They are evidence." },
+        { "id": "3", "text": "Four responders are trapped behind the seals." },
+        { "id": "4", "text": "Identify. Contain. Eradicate. Recover." },
+        { "id": "5", "text": "If I free them, they can break the core's guards." },
+        { "id": "6", "text": "Then the last question is not how I got here." },
+        { "id": "7", "text": "It is whether I can write the report that gets me out.", "end": true }
+      ]
+    },
+    {
+      "id": "ir_boss_truth",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "The core stops fighting." },
+        { "id": "2", "text": "It was never a monster. It was the unfinished incident report." },
+        { "id": "3", "text": "Every room was a damaged record of the same attack." },
+        { "id": "4", "text": "Unsafe trust opened the path. Weak credentials widened it. Malware spread through it. Social pressure hid it." },
+        { "id": "5", "text": "The only way out is to finish the response." },
+        { "id": "6", "text": "Write the report. Close the incident.", "end": true }
+      ]
+    },
+    {
+      "id": "ir_ending",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "The lever locks into place." },
+        { "id": "2", "text": "The sparks fade. The core is quiet." },
+        { "id": "3", "text": "Now I understand where I was." },
+        { "id": "4", "text": "Inside a reconstruction. A training system built from the incident itself." },
+        { "id": "5", "text": "It did not need me to defeat the attack." },
+        { "id": "6", "text": "It needed me to respond correctly." },
+        { "id": "7", "text": "Incident closed.", "end": true }
       ]
     }
   ]
