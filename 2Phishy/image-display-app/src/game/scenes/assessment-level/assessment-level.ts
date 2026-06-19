@@ -167,7 +167,7 @@ export class AssessmentLevel extends Scene {
       PassStren: 'PASSSTREN',
       MultiFact: 'MULTIFACT',
       MalType: 'MALTYPE',
-      MalInfect: 'MALINFECT',
+      MalInfect: 'MALINFOSYM',
       SocEngType: 'SOCENGTYPE',
       SocEngDef: 'SOCENGDEF',
       IRProc: 'IRPROC',

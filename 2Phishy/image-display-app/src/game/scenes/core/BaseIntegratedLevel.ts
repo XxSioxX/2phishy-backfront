@@ -22,10 +22,12 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     protected tileset!: Tilemaps.Tileset;
     protected wallsLayer!: Tilemaps.TilemapLayer;
     protected wallsLayer2!: Tilemaps.TilemapLayer;
-    protected platform!: Tilemaps.TilemapLayer;
+    protected platform?: Tilemaps.TilemapLayer;
 
     protected questions: any[] = [];
     protected assessmentResults: AssessmentResult[] = [];
+    protected backendQuestionMapTotal = 0;
+    protected backendLevelCompleted = false;
 
     protected inAssessment = false;
     protected assessmentCompleted = false;
@@ -40,6 +42,8 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     private exitPlatforms: Phaser.GameObjects.Sprite[] = [];
 
     private exitActivated = false;
+    private exitTransitioning = false;
+    private completeWhenReady = false;
     protected currentZone = 0;
 
     constructor(config: LevelConfig) {
@@ -52,6 +56,9 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.initMap();
         this.popup = new AssessmentPopup(this);
         await this.createQuestionMap();
+
+        if (await this.redirectToInitialAssessmentIfNeeded()) return;
+
         this.initAssessment();
         this.spawnPlayerOnSpawnPoint(this.currentZone);
         this.initNextLevelPlatforms();
@@ -63,23 +70,50 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.setupKnowledgeCollision();
         await this.introDialogue();
         this.initUI();
+
+        if (this.completeWhenReady || this.questions.length === 0) {
+          this.game.events.emit(
+            'questions:update',
+            this.totalquestions,
+            this.assessmentResults.length
+          );
+          await this.handleNoPlayableQuestionsReady();
+        }
     }
 
-    async setKnowledgeList(): void {
-        const knowledgeResponse = await gameAPI.getUserKnowledgeList({
-          userid: this.userData.userId,
-          topic: this.config.topic,
-        });
-        this.knowledgeList = knowledgeResponse.data.knowledge;
+    async setKnowledgeList(): Promise<void> {
+        try {
+          const knowledgeResponse = await gameAPI.getUserKnowledgeList({
+            userid: this.userData.userId,
+            topic: this.config.topic,
+          });
+
+          this.knowledgeList = Array.isArray(knowledgeResponse.data?.knowledge)
+            ? knowledgeResponse.data.knowledge
+            : [];
+        } catch (error) {
+          console.error(
+            `Failed to load knowledge list for ${this.config.topic}`,
+            error
+          );
+          this.knowledgeList = [];
+        }
     }
 
-    async introDialogue(): void {
-        const progressResponse = await gameAPI.getUserProgress(this.userData.userId);
+    async introDialogue(): Promise<void> {
+        let hasSeenIntro = false;
 
-        const topicProgress =
-          progressResponse.data?.progress?.progress?.[this.config.topic];
-
-        const hasSeenIntro = topicProgress?.intro_seen === true;
+        try {
+          const progressResponse = await gameAPI.getUserProgress(this.userData.userId);
+          const topicProgress =
+            progressResponse.data?.progress?.progress?.[this.config.topic];
+          hasSeenIntro = topicProgress?.intro_seen === true;
+        } catch (error) {
+          console.error(
+            `Failed to load intro progress for ${this.config.topic}`,
+            error
+          );
+        }
 
         if (!hasSeenIntro) {
           const showIntroAndSave = async () => {
@@ -88,10 +122,17 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
               this.config.intro.description
             );
 
-            await gameAPI.markIntroSeen({
-              userid: this.userData.userId,
-              topic: this.config.topic
-            });
+            try {
+              await gameAPI.markIntroSeen({
+                userid: this.userData.userId,
+                topic: this.config.topic
+              });
+            } catch (error) {
+              console.error(
+                `Failed to save intro progress for ${this.config.topic}`,
+                error
+              );
+            }
           };
 
           if (this.config.intro.dialogueId) {
@@ -177,7 +218,9 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.map.createLayer('Floor', this.tileset, 0, 0)!;
         this.wallsLayer = this.map.createLayer('Walls', this.tileset, 0, 0)!;
         this.wallsLayer2 = this.map.createLayer('Walls-second', this.tileset, 0, 0)!;
-        this.platform = this.map.createLayer('Platform', this.tileset, 0, 0)!;
+        if (this.map.layers.some(layer => layer.name === 'Platform')) {
+          this.platform = this.map.createLayer('Platform', this.tileset, 0, 0) ?? undefined;
+        }
         this.wallsLayer.setCollisionByProperty({ collides: true });
         this.wallsLayer2.setCollisionByProperty({ collides: true });
 
@@ -261,14 +304,11 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         const spawnLayer = this.map.getObjectLayer('SpawnPoint');
         const spawnObjects = spawnLayer?.objects || [];
 
-        const getZone = (obj: any) =>
-            obj.properties?.find((p: any) => p.name === "zone_number")?.value;
-
         let spawn;
 
         if (zone !== undefined) {
             spawn = spawnObjects.find(
-                obj => Number(getZone(obj)) === zone
+                obj => this.getObjectNumberProperty(obj, 'zone_number') === zone
             );
         }
 
@@ -301,16 +341,94 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.exitPlatforms.push(platform);
 
         this.physics.add.overlap(this.player, platform, () => {
-          if (!this.assessmentCompleted) return;
+          if (!this.assessmentCompleted || this.exitTransitioning) return;
 
-          this.player.lockMovement();
-          this.scene.stop('ui-scene');
-
-          this.scene.start(this.config.next.sceneKey, {
-            topic: this.config.next.topic
-          });
+          void this.startNextLevel();
         });
       });
+    }
+
+    private async startNextLevel(): Promise<void> {
+      this.exitTransitioning = true;
+      this.player.lockMovement();
+      this.scene.stop('ui-scene');
+
+      const nextLevel = this.config.next;
+      const directStart = () => {
+        this.scene.start(nextLevel.sceneKey, {
+          topic: nextLevel.topic
+        });
+      };
+
+      if (nextLevel.sceneKey === this.scene.key) {
+        directStart();
+        return;
+      }
+
+      const needsAssessment = await this.needsInitialAssessment(
+        nextLevel.topic
+      );
+
+      if (!needsAssessment) {
+        directStart();
+        return;
+      }
+
+      this.scene.start('assessment-scene', {
+        topic: nextLevel.topic,
+        nextScene: nextLevel.sceneKey
+      });
+    }
+
+    private async needsInitialAssessment(topic: string): Promise<boolean> {
+      if (!this.userData?.token || !this.userData?.userId) {
+        return true;
+      }
+
+      try {
+        gameAPI.setToken(this.userData.token);
+        const response = await gameAPI.getUserProgress(this.userData.userId);
+        const assessment =
+          response.data?.initial_assessments?.assessments?.[topic];
+
+        return assessment?.assessment_completed !== true;
+      } catch (error) {
+        console.error('Failed to check next topic assessment', error);
+        return true;
+      }
+    }
+
+    private async redirectToInitialAssessmentIfNeeded(): Promise<boolean> {
+      if (this.questions.length > 0) return false;
+
+      const needsAssessment = await this.needsInitialAssessment(
+        this.config.topic
+      );
+
+      if (!needsAssessment) {
+        const reason = this.backendLevelCompleted
+          ? 'level is already marked complete'
+          : this.backendQuestionMapTotal > 0
+            ? 'all mapped questions are already resolved or filtered out'
+            : 'no valid question map could be generated';
+
+        console.warn(
+          `No playable questions for ${this.config.topic} (${reason}); allowing level flow to continue.`
+        );
+        this.completeWhenReady = true;
+        return false;
+      }
+
+      console.warn(
+        `Missing initial assessment for ${this.config.topic}; opening assessment scene.`
+      );
+
+      this.scene.start('assessment-scene', {
+        topic: this.config.topic,
+        nextScene: this.scene.key
+      });
+
+      return true;
     }
 
     private showDebugWalls(): void {
@@ -349,25 +467,99 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
         });
 
+        this.setQuestionMapMetadata(response?.data);
 
         if (response?.data?.questions?.length > 0) {
-          console.log("Using existing backend question_map");
-          this.questions = response.data.questions;
-          this.totalquestions = response.data.questionsTotal;
-          return;
+          const validQuestions = this.filterQuestionsForTopic(
+            response.data.questions
+          );
+
+          if (validQuestions.length === response.data.questions.length) {
+            console.log("Using existing backend question_map");
+            this.questions = validQuestions;
+            this.totalquestions = validQuestions.length;
+            return;
+          }
+
+          console.warn(
+            `Ignoring ${response.data.questions.length - validQuestions.length} question(s) that do not belong to ${this.config.topic}.`
+          );
+
+          if (validQuestions.length > 0) {
+            this.questions = validQuestions;
+            this.totalquestions = validQuestions.length;
+            return;
+          }
         }
 
 
-        console.log("No question_map found, generating...");
+        console.log("No valid question_map found, generating...");
         const created = await gameAPI.createUserQuestionMap({
           userid: this.userData.userId,
           topic: this.config.topic,
 
         });
 
+        this.setQuestionMapMetadata(created?.data);
 
-        this.questions = created.data.questions;
-        this.totalquestions = created.data.totalquestions;
+        this.questions = this.filterQuestionsForTopic(
+          created.data.questions ?? []
+        );
+        this.totalquestions = this.questions.length;
+    }
+
+    private setQuestionMapMetadata(data: any): void {
+        this.backendQuestionMapTotal = this.toFiniteNumber(
+          data?.questionMapTotal ??
+          data?.allQuestionsTotal ??
+          data?.questionsTotal ??
+          data?.questions?.length ??
+          0
+        );
+        this.backendLevelCompleted = data?.levelCompleted === true;
+    }
+
+    private toFiniteNumber(value: unknown): number {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    private filterQuestionsForTopic(questions: any[]): any[] {
+        return questions.filter(question => {
+          if (!this.isPlayableQuestion(question)) {
+            console.warn(
+              `Ignoring malformed question for ${this.config.topic}:`,
+              question
+            );
+            return false;
+          }
+
+          const subcat = this.inferSubcat(String(question.question_id ?? ''));
+
+          if (subcat !== 'UNKNOWN') {
+            return true;
+          }
+
+          console.warn(
+            `Question ${question.question_id} does not match topic ${this.config.topic}.`
+          );
+
+          return false;
+        });
+    }
+
+    private isPlayableQuestion(question: any): boolean {
+        return Boolean(
+          question &&
+          typeof question.question_id === 'string' &&
+          question.question_id.trim() &&
+          typeof question.question === 'string' &&
+          question.question.trim() &&
+          Array.isArray(question.choices) &&
+          question.choices.length > 0 &&
+          typeof question.answer === 'string' &&
+          question.answer.trim()
+        );
     }
 
     protected initAssessment(): void {
@@ -378,6 +570,14 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
       Phaser.Utils.Array.Shuffle(allPoints);
 
       const selectedPoints = allPoints.slice(0, this.questions.length);
+
+      if (selectedPoints.length < this.questions.length) {
+        console.warn(
+          `${this.config.topic} has ${this.questions.length} playable questions but only ${selectedPoints.length} question points. Trimming to placed points.`
+        );
+        this.questions = this.questions.slice(0, selectedPoints.length);
+        this.totalquestions = this.questions.length;
+      }
 
       this.questionPoints = selectedPoints.map((pt, index) => {
         const qpbottom = this.physics.add.sprite(pt.x, pt.y, 'tiles_spr', 340).setScale(1.5);
@@ -437,6 +637,17 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         });
 
         const q = this.questions[qIndex];
+        if (!q) {
+            console.warn(
+              `No question data for point ${qIndex} in ${this.config.topic}; removing stale marker.`
+            );
+            pointPair.forEach((sprite: Phaser.GameObjects.Sprite) =>
+              sprite.destroy()
+            );
+            this.inAssessment = false;
+            this.player.unlockMovement();
+            return;
+        }
 
         this.popup.mode = "learning";
         this.popup.correctAnswer = q.answer;
@@ -468,9 +679,9 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
                   timestamp: result.timestamp,
                 });
 
-                console.log("📡 Single question submitted");
+                console.log("ðŸ“¡ Single question submitted");
             } catch (err) {
-            console.error("❌ Failed to submit single question", err);
+            console.error("âŒ Failed to submit single question", err);
             }
 
             // remove question trigger
@@ -543,7 +754,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
                 .setAlpha(1);
 
               if (platform.body) {
-                platform.body.enable = true;
+                (platform.body as Phaser.Physics.Arcade.Body).enable = true;
               }
 
               // Sine pulsing
@@ -856,6 +1067,35 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
     protected inferSubcat(questionId: string): string {
       return this.config.inferSubcat(questionId);
+    }
+
+    protected getObjectProperty(object: any, names: string | string[]): unknown {
+      const wantedNames = (Array.isArray(names) ? names : [names])
+        .map(name => this.normalizeObjectPropertyName(name));
+
+      return object?.properties?.find((property: any) =>
+        wantedNames.includes(
+          this.normalizeObjectPropertyName(String(property.name ?? ''))
+        )
+      )?.value;
+    }
+
+    protected getObjectNumberProperty(
+      object: any,
+      names: string | string[],
+      fallback = 0
+    ): number {
+      const value = this.getObjectProperty(object, names);
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    protected async handleNoPlayableQuestionsReady(): Promise<void> {
+      await this.completeAssessment();
+    }
+
+    private normalizeObjectPropertyName(name: string): string {
+      return name.trim().replace(/:+$/, '');
     }
 
     protected startIntroDialogue(

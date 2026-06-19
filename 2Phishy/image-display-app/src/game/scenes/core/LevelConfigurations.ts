@@ -51,6 +51,7 @@ export const LEVEL_CONFIGS = {
       description:
         'Explore each chamber, learn how passwords are attacked, and test a fictional password against its guardian.\n' +
         'Defeat all four guardians to assemble your knight escort and unlock the next level.',
+      dialogueId: 'level2_spawn_intro',
     },
 
     next: {
@@ -80,8 +81,9 @@ export const LEVEL_CONFIGS = {
     intro: {
       title: 'Level 3 — Malware',
       description:
-        'Discover the different types of malware and how infections spread.\n' +
-        'Collect knowledge and prove your skills against the Wards.',
+        'Track down infected programs, collect malware notes, and quarantine each threat.\n' +
+        'Finish every scan to unlock the quarantine door. Malware contact and wrong answers drain HP.',
+      dialogueId: 'level3_spawn_intro',
     },
 
     next: {
@@ -140,18 +142,19 @@ export const LEVEL_CONFIGS = {
   intro: {
     title: 'Level 5 — Incident Response',
     description:
-      'Learn how to response in the event of an attack or a crash.\n' +
-      'Stay alert, collect knowledge, and challenge the Wards.',
+      'Rebuild the incident report, free each responder, and close the corrupted core.\n' +
+      'Identify, contain, eradicate, recover, then report what really happened.',
+    dialogueId: 'level5_spawn_intro',
   },
 
   next: {
-    sceneKey: 'ir-level-scene',
+    sceneKey: 'main-menu-scene',
     topic: 'Incident Response',
   },
 
   inferSubcat: (id: string) => {
-    if (id.includes('ir_steps_')) return 'IRSteps';
-    if (id.includes('ir_response_')) return 'IRResponse';
+    if (id.includes('ir_steps_')) return 'IRSTEPS';
+    if (id.includes('ir_response_')) return 'IRRESPONSE';
     return 'UNKNOWN';
   },
 } satisfies LevelConfig,

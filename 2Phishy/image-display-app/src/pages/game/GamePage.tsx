@@ -203,12 +203,14 @@ const GamePage: React.FC = () => {
                     const userData = {
                         userId: user.userid || user.id,
                         username: user.username,
-                        token: localStorage.getItem('token')
+                        token: localStorage.getItem('token'),
+                        role: user.role
                     };
                     
                     console.log('Creating new game instance with user data:', {
                         userId: userData.userId,
                         username: userData.username,
+                        role: userData.role,
                         token: userData.token ? userData.token.substring(0, 20) + '...' : 'No token'
                     });
                     

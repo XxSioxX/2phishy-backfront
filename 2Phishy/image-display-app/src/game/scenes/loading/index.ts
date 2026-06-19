@@ -6,6 +6,7 @@ import {MLevel} from "../level-3-M";
 import {SELevel} from "../level-4-SE";
 import {IRLevel} from "../level-5-IR";
 import {PrologueScene} from "../dialogues/prologue.ts";
+import { AdminDevToolsScene } from "../admin-devtools";
 
 export class LoadingScene extends Scene {
   constructor() {
@@ -27,9 +28,9 @@ export class LoadingScene extends Scene {
     this.load.tilemapTiledJSON('assessmentlevel', 'tilemaps/tilesets/assessment-level.tmj');
     this.load.tilemapTiledJSON('SFBlevel', 'tilemaps/tilesets/SFB-level-1-ver4.tmj');
     this.load.tilemapTiledJSON('PSlevel', 'tilemaps/tilesets/PS-level-2-ver2.tmj');
-    this.load.tilemapTiledJSON('Mlevel', 'tilemaps/tilesets/M-level-3-ver1.tmj');
+    this.load.tilemapTiledJSON('Mlevel', 'tilemaps/tilesets/M-level-3-ver2.tmj');
     this.load.tilemapTiledJSON('SElevel', 'tilemaps/tilesets/SE-level-4-ver1.tmj');
-    this.load.tilemapTiledJSON('IRlevel', 'tilemaps/tilesets/IR-level-5-ver1.tmj');
+    this.load.tilemapTiledJSON('IRlevel', 'tilemaps/tilesets/IR-level-5-ver2.tmj');
 
     this.load.spritesheet('tiles_spr', 'tilemaps/tiles/dungeon-16-16.png', {
       frameWidth: 16,
@@ -57,9 +58,20 @@ export class LoadingScene extends Scene {
     this.scene.add('m-level-scene', MLevel);
     this.scene.add('se-level-scene', SELevel);
     this.scene.add('ir-level-scene', IRLevel);
-
+    this.scene.add('admin-devtools-scene', AdminDevToolsScene);
 
     this.scene.start('main-menu-scene');
+
+    if (this.shouldLaunchAdminDevTools()) {
+      this.scene.launch('admin-devtools-scene');
+      this.scene.bringToTop('admin-devtools-scene');
+    }
+
     console.log('loading/index.ts (create)', this.textures.exists('tiles'));
+  }
+
+  private shouldLaunchAdminDevTools(): boolean {
+    const role = String((window as any).userData?.role ?? '').toLowerCase();
+    return role === 'admin' || role === 'super-admin';
   }
 }
