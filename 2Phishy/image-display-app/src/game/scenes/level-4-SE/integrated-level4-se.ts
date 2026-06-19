@@ -3,20 +3,17 @@ import { LEVEL_CONFIGS } from '../core/LevelConfigurations';
 import { DialogueManager } from '../../helpers/DialogueManager';
 import { DialogueUI } from '../ui/DialogueUI';
 import { SocialEngineer } from '../../classes/socialEngineer';
-import {gameAPI} from "../../helpers/game-api";
-
+import { gameAPI } from '../../helpers/game-api';
 export class SELevel extends BaseIntegratedLevel {
   private socialEngineers!: Phaser.Physics.Arcade.Group;
-  private dialogueManager!: DialogueManager;
-  private dialogueUI!: DialogueUI;
 
   constructor() {
     super(LEVEL_CONFIGS.SE);
   }
+  async create(): Promise<void> {
+    await super.create();
 
-  create(): void {
-    // Always call base create
-    super.create();
+    if (!this.player) return;
 
     // Init systems
     this.socialEngineers = this.physics.add.group();
@@ -28,6 +25,7 @@ export class SELevel extends BaseIntegratedLevel {
 
     if (!dialogueData || !Array.isArray(dialogueData.scenarios)) {
       console.error('SE dialogues NOT loaded correctly', dialogueData);
+      return;
     } else {
       console.log(
         `SE dialogues loaded (${dialogueData.scenarios.length} scenarios)`
@@ -51,7 +49,17 @@ export class SELevel extends BaseIntegratedLevel {
       this.inAssessment = true;
 
       console.log('npc: ', npc, 'strategy: ', strategy);
-      const scenario = this.dialogueManager.getScenario(strategy);
+      let scenario;
+
+      try {
+        scenario = this.dialogueManager.getScenarioByStrategy(strategy);
+      } catch (error) {
+        console.error('Unable to start SE dialogue', error);
+        npc.finishInteraction();
+        this.inAssessment = false;
+        this.player.unlockMovement();
+        return;
+      }
 
       this.dialogueUI.start(scenario, async (result) => {
         npc.finishInteraction();

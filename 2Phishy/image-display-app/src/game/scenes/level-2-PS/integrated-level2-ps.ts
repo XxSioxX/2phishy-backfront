@@ -117,7 +117,7 @@ export class PSLevel extends BaseIntegratedLevel {
     this.restoreCompletedZones();
     this.createInteractionPrompt();
 
-    if (this.completedBosses.size === FINAL_ZONE) {
+    if (this.allRequiredBossesConquered()) {
       await this.completeAssessment();
     }
 
@@ -137,7 +137,7 @@ export class PSLevel extends BaseIntegratedLevel {
   protected async completeAssessment(): Promise<void> {
     const allQuestionsAnswered =
       this.assessmentResults.length >= this.questions.length;
-    const allBossesConquered = this.completedBosses.size >= FINAL_ZONE;
+    const allBossesConquered = this.allRequiredBossesConquered();
 
     if (!allQuestionsAnswered || !allBossesConquered) return;
     await super.completeAssessment();
@@ -151,7 +151,7 @@ export class PSLevel extends BaseIntegratedLevel {
     const pointsByZone = this.groupPointsByZone(points);
     const assignments: {
       point: any;
-      questionIndex: number;
+      question: any;
       zone: number;
     }[] = [];
 
@@ -168,14 +168,23 @@ export class PSLevel extends BaseIntegratedLevel {
         .forEach(({ questionIndex }, index) => {
           assignments.push({
             point: zonePoints[index],
-            questionIndex,
+            question: this.questions[questionIndex],
             zone,
           });
         });
     }
 
-    this.questionPoints = assignments.map(assignment => {
-      const { point, questionIndex, zone } = assignment;
+    if (assignments.length < this.questions.length) {
+      console.warn(
+        `Password Security has ${this.questions.length} playable questions but only ${assignments.length} matching zone question points. Trimming to spawned questions.`
+      );
+    }
+
+    this.questions = assignments.map(assignment => assignment.question);
+    this.totalquestions = this.questions.length;
+
+    this.questionPoints = assignments.map((assignment, questionIndex) => {
+      const { point, zone } = assignment;
       const qpbottom = this.physics.add
         .sprite(point.x ?? 0, point.y ?? 0, 'tiles_spr', 340)
         .setScale(1.5);
@@ -453,7 +462,7 @@ export class PSLevel extends BaseIntegratedLevel {
       return;
     }
 
-    const boss = this.bosses.get(this.unlockedZone);
+    const boss = this.getCurrentBoss();
     if (!boss || boss.completed) {
       this.interactionPrompt?.setVisible(false);
       return;
@@ -693,6 +702,10 @@ export class PSLevel extends BaseIntegratedLevel {
   }
 
   private hasCommonPattern(normalizedPassword: string): boolean {
+    const compactPassword = normalizedPassword.replace(/[^a-z0-9]/g, '');
+
+    if (!compactPassword) return true;
+
     const keyboardPatterns = [
       'qwerty',
       'asdf',
@@ -703,35 +716,53 @@ export class PSLevel extends BaseIntegratedLevel {
     ];
 
     const hasKeyboardPattern = keyboardPatterns.some(pattern =>
-      normalizedPassword.includes(pattern)
+      compactPassword.includes(pattern)
     );
 
-    const hasLongRepeat = /(.)\1{3,}/.test(normalizedPassword);
+    const hasLongRepeat =
+      /(.)\1{3,}/.test(normalizedPassword) ||
+      /(.)\1{3,}/.test(compactPassword);
 
     const hasSimpleSequence =
       /(0123|1234|2345|3456|4567|5678|6789|abcd)/.test(
-        normalizedPassword
+        compactPassword
       );
 
     const uniqueRatio =
-      new Set(normalizedPassword).size / normalizedPassword.length;
+      new Set(compactPassword).size / compactPassword.length;
 
     const looksRepetitive =
-      normalizedPassword.length >= 10 && uniqueRatio < 0.45;
-
-    const looksLikeButtonMashing =
-      normalizedPassword.length >= 10 &&
-      /^[a-z]+$/.test(normalizedPassword);
+      compactPassword.length >= 10 && uniqueRatio < 0.45;
 
     return (
       COMMON_PASSWORDS.some(common =>
-        normalizedPassword.includes(common)
+        this.isCommonPasswordVariant(compactPassword, common)
       ) ||
       hasKeyboardPattern ||
       hasLongRepeat ||
       hasSimpleSequence ||
-      looksRepetitive ||
-      looksLikeButtonMashing
+      looksRepetitive
+    );
+  }
+
+  private isCommonPasswordVariant(
+    normalizedPassword: string,
+    common: string
+  ): boolean {
+    if (normalizedPassword === common) return true;
+
+    const suffix = normalizedPassword.slice(common.length);
+    if (
+      normalizedPassword.startsWith(common) &&
+      /^[0-9!@#$%^&*._-]+$/.test(suffix)
+    ) {
+      return true;
+    }
+
+    if (normalizedPassword.length % common.length !== 0) return false;
+
+    return normalizedPassword === common.repeat(
+      normalizedPassword.length / common.length
     );
   }
 
@@ -762,7 +793,8 @@ export class PSLevel extends BaseIntegratedLevel {
     this.openSpikeGate(boss.zone, true);
     this.addKnightFollower(true);
 
-    this.currentZone = boss.zone + 1;
+    this.currentZone =
+      this.getNextBossZone(boss.zone + 1) ?? FINAL_ZONE + 1;
     this.unlockedZone = Math.max(this.unlockedZone, this.currentZone);
 
     try {
@@ -779,7 +811,7 @@ export class PSLevel extends BaseIntegratedLevel {
     this.inAssessment = false;
     this.player.unlockMovement();
 
-    if (boss.zone === FINAL_ZONE) {
+    if (this.allRequiredBossesConquered()) {
       await this.completeAssessment();
     }
   }
@@ -935,6 +967,26 @@ export class PSLevel extends BaseIntegratedLevel {
     });
   }
 
+  private getCurrentBoss(): BossState | undefined {
+    const nextZone = this.getNextBossZone(this.unlockedZone);
+    return nextZone ? this.bosses.get(nextZone) : undefined;
+  }
+
+  private getNextBossZone(startZone: number): number | undefined {
+    return Array.from(this.bosses.keys())
+      .sort((a, b) => a - b)
+      .find(zone => zone >= startZone && !this.completedBosses.has(zone));
+  }
+
+  private allRequiredBossesConquered(): boolean {
+    const bossZones = Array.from(this.bosses.keys());
+
+    return (
+      bossZones.length === 0 ||
+      bossZones.every(zone => this.completedBosses.has(zone))
+    );
+  }
+
   private groupPointsByZone(points: any[]): Map<number, any[]> {
     const grouped = new Map<number, any[]>();
 
@@ -951,10 +1003,6 @@ export class PSLevel extends BaseIntegratedLevel {
   }
 
   private getZoneNumber(object: any): number {
-    return Number(
-      object.properties?.find(
-        (property: any) => property.name === 'zone_number'
-      )?.value ?? 0
-    );
+    return this.getObjectNumberProperty(object, 'zone_number');
   }
 }
