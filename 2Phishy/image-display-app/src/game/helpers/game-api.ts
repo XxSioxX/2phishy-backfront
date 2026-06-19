@@ -2,7 +2,7 @@
 
 
 export interface AssessmentResult {
-  assessment_id: string;
+  assessment_id?: string;
   question_id: string;
   user_answer: string | null;
   correct_answer: string;
@@ -12,9 +12,18 @@ export interface AssessmentResult {
   timestamp: Date;
 }
 
+export interface AdminRoleResponse {
+  user_id: string;
+  username: string;
+  role: string;
+  account_status: string;
+}
+
 class GameAPI {
   private token: string | null = null;
-  private readonly baseUrl = `${process.env.REACT_APP_API_BASE_URL}/game`;
+  private readonly apiRoot =
+    process.env.REACT_APP_API_BASE_URL || `${window.location.origin}/api`;
+  private readonly baseUrl = `${this.apiRoot}/game`;
 
   setToken(token: string) {
     this.token = token;
@@ -343,6 +352,20 @@ class GameAPI {
       const err = await response.text();
       console.error('markIntroSeen error:', err);
       throw new Error(`Failed to mark intro seen: ${err}`);
+    }
+
+    return await response.json();
+  }
+
+  async getAdminRole(): Promise<AdminRoleResponse> {
+    const response = await fetch(`${this.apiRoot}/admin/my-role`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Failed to verify admin role: ${err}`);
     }
 
     return await response.json();

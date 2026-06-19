@@ -18,12 +18,12 @@ export default class AssessmentPopup {
     if (this.container) return;
 
     const cam = this.scene.cameras.main;
-    const panelWidth = Math.min(580, cam.width - 80);
-    const contentWidth = panelWidth - 64;
+    const panelWidth = Math.min(720, cam.width - 72);
+    const contentWidth = panelWidth - 72;
 
     const questionText = this.scene.add
       .text(0, 0, question, {
-        fontSize: '16px',
+        fontSize: '22px',
         color: '#ffffff',
         fontStyle: 'bold',
         wordWrap: { width: contentWidth, useAdvancedWrap: true },
@@ -41,7 +41,7 @@ export default class AssessmentPopup {
     choices.forEach(choice => {
       const label = this.scene.add
         .text(0, 0, choice, {
-          fontSize: '13px',
+          fontSize: '17px',
           color: '#d8f8f2',
           wordWrap: {
             width: contentWidth - 30,
@@ -57,7 +57,7 @@ export default class AssessmentPopup {
           0,
           0,
           contentWidth,
-          Math.max(46, label.height + 18),
+          Math.max(56, label.height + 22),
           0x17212b,
           1
         )
@@ -114,11 +114,11 @@ export default class AssessmentPopup {
     const panelHeight = Math.min(
       cam.height - 40,
       Math.max(
-        360,
+        420,
         questionText.height +
           choicesHeight +
-          Math.max(0, choices.length - 1) * 10 +
-          104
+          Math.max(0, choices.length - 1) * 12 +
+          118
       )
     );
     const top = -panelHeight / 2 + 42;
@@ -128,7 +128,7 @@ export default class AssessmentPopup {
     buttonObjects.forEach(object => {
       object.btn.setPosition(0, currentY + object.btn.height / 2);
       object.label.setPosition(object.btn.x, object.btn.y);
-      currentY += object.btn.height + 10;
+      currentY += object.btn.height + 12;
     });
 
     const overlay = this.scene.add.rectangle(
@@ -137,7 +137,7 @@ export default class AssessmentPopup {
       cam.width,
       cam.height,
       0x000000,
-      0.65
+      0.74
     );
     const panel = this.scene.add
       .rectangle(0, 0, panelWidth, panelHeight, 0x0d141c, 0.98)
@@ -176,12 +176,12 @@ export default class AssessmentPopup {
     if (this.container) return;
 
     const cam = this.scene.cameras.main;
-    const panelWidth = Math.min(620, cam.width - 60);
-    const contentWidth = panelWidth - 60;
+    const panelWidth = Math.min(700, cam.width - 60);
+    const contentWidth = panelWidth - 72;
 
     const titleText = this.scene.add
       .text(0, 0, title, {
-        fontSize: '19px',
+        fontSize: '24px',
         color: '#ffffff',
         fontStyle: 'bold',
         align: 'center',
@@ -191,7 +191,7 @@ export default class AssessmentPopup {
 
     const bodyText = this.scene.add
       .text(0, 0, content, {
-        fontSize: '14px',
+        fontSize: '18px',
         color: '#ffffff',
         wordWrap: { width: contentWidth, useAdvancedWrap: true },
         align: 'center',
@@ -201,7 +201,7 @@ export default class AssessmentPopup {
 
     const panelHeight = Math.min(
       cam.height - 40,
-      Math.max(300, titleText.height + bodyText.height + 150)
+      Math.max(330, titleText.height + bodyText.height + 170)
     );
     const top = -panelHeight / 2 + 32;
     titleText.setPosition(0, top);
@@ -214,7 +214,7 @@ export default class AssessmentPopup {
       .setInteractive({ useHandCursor: true });
     const okText = this.scene.add
       .text(0, okY, 'OK', {
-        fontSize: '14px',
+        fontSize: '16px',
         color: '#00ffcc',
       })
       .setOrigin(0.5)
@@ -233,10 +233,10 @@ export default class AssessmentPopup {
       cam.width,
       cam.height,
       0x000000,
-      0.65
+      0.74
     );
     const panel = this.scene.add
-      .rectangle(0, 0, panelWidth, panelHeight, 0x000000, 0.94)
+      .rectangle(0, 0, panelWidth, panelHeight, 0x05080c, 0.97)
       .setStrokeStyle(2, 0xffffff);
 
     this.container = this.scene.add.container(
