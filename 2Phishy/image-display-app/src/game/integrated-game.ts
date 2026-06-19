@@ -9,6 +9,7 @@ type GameConfigExtended = Types.Core.GameConfig & {
     userId: string;
     username: string;
     token: string;
+    role?: string;
   };
 };
 
@@ -21,6 +22,7 @@ declare global {
       userId: string;
       username: string;
       token: string;
+      role?: string;
     };
   }
 }
@@ -89,4 +91,3 @@ export const createPhaserGame = (parentElement: HTMLElement, userData?: any): Ga
   
   return game;
 };
-
