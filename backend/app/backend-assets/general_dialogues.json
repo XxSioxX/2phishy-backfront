@@ -85,7 +85,8 @@
         { "id": "4", "text": "Weak passwords. Reused passwords. Missing second factors." },
         { "id": "5", "text": "If I need to type a password here, it must be fictional." },
         { "id": "6", "text": "No real secrets. Not in a place built to test me." },
-        { "id": "7", "text": "Beat the guardians. Clear the path.", "end": true }
+        { "id": "7", "text": "I need to remember the first fictional password exactly." },
+        { "id": "8", "text": "The final guardian may ask for proof that I remember it.", "end": true }
       ]
     },
     {
@@ -101,10 +102,10 @@
       "nodes": [
         { "id": "1", "text": "This chamber is infected." },
         { "id": "2", "text": "Those things are not just wandering." },
-        { "id": "3", "text": "If they touch me, my HP drops." },
-        { "id": "4", "text": "Wrong answers hurt too." },
-        { "id": "5", "text": "The door will stay locked until every threat is handled." },
-        { "id": "6", "text": "Keep distance. Read the notes. Quarantine the malware.", "end": true }
+        { "id": "3", "text": "I cannot fight malware head-on." },
+        { "id": "4", "text": "I can block when it strikes, then reach the scanner angel." },
+        { "id": "5", "text": "Wrong answers still hurt too." },
+        { "id": "6", "text": "Reach each angel. Quarantine the malware zone by zone.", "end": true }
       ]
     }
   ]
