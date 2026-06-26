@@ -165,6 +165,32 @@
         { "id": "6", "text": "It needed me to respond correctly." },
         { "id": "7", "text": "Incident closed.", "end": true }
       ]
+    },
+    {
+      "id": "ir_final_cutscene",
+      "type": "cutscene",
+      "skippable": false,
+      "settings": {
+        "background": "#000000",
+        "textColor": "#ffffff",
+        "fontSize": 28,
+        "typeSpeed": 30
+      },
+      "nodes": [
+        { "id": "1", "text": "The lever locks into place." },
+        { "id": "2", "text": "The core goes silent." },
+        { "id": "3", "text": "No monster falls." },
+        { "id": "4", "text": "No final strike lands." },
+        { "id": "5", "text": "The report is complete." },
+        { "id": "6", "text": "The source was identified." },
+        { "id": "7", "text": "The damage was contained." },
+        { "id": "8", "text": "The threat was removed." },
+        { "id": "9", "text": "The system was recovered." },
+        { "id": "10", "text": "And the lesson was written down." },
+        { "id": "11", "text": "This place was never asking me to win a fight." },
+        { "id": "12", "text": "It was asking me to respond." },
+        { "id": "13", "text": "Incident closed.", "end": true }
+      ]
     }
   ]
 }

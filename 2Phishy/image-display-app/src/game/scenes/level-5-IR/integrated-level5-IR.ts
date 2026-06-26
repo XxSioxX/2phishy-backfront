@@ -6,7 +6,10 @@ import {
 } from '../../helpers/password-challenge-popup';
 import { AssessmentResult, gameAPI } from '../../helpers/game-api';
 import { DialogueManager } from '../../helpers/DialogueManager';
+import { DialogueRunner } from '../../helpers/DialogueRunner';
 import { DialogueUI } from '../ui/DialogueUI';
+import { TOUCH_EVENTS } from '../../consts';
+import { AudioManager, MUSIC, SFX } from '../../audio';
 
 type DoorState = {
   zone: number;
@@ -34,6 +37,11 @@ type WizardState = {
   visual: Phaser.GameObjects.Container;
   parts: Phaser.GameObjects.Sprite[];
   frameSets: number[][];
+  homeX: number;
+  homeY: number;
+  targetX: number;
+  targetY: number;
+  nextMoveAt: number;
   freed: boolean;
   sealed: boolean;
   timer?: Phaser.Time.TimerEvent;
@@ -50,6 +58,11 @@ type MinionState = {
 type PSBossState = {
   index: number;
   sprite: Phaser.GameObjects.Container;
+  homeX: number;
+  homeY: number;
+  targetX: number;
+  targetY: number;
+  nextMoveAt: number;
   completed: boolean;
 };
 
@@ -61,7 +74,10 @@ type MalwareThreat = {
   targetX: number;
   targetY: number;
   nextDecisionAt: number;
+  stunnedUntil: number;
   disabled: boolean;
+  quarantined: boolean;
+  quarantineEffects?: Phaser.GameObjects.GameObject[];
 };
 
 type WitnessState = {
@@ -78,10 +94,20 @@ type Interactable = {
   action: () => void;
 };
 
-type BossReportQuestion = {
-  question: string;
+type ReportPhase = {
+  key: string;
+  label: string;
+  prompt: string;
   choices: string[];
   answer: string;
+  responderClue: string;
+  feedbackCorrect: string;
+  feedbackWrong: string;
+};
+
+type ReportBossOverlay = {
+  element: HTMLDivElement;
+  removeListeners: () => void;
 };
 
 const ROOM_ZONES = [1, 2, 3, 4];
@@ -98,6 +124,27 @@ const LEVER_OFF_FRAME = 389;
 const LEVER_ON_FRAME = 390;
 const MAX_PLAYER_HEALTH = 6;
 const MALWARE_TOUCH_DAMAGE = 1;
+const MALWARE_ATTACK_COOLDOWN = 2200;
+const MALWARE_BLOCK_STUN_DURATION = 1400;
+const MALWARE_QUARANTINE_DURATION = 9000;
+const MALWARE_ROOM_RADIUS = 176;
+const MAX_EXTRA_WITNESSES = 3;
+const ROOM_PATROL_RADIUS = 18;
+const WIZARD_PATROL_SPEED = 0.018;
+const PASSWORD_BOSS_PATROL_SPEED = 0.016;
+const MAIN_BOSS_PATROL_SPEED = 0.008;
+const MAIN_BOSS_PATROL_RADIUS = 14;
+const ACTOR_DEPTH = 2;
+
+const IR_PROGRESS_METRICS = {
+  passwordRoomComplete: 'ir_password_room_complete',
+  coreDoorOpened: 'ir_core_door_opened',
+  bossReportComplete: 'ir_boss_report_complete',
+  bossReportPhaseIndex: 'ir_boss_report_phase_index',
+  bossReportPhase: (phaseKey: string) => `ir_boss_report_phase_${phaseKey}`,
+  roomComplete: (zone: number) => `ir_room_${zone}_complete`,
+  roomReleased: (zone: number) => `ir_room_${zone}_released`,
+};
 
 const DOOR_CLOSED = { topL: 450, topR: 451, botL: 482, botR: 483 };
 const DOOR_OPEN = { topL: 453, topR: 454, botL: 485, botR: 486 };
@@ -122,9 +169,9 @@ const ROOM_DETAILS: Record<number, {
   },
   3: {
     title: 'Eradicate Fragment',
-    fragmentDialogue: 'The third memory is unstable. This shard anchors your respawn here. Survive the malware and reach the angel to eradicate the threat.',
-    lockedMessage: 'The eradication seal is still active. The malware must be disabled first.',
-    releasedMessage: 'Eradication is restored. The responder can remove the active threat.',
+    fragmentDialogue: 'The third memory is unstable. This shard anchors your respawn here. Block the malware and reach the scanner angel to quarantine the threat.',
+    lockedMessage: 'The eradication seal is still active. The malware must be quarantined first.',
+    releasedMessage: 'Eradication is restored. The responder can remove the isolated threat.',
   },
   4: {
     title: 'Recover Fragment',
@@ -146,7 +193,8 @@ const WITNESS_FRAME_SETS = [
   makeFramePairs(72, 104, 9),
 ];
 
-const BOSS_FRAME_SETS = makeFramePairs(737, 769, 16);
+const PS_BOSS_DRAGON_FRAMES = [424, 488];
+const BOSS_FRAME_SETS = makeFrameTriples(705, 737, 769, 16);
 const ANGEL_FRAMES = makeRange(759, 766);
 const MALWARE_FRAMES = [
   makeRange(375, 382),
@@ -154,46 +202,81 @@ const MALWARE_FRAMES = [
   makeRange(503, 510),
 ];
 
-const BOSS_REPORT_QUESTIONS: BossReportQuestion[] = [
+const REPORT_PHASES: ReportPhase[] = [
   {
-    question: 'The report begins with identification. What should be recorded first?',
+    key: 'identify',
+    label: 'Identify',
+    prompt: 'What should be confirmed first when an incident is detected?',
     choices: [
-      'The first signs, affected system, and suspected source',
-      'Only the final fix',
-      'A guess about who caused it',
-      'Nothing until every system is restored',
+      'Identify the suspicious activity or affected system',
+      'Delete all system logs',
+      'Ignore the warning',
+      'Immediately restore backups',
     ],
-    answer: 'The first signs, affected system, and suspected source',
+    answer: 'Identify the suspicious activity or affected system',
+    responderClue: 'Identify responder: Start with evidence. Name what happened, where it happened, and what may have caused it.',
+    feedbackCorrect: 'Incident source identified. Report section repaired.',
+    feedbackWrong: 'Incorrect. The report still lacks proper identification.',
   },
   {
-    question: 'Before recovery, what response action keeps the incident from spreading?',
+    key: 'contain',
+    label: 'Contain',
+    prompt: 'What should be done immediately to prevent the incident from spreading?',
     choices: [
-      'Contain the affected account or device',
-      'Delete every log file',
-      'Share the password with the team',
-      'Reconnect everything to test it',
+      'Disconnect or isolate the affected device',
+      'Share the password with others',
+      'Keep using the infected device',
+      'Delete the report',
     ],
-    answer: 'Contain the affected account or device',
+    answer: 'Disconnect or isolate the affected device',
+    responderClue: 'Contain responder: Stop the spread before trying to restore anything.',
+    feedbackCorrect: 'Threat contained. Report section repaired.',
+    feedbackWrong: 'Incorrect. Containment must prevent further spread.',
   },
   {
-    question: 'What does eradication focus on?',
+    key: 'eradicate',
+    label: 'Eradicate',
+    prompt: 'After containment, what should be done to remove the threat?',
     choices: [
-      'Removing the root cause and active threat',
-      'Making the report sound shorter',
-      'Ignoring suspicious files',
-      'Restoring backups before isolating anything',
+      'Quarantine or remove the malware/cause of compromise',
+      'Open more suspicious files',
+      'Disable all security tools permanently',
+      'Post the incident online',
     ],
-    answer: 'Removing the root cause and active threat',
+    answer: 'Quarantine or remove the malware/cause of compromise',
+    responderClue: 'Eradicate responder: The cause has to be removed, not ignored or hidden.',
+    feedbackCorrect: 'Threat eradicated. Report section repaired.',
+    feedbackWrong: 'Incorrect. Eradication means removing the cause of compromise.',
   },
   {
-    question: 'What belongs in the final lessons-learned section?',
+    key: 'recover',
+    label: 'Recover',
+    prompt: 'What should be done after the threat has been removed?',
     choices: [
-      'What happened, what was done, and how to prevent a repeat',
-      'Only who should be blamed',
-      'A copy of the attacker message only',
-      'A note to never investigate again',
+      'Restore safe data/systems and verify normal operation',
+      'Reuse the compromised password',
+      'Delete backups',
+      'Skip verification',
     ],
-    answer: 'What happened, what was done, and how to prevent a repeat',
+    answer: 'Restore safe data/systems and verify normal operation',
+    responderClue: 'Recover responder: Bring systems back only after the threat is gone, then verify they are safe.',
+    feedbackCorrect: 'Recovery verified. Report section repaired.',
+    feedbackWrong: 'Incorrect. Recovery requires safe restoration and verification.',
+  },
+  {
+    key: 'lessons',
+    label: 'Lessons Learned',
+    prompt: 'What should be done after the incident is resolved?',
+    choices: [
+      'Document the incident and update prevention steps',
+      'Forget the incident happened',
+      'Delete all evidence',
+      'Disable future reports',
+    ],
+    answer: 'Document the incident and update prevention steps',
+    responderClue: 'Recovered responders: Close the loop. Document the incident so it is harder to repeat.',
+    feedbackCorrect: 'Lessons documented. Final report completed.',
+    feedbackWrong: 'Incorrect. Post-incident review is needed to prevent recurrence.',
   },
 ];
 
@@ -218,6 +301,19 @@ function makeFramePairs(
   ]);
 }
 
+function makeFrameTriples(
+  topStart: number,
+  middleStart: number,
+  bottomStart: number,
+  count: number
+): number[][] {
+  return Array.from({ length: count }, (_, index) => [
+    topStart + index,
+    middleStart + index,
+    bottomStart + index,
+  ]);
+}
+
 export class IRLevel extends BaseIntegratedLevel {
   private doors = new Map<number, DoorState[]>();
   private fragments = new Map<number, FragmentState>();
@@ -227,6 +323,7 @@ export class IRLevel extends BaseIntegratedLevel {
   private minions = new Map<number, MinionState>();
   private psBosses: PSBossState[] = [];
   private witnesses: WitnessState[] = [];
+  private witnessSpawnPoints: any[] = [];
   private malwareThreats: MalwareThreat[] = [];
   private roomChallengesComplete = new Set<number>();
   private roomRespondersReleased = new Set<number>();
@@ -237,11 +334,23 @@ export class IRLevel extends BaseIntegratedLevel {
   private bossVisual?: Phaser.GameObjects.Container;
   private bossAura?: Phaser.GameObjects.Arc;
   private bossBlocker?: Phaser.GameObjects.Zone;
+  private bossPatrol?: {
+    homeX: number;
+    homeY: number;
+    targetX: number;
+    targetY: number;
+    nextMoveAt: number;
+  };
   private bossGatePoint?: Phaser.Math.Vector2;
   private doorWallsLayer?: Phaser.Tilemaps.TilemapLayer;
   private lever?: Phaser.Physics.Arcade.Sprite;
   private energyGraphics?: Phaser.GameObjects.Graphics;
   private interactionPrompt?: Phaser.GameObjects.Text;
+  private reportBossOverlay?: ReportBossOverlay;
+  private reportOverlaySuspendedInputs: Array<{
+    scene: Phaser.Scene;
+    enabled: boolean;
+  }> = [];
   private interactKey?: Phaser.Input.Keyboard.Key;
   private passwordPopup!: PasswordChallengePopup;
   private playerHealth = MAX_PLAYER_HEALTH;
@@ -251,6 +360,18 @@ export class IRLevel extends BaseIntegratedLevel {
   private bossReportComplete = false;
   private leverReady = false;
   private finalShutdownComplete = false;
+  private reportBossStarted = false;
+  private currentReportPhaseIndex = 0;
+  private reportAwaitingContinue = false;
+  private reportFeedback = '';
+  private touchInteractRequested = false;
+  private extraWitnessesSpawned = 0;
+  private unlockedZone = 1;
+  private savedProgressMetrics: Record<string, number> = {};
+  private roomOneQuestionIds = new Set<string>();
+  private roomOneAnsweredQuestionIds = new Set<string>();
+  private usedWitnessQuestionKeys = new Set<string>();
+  private completedReportPhaseKeys = new Set<string>();
 
   constructor() {
     super(LEVEL_CONFIGS.IR);
@@ -258,6 +379,7 @@ export class IRLevel extends BaseIntegratedLevel {
 
   async create(): Promise<void> {
     this.resetState();
+    await this.loadSavedLevelProgress();
 
     await super.create();
 
@@ -266,6 +388,7 @@ export class IRLevel extends BaseIntegratedLevel {
     this.interactKey = this.input.keyboard?.addKey(
       Phaser.Input.Keyboard.KeyCodes.E
     );
+    this.game.events.on(TOUCH_EVENTS.interact, this.handleTouchInteract, this);
 
     this.initDoors();
     this.initSpikeGates();
@@ -277,6 +400,7 @@ export class IRLevel extends BaseIntegratedLevel {
     this.initMalwareRoom();
     this.initBossRoom();
     this.initLever();
+    this.applySavedLevelProgress();
     this.createInteractionPrompt();
     this.createSystemHealthUI();
     this.completeMissingRoomContent();
@@ -284,20 +408,33 @@ export class IRLevel extends BaseIntegratedLevel {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.passwordPopup.destroy();
       this.interactKey?.removeAllListeners();
+      this.game.events.off(TOUCH_EVENTS.interact, this.handleTouchInteract, this);
       this.animationTimers.forEach(timer => timer.destroy());
+      this.malwareThreats.forEach(threat => {
+        this.tweens.killTweensOf([
+          threat.sprite,
+          threat.aura,
+          ...(threat.quarantineEffects ?? []),
+        ]);
+      });
+      this.destroyReportBossOverlay();
       this.game.events.emit('health:hide');
     });
   }
 
   update(): void {
+    this.updateInteractionPrompt();
     super.update();
+    this.updateRoomPatrols();
     this.updateFollowers();
     this.updateMalwareThreats();
     this.updateEnergyLines();
-    this.updateInteractionPrompt();
+    this.updateActorDepths();
   }
 
   protected initAssessment(): void {
+    this.questions = this.dedupeQuestionsById(this.questions);
+
     const points = this.map.filterObjects(
       'QuestionPoints',
       object => object.name === 'QuestionPoint'
@@ -315,10 +452,14 @@ export class IRLevel extends BaseIntegratedLevel {
 
     this.questions = this.questions.slice(0, questionCount);
     this.totalquestions = questionCount;
+    this.roomOneQuestionIds.clear();
+    this.roomOneAnsweredQuestionIds.clear();
 
     this.questionPoints = orderedPoints
       .slice(0, questionCount)
       .map((point, questionIndex) => {
+        const question = this.questions[questionIndex];
+        const pointZone = this.getZoneNumber(point);
         const qpbottom = this.physics.add
           .sprite(point.x ?? 0, point.y ?? 0, 'tiles_spr', 340)
           .setScale(1.5);
@@ -348,8 +489,23 @@ export class IRLevel extends BaseIntegratedLevel {
 
         const pair = [qpbottom, qptop] as any;
         pair.questionIndex = questionIndex;
+        pair.zone = pointZone;
+        pair.questionId = question?.question_id;
+
+        if (pointZone === 1 && question?.question_id) {
+          this.roomOneQuestionIds.add(String(question.question_id));
+        }
+
         return pair;
       });
+
+    if (this.roomOneQuestionIds.size === 0 && this.questions.length > 0) {
+      this.questions.forEach(question => {
+        if (question?.question_id) {
+          this.roomOneQuestionIds.add(String(question.question_id));
+        }
+      });
+    }
   }
 
   protected initKnowledge(): void {
@@ -393,10 +549,18 @@ export class IRLevel extends BaseIntegratedLevel {
     _result: AssessmentResult,
     _context: any
   ): void {
+    const questionId = String(_result?.question_id ?? '');
+    if (this.roomOneQuestionIds.has(questionId)) {
+      this.roomOneAnsweredQuestionIds.add(questionId);
+    }
+
     if (
-      this.questions.length > 0 &&
-      this.assessmentResults.length >= this.questions.length
+      this.roomOneQuestionIds.size > 0 &&
+      this.roomOneAnsweredQuestionIds.size >= this.roomOneQuestionIds.size
     ) {
+      if (!this.roomChallengesComplete.has(1)) {
+        this.recordGameplayMetric('rooms_completed');
+      }
       this.markRoomChallengeComplete(1);
     }
   }
@@ -404,6 +568,10 @@ export class IRLevel extends BaseIntegratedLevel {
   protected async completeAssessment(): Promise<void> {
     if (!this.finalShutdownComplete) return;
     await super.completeAssessment();
+  }
+
+  protected shouldUpdateKnowledgeInteractionPrompt(): boolean {
+    return false;
   }
 
   private resetState(): void {
@@ -415,6 +583,7 @@ export class IRLevel extends BaseIntegratedLevel {
     this.minions.clear();
     this.psBosses = [];
     this.witnesses = [];
+    this.witnessSpawnPoints = [];
     this.malwareThreats = [];
     this.roomChallengesComplete.clear();
     this.roomRespondersReleased.clear();
@@ -430,19 +599,32 @@ export class IRLevel extends BaseIntegratedLevel {
     this.lever = undefined;
     this.energyGraphics = undefined;
     this.interactionPrompt = undefined;
+    this.reportBossOverlay = undefined;
     this.interactKey = undefined;
     this.playerHealth = MAX_PLAYER_HEALTH;
     this.zoneThreeRespawnActive = false;
     this.minionSealingStarted = false;
     this.bossReady = false;
     this.bossReportComplete = false;
+    this.bossPatrol = undefined;
     this.leverReady = false;
     this.finalShutdownComplete = false;
+    this.reportBossStarted = false;
+    this.currentReportPhaseIndex = 0;
+    this.reportAwaitingContinue = false;
+    this.reportFeedback = '';
     this.questionPoints = [];
     this.knowledgePoints = [];
     this.assessmentResults = [];
     this.assessmentCompleted = false;
     this.inAssessment = false;
+    this.extraWitnessesSpawned = 0;
+    this.unlockedZone = 1;
+    this.savedProgressMetrics = {};
+    this.roomOneQuestionIds.clear();
+    this.roomOneAnsweredQuestionIds.clear();
+    this.usedWitnessQuestionKeys.clear();
+    this.completedReportPhaseKeys.clear();
   }
 
   private createAdditionalMapLayers(): void {
@@ -455,7 +637,7 @@ export class IRLevel extends BaseIntegratedLevel {
     this.doorWallsLayer?.setDepth(3);
     this.doorWallsLayer?.setCollisionByExclusion([-1]);
     this.map.createLayer('Pillar', this.tileset, 0, 0)?.setDepth(9);
-    this.player.setDepth(8);
+    this.player.setDepth(ACTOR_DEPTH);
   }
 
   private initDoors(): void {
@@ -663,25 +845,23 @@ export class IRLevel extends BaseIntegratedLevel {
         point.y ?? 0,
         frameSets,
         1.35,
-        7
+        ACTOR_DEPTH
       );
 
-      wizard.visual.setAlpha(0.72);
+      wizard.visual.setAlpha(0.76);
+      wizard.visual.setVisible(true);
       this.setContainerTint(wizard.visual, 0x6f7a86);
-      this.tweens.add({
-        targets: wizard.visual,
-        y: wizard.visual.y - 4,
-        duration: 1000,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      });
 
       this.wizards.set(zone, {
         zone,
         visual: wizard.visual,
         parts: wizard.parts,
         frameSets,
+        homeX: wizard.visual.x,
+        homeY: wizard.visual.y,
+        targetX: wizard.visual.x,
+        targetY: wizard.visual.y,
+        nextMoveAt: 0,
         freed: false,
         sealed: false,
         timer: wizard.timer,
@@ -696,22 +876,22 @@ export class IRLevel extends BaseIntegratedLevel {
     ) ?? [];
 
     points.forEach((point, index) => {
-      const frameSets = index % 2 === 0
-        ? makeFramePairs(641, 673, 5)
-        : makeFramePairs(545, 577, 5);
-      const boss = this.createCompositeActor(
+      const boss = this.createDragonBossActor(
         point.x ?? 0,
         point.y ?? 0,
-        frameSets,
-        1.45,
-        7
+        PS_BOSS_DRAGON_FRAMES[index % PS_BOSS_DRAGON_FRAMES.length],
+        2,
+        ACTOR_DEPTH
       );
-
-      this.createPulseAura(boss.visual.x, boss.visual.y + 4, 20, 0xffd166, 0.18);
 
       this.psBosses.push({
         index,
         sprite: boss.visual,
+        homeX: boss.visual.x,
+        homeY: boss.visual.y,
+        targetX: boss.visual.x,
+        targetY: boss.visual.y,
+        nextMoveAt: 0,
         completed: false,
       });
     });
@@ -722,6 +902,7 @@ export class IRLevel extends BaseIntegratedLevel {
       'NPCPoints',
       object => object.name === 'NPCPoint'
     ) ?? [];
+    this.witnessSpawnPoints = points;
 
     points.forEach((point, index) => {
       const frameSets = WITNESS_FRAME_SETS[index % WITNESS_FRAME_SETS.length];
@@ -730,7 +911,7 @@ export class IRLevel extends BaseIntegratedLevel {
         point.y ?? 0,
         frameSets,
         1.25,
-        7
+        ACTOR_DEPTH
       );
 
       this.witnesses.push({
@@ -757,11 +938,11 @@ export class IRLevel extends BaseIntegratedLevel {
       const sprite = this.physics.add
         .sprite(point.x ?? 0, point.y ?? 0, 'tiles_spr', frameSet[0])
         .setScale(1.35)
-        .setDepth(7);
+        .setDepth(ACTOR_DEPTH);
       const aura = this.add
         .circle(sprite.x, sprite.y + 5, 15, 0xff3333, 0.18)
         .setStrokeStyle(1, 0xff7777, 0.42)
-        .setDepth(6);
+        .setDepth(ACTOR_DEPTH - 0.1);
 
       sprite.setData('frames', frameSet);
       sprite.setData('frameIndex', 0);
@@ -785,6 +966,8 @@ export class IRLevel extends BaseIntegratedLevel {
         loop: true,
         callback: () => {
           if (!sprite.active) return;
+          if (sprite.getData('quarantined') === true) return;
+
           const nextIndex =
             ((sprite.getData('frameIndex') as number) + 1) % frameSet.length;
           sprite.setData('frameIndex', nextIndex);
@@ -811,7 +994,9 @@ export class IRLevel extends BaseIntegratedLevel {
         targetX: sprite.x,
         targetY: sprite.y,
         nextDecisionAt: 0,
+        stunnedUntil: 0,
         disabled: false,
+        quarantined: false,
       });
     });
 
@@ -819,7 +1004,7 @@ export class IRLevel extends BaseIntegratedLevel {
       const angel = this.physics.add
         .sprite(angelPoint.x ?? 0, angelPoint.y ?? 0, 'tiles_spr', ANGEL_FRAMES[0])
         .setScale(1.45)
-        .setDepth(7);
+        .setDepth(ACTOR_DEPTH);
 
       angel.setName('MalwareAngelActor');
       angel.setImmovable(true);
@@ -850,23 +1035,31 @@ export class IRLevel extends BaseIntegratedLevel {
     )?.[0];
 
     if (bossPoint) {
-      const boss = this.createCompositeActor(
+      const boss = this.createThreePartBossActor(
         bossPoint.x ?? 0,
         bossPoint.y ?? 0,
         BOSS_FRAME_SETS,
         2.1,
-        8
+        ACTOR_DEPTH
       );
 
       this.bossVisual = boss.visual;
+      this.bossPatrol = {
+        homeX: boss.visual.x,
+        homeY: boss.visual.y,
+        targetX: boss.visual.x,
+        targetY: boss.visual.y,
+        nextMoveAt: 0,
+      };
       this.bossAura = this.createPulseAura(
         boss.visual.x,
-        boss.visual.y + 6,
-        42,
+        boss.visual.y + 16,
+        54,
         0xff3333,
         0.2
       );
-      this.bossBlocker = this.add.zone(boss.visual.x, boss.visual.y + 8, 56, 58);
+      this.bossAura.setDepth(ACTOR_DEPTH - 0.1);
+      this.bossBlocker = this.add.zone(boss.visual.x, boss.visual.y + 16, 76, 132);
       this.physics.add.existing(this.bossBlocker, true);
       this.physics.add.collider(this.player, this.bossBlocker);
     }
@@ -894,11 +1087,11 @@ export class IRLevel extends BaseIntegratedLevel {
       const sprite = this.add
         .sprite(point.x ?? 0, point.y ?? 0, 'tiles_spr', frames[0])
         .setScale(1.45)
-        .setDepth(7);
+        .setDepth(ACTOR_DEPTH);
       const aura = this.add
         .circle(sprite.x, sprite.y + 4, 16, 0xff2222, 0.2)
         .setStrokeStyle(1, 0xffaaaa, 0.45)
-        .setDepth(6);
+        .setDepth(ACTOR_DEPTH - 0.1);
 
       sprite.setData('frameIndex', 0);
 
@@ -981,7 +1174,7 @@ export class IRLevel extends BaseIntegratedLevel {
     const lever = this.physics.add
       .sprite(point.x ?? 0, point.y ?? 0, 'tiles_spr', LEVER_OFF_FRAME)
       .setScale(1.5)
-      .setDepth(7)
+      .setDepth(ACTOR_DEPTH)
       .setAlpha(0.5)
       .setTint(0x7a7a7a);
 
@@ -992,8 +1185,9 @@ export class IRLevel extends BaseIntegratedLevel {
 
   private createInteractionPrompt(): void {
     this.interactionPrompt = this.add
-      .text(0, 0, 'Press E', {
-        fontSize: '12px',
+      .text(0, 0, 'Press E / ACT', {
+        fontFamily: 'Verdana, Arial, Helvetica, sans-serif',
+        fontSize: '13px',
         color: '#ffffff',
         backgroundColor: '#111820',
         padding: { x: 6, y: 4 },
@@ -1005,6 +1199,8 @@ export class IRLevel extends BaseIntegratedLevel {
   }
 
   private updateInteractionPrompt(): void {
+    const touchInteract = this.consumeTouchInteractRequest();
+
     if (!this.player || this.inAssessment) {
       this.interactionPrompt?.setVisible(false);
       return;
@@ -1030,23 +1226,69 @@ export class IRLevel extends BaseIntegratedLevel {
       .setPosition(interactable.x, interactable.y - 34)
       .setVisible(true);
 
-    if (
+    if (touchInteract || (
       this.interactKey &&
       Phaser.Input.Keyboard.JustDown(this.interactKey)
-    ) {
+    )) {
       interactable.action();
     }
   }
 
+  private handleTouchInteract(): void {
+    this.touchInteractRequested = true;
+  }
+
+  private consumeTouchInteractRequest(): boolean {
+    const requested = this.touchInteractRequested;
+    this.touchInteractRequested = false;
+    return requested;
+  }
+
   private findNearestInteractable(): Interactable | undefined {
     const candidates: Interactable[] = [];
+
+    this.knowledgePoints.forEach((point: any) => {
+      if (point.isOpen || point.isAnimating) return;
+      const sprite = point[0] as Phaser.GameObjects.Sprite | undefined;
+      if (!sprite?.active) return;
+
+      candidates.push({
+        x: sprite.x,
+        y: sprite.y,
+        prompt: 'Press E / ACT to open chest',
+        action: () => this.openKnowledgeChest(point),
+      });
+    });
+
+    this.questionPoints.forEach((pointPair: any) => {
+      const sprite = pointPair[0] as Phaser.GameObjects.Sprite | undefined;
+      const questionIndex = pointPair.questionIndex;
+
+      if (
+        pointPair.taskDone ||
+        !sprite?.active ||
+        this.questions[questionIndex] === undefined
+      ) {
+        return;
+      }
+
+      candidates.push({
+        x: sprite.x,
+        y: sprite.y,
+        prompt: 'Press E / ACT to answer question',
+        action: () => this.startQuestionAtPoint(
+          pointPair,
+          this.getQuestionInteractContext(pointPair)
+        ),
+      });
+    });
 
     this.fragments.forEach(fragment => {
       if (fragment.opened) return;
       candidates.push({
         x: fragment.sprite.x,
         y: fragment.sprite.y,
-        prompt: 'Press E to read fragment',
+        prompt: 'Press E / ACT to read fragment',
         action: () => this.openMemoryFragment(fragment.zone),
       });
     });
@@ -1057,8 +1299,8 @@ export class IRLevel extends BaseIntegratedLevel {
         x: trigger.sprite.x,
         y: trigger.sprite.y,
         prompt: trigger.active
-          ? 'Press E to release responder'
-          : 'Press E to inspect seal',
+          ? 'Press E / ACT to release responder'
+          : 'Press E / ACT to inspect seal',
         action: () => this.handleSpikeTrigger(trigger.zone),
       });
     });
@@ -1068,7 +1310,7 @@ export class IRLevel extends BaseIntegratedLevel {
       candidates.push({
         x: boss.sprite.x,
         y: boss.sprite.y,
-        prompt: 'Press E to contain account',
+        prompt: 'Press E / ACT to contain account',
         action: () => this.startPSBossChallenge(boss),
       });
     });
@@ -1082,7 +1324,7 @@ export class IRLevel extends BaseIntegratedLevel {
       candidates.push({
         x: angel.x,
         y: angel.y,
-        prompt: 'Press E to cleanse malware',
+        prompt: 'Press E / ACT to activate scanner',
         action: () => this.startAngelChallenge(),
       });
     }
@@ -1092,7 +1334,7 @@ export class IRLevel extends BaseIntegratedLevel {
       candidates.push({
         x: witness.visual.x,
         y: witness.visual.y,
-        prompt: 'Press E to interview witness',
+        prompt: 'Press E / ACT to interview witness',
         action: () => this.startWitnessChallenge(witness),
       });
     });
@@ -1105,7 +1347,7 @@ export class IRLevel extends BaseIntegratedLevel {
       candidates.push({
         x: this.bossGatePoint.x,
         y: this.bossGatePoint.y,
-        prompt: 'Press E to inspect core gate',
+        prompt: 'Press E / ACT to inspect core gate',
         action: () => this.inspectBossGate(),
       });
     }
@@ -1116,7 +1358,7 @@ export class IRLevel extends BaseIntegratedLevel {
       candidates.push({
         x: reportPoint.x,
         y: reportPoint.y,
-        prompt: 'Press E to complete report',
+        prompt: 'Press E / ACT to complete report',
         action: () => this.startBossReport(),
       });
       }
@@ -1127,8 +1369,8 @@ export class IRLevel extends BaseIntegratedLevel {
         x: this.lever.x,
         y: this.lever.y,
         prompt: this.leverReady
-          ? 'Press E to shut down core'
-          : 'Press E to inspect lever',
+          ? 'Press E / ACT to shut down core'
+          : 'Press E / ACT to inspect lever',
         action: () => this.handleLeverInteraction(),
       });
     }
@@ -1157,6 +1399,7 @@ export class IRLevel extends BaseIntegratedLevel {
     if (!fragment || fragment.opened) return;
 
     fragment.opened = true;
+    AudioManager.playSfx(this, SFX.MEMORY_FRAGMENT_OPEN);
     this.tweens.killTweensOf(fragment.sprite);
     fragment.sprite.setTint(0x8cf7ff).setAlpha(1);
 
@@ -1178,11 +1421,13 @@ export class IRLevel extends BaseIntegratedLevel {
 
     if (!trigger.active) {
       const details = ROOM_DETAILS[zone];
+      AudioManager.playSfx(this, SFX.RESPONDER_SEAL_LOCKED);
       this.showInfo('Responder Seal', details.lockedMessage);
       return;
     }
 
     trigger.completed = true;
+    AudioManager.playSfx(this, SFX.RESPONDER_SEAL_ACTIVATE);
     this.tweens.killTweensOf([trigger.sprite, trigger.aura]);
     trigger.aura.destroy();
     trigger.sparks.forEach(spark => spark.destroy());
@@ -1201,6 +1446,7 @@ export class IRLevel extends BaseIntegratedLevel {
     if (boss.completed) return;
 
     this.inAssessment = true;
+    AudioManager.playSfx(this, SFX.PASSWORD_BOSS_START);
     this.player.lockMovement();
     this.interactionPrompt?.setVisible(false);
 
@@ -1211,6 +1457,12 @@ export class IRLevel extends BaseIntegratedLevel {
         title: challenge.title,
         instructions: challenge.instructions,
         evaluate: challenge.evaluate,
+        onAttempt: result => {
+          this.recordGameplayMetric('password_attempts');
+          this.recordGameplayMetric(
+            result.passed ? 'password_successes' : 'password_failures'
+          );
+        },
       },
       password => {
         this.challengePasswords.set(boss.index, password);
@@ -1225,52 +1477,49 @@ export class IRLevel extends BaseIntegratedLevel {
 
   private completePSBoss(boss: PSBossState): void {
     boss.completed = true;
+    AudioManager.playSfx(this, SFX.PASSWORD_BOSS_COMPLETE);
+    this.recordGameplayMetric('password_bosses_completed');
     this.tweens.add({
       targets: boss.sprite,
       alpha: 0,
-      scale: boss.sprite.scale * 1.2,
+      scaleX: Math.abs(boss.sprite.scaleX) * 1.2,
+      scaleY: Math.abs(boss.sprite.scaleY) * 1.2,
       duration: 380,
       ease: 'Back.In',
-      onComplete: () => boss.sprite.setVisible(false),
+      onComplete: () => boss.sprite.destroy(),
     });
 
     this.inAssessment = false;
     this.player.unlockMovement();
 
     if (this.psBosses.every(item => item.completed)) {
+      if (!this.roomChallengesComplete.has(2)) {
+        this.recordGameplayMetric('rooms_completed');
+      }
       this.markRoomChallengeComplete(2);
+      this.saveIncidentProgress(2, {
+        [IR_PROGRESS_METRICS.passwordRoomComplete]: 1,
+        [IR_PROGRESS_METRICS.roomComplete(2)]: 1,
+      });
     }
   }
 
   private startAngelChallenge(): void {
     if (this.roomChallengesComplete.has(3)) return;
 
-    const correctAnswer = 'Isolate the infected systems and remove the malware';
-
-    this.inAssessment = true;
-    this.player.lockMovement();
-    this.interactionPrompt?.setVisible(false);
-    this.popup.mode = 'learning';
-    this.popup.correctAnswer = correctAnswer;
-    this.popup.show(
-      'The malware is still active. What should the responder do before recovery?',
-      [
-        'Restore backups while the malware keeps running',
-        correctAnswer,
-        'Delete every log immediately',
-        'Reconnect the device to test if it spreads',
-      ],
-      choice => {
-        if (choice === correctAnswer) {
-          this.disableMalwareThreats();
-          this.markRoomChallengeComplete(3);
-        } else {
-          this.damagePlayer(this.malwareThreats[0]?.sprite, 2);
-        }
-
-        this.inAssessment = false;
-        this.player.unlockMovement();
-      }
+    this.recordGameplayMetric('malware_quarantined');
+    AudioManager.playSfx(this, SFX.MALWARE_SCANNER_ACTIVATE);
+    if (!this.roomChallengesComplete.has(3)) {
+      this.recordGameplayMetric('rooms_completed');
+    }
+    this.disableMalwareThreats();
+    this.markRoomChallengeComplete(3);
+    this.saveIncidentProgress(3, {
+      [IR_PROGRESS_METRICS.roomComplete(3)]: 1,
+    });
+    this.showInfo(
+      'Virus Scanner',
+      'The scanner temporarily quarantines the malware. Move while the threats are frozen and isolated.'
     );
   }
 
@@ -1309,7 +1558,7 @@ export class IRLevel extends BaseIntegratedLevel {
         ],
       },
     ];
-    const challenge = challenges[witness.index % challenges.length];
+    const challenge = this.pickWitnessChallenge(challenges, witness.index);
 
     this.inAssessment = true;
     this.player.lockMovement();
@@ -1318,6 +1567,8 @@ export class IRLevel extends BaseIntegratedLevel {
     this.popup.correctAnswer = challenge.answer;
     this.popup.show(challenge.question, challenge.choices, choice => {
       if (choice === challenge.answer) {
+        this.recordGameplayMetric('witness_correct');
+        AudioManager.playSfx(this, SFX.WITNESS_CORRECT);
         witness.completed = true;
         this.setContainerTint(witness.visual, 0x8cff9a);
         this.tweens.add({
@@ -1331,15 +1582,82 @@ export class IRLevel extends BaseIntegratedLevel {
         });
 
         if (this.witnesses.every(item => item.completed)) {
+          if (!this.roomChallengesComplete.has(4)) {
+            this.recordGameplayMetric('rooms_completed');
+          }
           this.markRoomChallengeComplete(4);
+          this.saveIncidentProgress(4, {
+            [IR_PROGRESS_METRICS.roomComplete(4)]: 1,
+          });
         }
       } else {
+        this.recordGameplayMetric('witness_wrong');
+        AudioManager.playSfx(this, SFX.WITNESS_WRONG);
+        this.spawnExtraWitness();
         this.cameras.main.shake(180, 0.004);
       }
 
       this.inAssessment = false;
       this.player.unlockMovement();
     });
+  }
+
+  private spawnExtraWitness(): void {
+    if (this.extraWitnessesSpawned >= MAX_EXTRA_WITNESSES) return;
+    if (this.roomChallengesComplete.has(4)) return;
+
+    const index = this.witnesses.length;
+    const sourcePoint = this.witnessSpawnPoints[
+      this.extraWitnessesSpawned % Math.max(1, this.witnessSpawnPoints.length)
+    ];
+    const angle = Phaser.Math.DegToRad(55 + this.extraWitnessesSpawned * 95);
+    const distance = 58 + this.extraWitnessesSpawned * 18;
+    const baseX = Number(sourcePoint?.x ?? this.player.x);
+    const baseY = Number(sourcePoint?.y ?? this.player.y);
+    const x = Phaser.Math.Clamp(
+      baseX + Math.cos(angle) * distance,
+      32,
+      this.map.widthInPixels - 32
+    );
+    const y = Phaser.Math.Clamp(
+      baseY + Math.sin(angle) * distance,
+      32,
+      this.map.heightInPixels - 32
+    );
+    const frameSets = WITNESS_FRAME_SETS[index % WITNESS_FRAME_SETS.length];
+    const witness = this.createCompositeActor(x, y, frameSets, 1.18, ACTOR_DEPTH);
+
+    this.extraWitnessesSpawned += 1;
+    AudioManager.playSfx(this, SFX.EXTRA_WITNESS_SPAWN);
+    this.setContainerTint(witness.visual, 0xffd166);
+    this.tweens.add({
+      targets: witness.visual,
+      scaleX: witness.visual.scaleX * 1.08,
+      scaleY: witness.visual.scaleY * 1.08,
+      duration: 180,
+      yoyo: true,
+      ease: 'Sine.easeOut',
+    });
+
+    this.witnesses.push({
+      index,
+      visual: witness.visual,
+      completed: false,
+      timer: witness.timer,
+    });
+  }
+
+  private pickWitnessChallenge<T extends { question: string }>(
+    challenges: T[],
+    index: number
+  ): T {
+    const unused = challenges.filter(
+      challenge => !this.usedWitnessQuestionKeys.has(challenge.question)
+    );
+    const pool = unused.length > 0 ? unused : challenges;
+    const challenge = pool[index % pool.length];
+    this.usedWitnessQuestionKeys.add(challenge.question);
+    return challenge;
   }
 
   private inspectBossGate(): void {
@@ -1352,50 +1670,508 @@ export class IRLevel extends BaseIntegratedLevel {
       'Core Gate Locked',
       'The incident core is protected by four unresolved response phases. Free every responder first: Identify, Contain, Eradicate, and Recover.'
     );
+    AudioManager.playSfx(this, SFX.CORE_GATE_LOCKED);
   }
 
   private startBossReport(): void {
     if (!this.bossReady || this.bossReportComplete) return;
 
-    this.showDialogue('ir_boss_truth', () => {
-      this.startBossReportQuestion(0);
-    });
+    AudioManager.playMusic(this, MUSIC.BOSS_OR_FINAL);
+    AudioManager.playSfx(this, SFX.BOSS_REPORT_START);
+    this.reportBossStarted = true;
+
+    if (this.currentReportPhaseIndex > 0) {
+      this.openReportBossOverlay();
+      return;
+    }
+
+    this.showDialogue(
+      'ir_boss_truth',
+      () => this.openReportBossOverlay(),
+      { unlockOnComplete: false }
+    );
   }
 
-  private startBossReportQuestion(index: number): void {
-    const question = BOSS_REPORT_QUESTIONS[index];
+  private openReportBossOverlay(): void {
+    if (this.bossReportComplete) return;
 
-    if (!question) {
+    this.scene.bringToTop(this.scene.key);
+    this.suspendReportBlockingInputs();
+    this.inAssessment = true;
+    this.player.lockMovement();
+    this.interactionPrompt?.setVisible(false);
+    this.reportAwaitingContinue = false;
+    this.reportFeedback = '';
+    this.createOrUpdateReportBossOverlay();
+  }
+
+  private createOrUpdateReportBossOverlay(): void {
+    this.destroyReportBossOverlay(false);
+    this.scene.bringToTop(this.scene.key);
+
+    const phase = REPORT_PHASES[this.currentReportPhaseIndex];
+
+    if (!phase) {
       this.completeBossReport();
       return;
     }
 
-    this.inAssessment = true;
-    this.player.lockMovement();
-    this.popup.mode = 'learning';
-    this.popup.correctAnswer = question.answer;
-    this.popup.show(question.question, question.choices, choice => {
-      if (choice === question.answer) {
-        this.startBossReportQuestion(index + 1);
+    const progress = this.getReportProgress();
+    this.reportBossOverlay = this.createReportBossDomOverlay(phase, progress);
+    this.highlightReportResponder();
+  }
+
+  private createReportChoiceButton(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    label: string,
+    onSelect: () => void
+  ): Phaser.GameObjects.Container {
+    const background = this.add
+      .rectangle(0, 0, width, height, 0x1d2b34, 1)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x5deeff, 0.45);
+    const text = this.add
+      .text(12, Math.max(7, height / 2 - 8), label, {
+        fontFamily: 'Verdana, Arial, Helvetica, sans-serif',
+        fontSize: width < 420 ? '10px' : '11px',
+        color: '#effcff',
+        wordWrap: { width: width - 24 },
+      })
+      .setOrigin(0, 0);
+    const touchHeight = Math.max(44, height);
+    const touchOffsetY = (height - touchHeight) / 2;
+    const touchZone = this.add
+      .zone(0, touchOffsetY, width, touchHeight)
+      .setOrigin(0, 0)
+      .setInteractive(
+        new Phaser.Geom.Rectangle(0, 0, width, touchHeight),
+        Phaser.Geom.Rectangle.Contains
+      );
+    const button = this.add
+      .container(x, y, [background, text, touchZone])
+      .setSize(width, height);
+
+    const setHover = () => {
+      background.setFillStyle(0x25404a, 1);
+      background.setStrokeStyle(1, 0x9dffff, 0.85);
+    };
+    const clearHover = () => {
+      background.setFillStyle(0x1d2b34, 1);
+      background.setStrokeStyle(1, 0x5deeff, 0.45);
+    };
+    let selected = false;
+    const select = (
+      _pointer?: Phaser.Input.Pointer,
+      _localX?: number,
+      _localY?: number,
+      event?: Phaser.Types.Input.EventData
+    ) => {
+      event?.stopPropagation();
+
+      if (selected || !button.active || !button.visible) return;
+
+      selected = true;
+      setHover();
+      onSelect();
+    };
+
+    touchZone.on('pointerover', setHover);
+    touchZone.on('pointerout', clearHover);
+    touchZone.on('pointerdown', select);
+    touchZone.on('pointerup', select);
+
+    return button;
+  }
+
+  private createReportBossDomOverlay(
+    phase: ReportPhase,
+    progress: number
+  ): ReportBossOverlay {
+    type DomReportAction = {
+      element: HTMLButtonElement;
+      press: (event: Event) => void;
+    };
+
+    const overlay = document.createElement('div');
+    overlay.className = 'phishy-ir-report-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.zIndex = '2147483647';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.padding = '16px';
+    overlay.style.background = 'rgba(2, 6, 10, 0.34)';
+    overlay.style.boxSizing = 'border-box';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.touchAction = 'manipulation';
+    overlay.style.userSelect = 'none';
+    overlay.style.webkitUserSelect = 'none';
+
+    const panel = document.createElement('div');
+    panel.style.width = 'min(680px, calc(100% - 18px))';
+    panel.style.maxHeight = 'calc(100% - 18px)';
+    panel.style.overflowY = 'auto';
+    panel.style.boxSizing = 'border-box';
+    panel.style.padding = '18px 22px';
+    panel.style.border = '2px solid rgba(117, 247, 255, 0.86)';
+    panel.style.background = 'rgba(17, 24, 32, 0.98)';
+    panel.style.color = '#effcff';
+    panel.style.fontFamily = 'Verdana, Arial, Helvetica, sans-serif';
+    panel.style.boxShadow = '0 18px 42px rgba(0, 0, 0, 0.52)';
+    panel.style.touchAction = 'manipulation';
+    overlay.appendChild(panel);
+
+    const title = document.createElement('div');
+    title.textContent = 'CORRUPTED INCIDENT REPORT';
+    title.style.fontSize = '18px';
+    title.style.fontWeight = '700';
+    title.style.letterSpacing = '0';
+    panel.appendChild(title);
+
+    const subtitle = document.createElement('div');
+    subtitle.textContent = 'Reconstruct the response sequence to stabilize the core.';
+    subtitle.style.marginTop = '4px';
+    subtitle.style.fontSize = '12px';
+    subtitle.style.color = '#a9cbd1';
+    panel.appendChild(subtitle);
+
+    const progressTrack = document.createElement('div');
+    progressTrack.style.height = '10px';
+    progressTrack.style.marginTop = '12px';
+    progressTrack.style.background = '#26323a';
+    progressTrack.style.overflow = 'hidden';
+    panel.appendChild(progressTrack);
+
+    const progressFill = document.createElement('div');
+    progressFill.style.width = `${Math.round(progress * 100)}%`;
+    progressFill.style.height = '100%';
+    progressFill.style.background = '#5deeff';
+    progressTrack.appendChild(progressFill);
+
+    const progressText = document.createElement('div');
+    progressText.textContent = `Report Resolved: ${Math.round(progress * 100)}%`;
+    progressText.style.marginTop = '8px';
+    progressText.style.fontSize = '12px';
+    progressText.style.color = '#d7fbff';
+    panel.appendChild(progressText);
+
+    const checklist = document.createElement('div');
+    checklist.style.marginTop = '10px';
+    checklist.style.fontSize = '12px';
+    checklist.style.lineHeight = '1.4';
+    REPORT_PHASES.forEach((item, index) => {
+      const completed = this.completedReportPhaseKeys.has(item.key);
+      const active = index === this.currentReportPhaseIndex;
+      const row = document.createElement('div');
+      row.textContent = `${completed ? '[x]' : active ? '[>]' : '[ ]'} ${item.label}`;
+      row.style.color = completed ? '#9dffb3' : active ? '#ffffff' : '#8ba4aa';
+      row.style.fontWeight = active ? '700' : '400';
+      checklist.appendChild(row);
+    });
+    panel.appendChild(checklist);
+
+    const phaseTitle = document.createElement('div');
+    phaseTitle.textContent = `Phase ${this.currentReportPhaseIndex + 1}: ${phase.label}`;
+    phaseTitle.style.marginTop = '18px';
+    phaseTitle.style.fontSize = '15px';
+    phaseTitle.style.fontWeight = '700';
+    panel.appendChild(phaseTitle);
+
+    const prompt = document.createElement('div');
+    prompt.textContent = phase.prompt;
+    prompt.style.marginTop = '6px';
+    prompt.style.fontSize = '13px';
+    prompt.style.lineHeight = '1.35';
+    panel.appendChild(prompt);
+
+    const clue = document.createElement('div');
+    clue.textContent = phase.responderClue;
+    clue.style.marginTop = '16px';
+    clue.style.fontSize = '12px';
+    clue.style.lineHeight = '1.35';
+    clue.style.color = '#b7f7c9';
+    panel.appendChild(clue);
+
+    const choices = document.createElement('div');
+    choices.style.display = 'grid';
+    choices.style.gap = '8px';
+    choices.style.marginTop = '12px';
+    panel.appendChild(choices);
+
+    const domActions: DomReportAction[] = [];
+    const addButton = (label: string, onPress: () => void) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.style.width = '100%';
+      button.style.minHeight = '44px';
+      button.style.padding = '10px 12px';
+      button.style.border = '1px solid rgba(93, 238, 255, 0.58)';
+      button.style.borderRadius = '0';
+      button.style.background = '#1d2b34';
+      button.style.color = '#effcff';
+      button.style.fontFamily = 'Verdana, Arial, Helvetica, sans-serif';
+      button.style.fontSize = '12px';
+      button.style.textAlign = 'left';
+      button.style.cursor = 'pointer';
+      button.style.touchAction = 'manipulation';
+      button.style.pointerEvents = 'auto';
+      button.style.webkitTapHighlightColor = 'rgba(93, 238, 255, 0.24)';
+
+      let selected = false;
+      const press = (event: Event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+
+        if (selected) return;
+
+        selected = true;
+        button.style.background = '#25404a';
+        button.style.borderColor = 'rgba(157, 255, 255, 0.92)';
+        onPress();
+      };
+
+      button.addEventListener('pointerdown', press, { capture: true });
+      button.addEventListener('touchstart', press, { capture: true, passive: false });
+      button.addEventListener('mousedown', press, { capture: true });
+      button.addEventListener('click', press, { capture: true });
+      domActions.push({ element: button, press });
+      choices.appendChild(button);
+    };
+
+    if (this.reportAwaitingContinue) {
+      addButton(
+        this.currentReportPhaseIndex >= REPORT_PHASES.length
+          ? 'Finalize Report'
+          : 'Continue Reconstruction',
+        () => this.continueReportBoss()
+      );
+    } else {
+      phase.choices.forEach(choice => {
+        addButton(choice, () => this.handleReportChoice(choice));
+      });
+    }
+
+    if (this.reportFeedback) {
+      const feedback = document.createElement('div');
+      feedback.textContent = this.reportFeedback;
+      feedback.style.marginTop = '12px';
+      feedback.style.fontSize = '12px';
+      feedback.style.color = this.reportAwaitingContinue ? '#9dffb3' : '#ffd2d2';
+      feedback.style.lineHeight = '1.35';
+      panel.appendChild(feedback);
+    }
+
+    const syncToCanvas = () => {
+      const rect = this.game.canvas.getBoundingClientRect();
+      overlay.style.left = `${rect.left}px`;
+      overlay.style.top = `${rect.top}px`;
+      overlay.style.width = `${rect.width}px`;
+      overlay.style.height = `${rect.height}px`;
+    };
+    const pressFromPoint = (event: Event, clientX: number, clientY: number) => {
+      const action = domActions.find(({ element }) => {
+        const rect = element.getBoundingClientRect();
+
+        return (
+          clientX >= rect.left &&
+          clientX <= rect.right &&
+          clientY >= rect.top &&
+          clientY <= rect.bottom
+        );
+      });
+
+      if (!action) return;
+
+      action.press(event);
+    };
+    const capturePointerPress = (event: PointerEvent | MouseEvent) => {
+      pressFromPoint(event, event.clientX, event.clientY);
+    };
+    const captureTouchPress = (event: TouchEvent) => {
+      const touch = event.changedTouches[0] ?? event.touches[0];
+
+      if (!touch) return;
+
+      pressFromPoint(event, touch.clientX, touch.clientY);
+    };
+
+    syncToCanvas();
+    window.addEventListener('resize', syncToCanvas);
+    window.addEventListener('orientationchange', syncToCanvas);
+    document.addEventListener('pointerdown', capturePointerPress, true);
+    document.addEventListener('mousedown', capturePointerPress, true);
+    document.addEventListener('click', capturePointerPress, true);
+    document.addEventListener('touchstart', captureTouchPress, {
+      capture: true,
+      passive: false,
+    });
+    document.body.appendChild(overlay);
+
+    return {
+      element: overlay,
+      removeListeners: () => {
+        window.removeEventListener('resize', syncToCanvas);
+        window.removeEventListener('orientationchange', syncToCanvas);
+        document.removeEventListener('pointerdown', capturePointerPress, true);
+        document.removeEventListener('mousedown', capturePointerPress, true);
+        document.removeEventListener('click', capturePointerPress, true);
+        document.removeEventListener('touchstart', captureTouchPress, true);
+      },
+    };
+  }
+
+  private handleReportChoice(choice: string): void {
+    const phase = REPORT_PHASES[this.currentReportPhaseIndex];
+
+    if (!phase) {
+      this.completeBossReport();
+      return;
+    }
+
+    if (choice === phase.answer) {
+      this.recordGameplayMetric('report_answers_correct');
+      AudioManager.playSfx(this, SFX.REPORT_ANSWER_CORRECT);
+      this.completedReportPhaseKeys.add(phase.key);
+      this.currentReportPhaseIndex += 1;
+      this.reportAwaitingContinue = true;
+      this.reportFeedback = phase.feedbackCorrect;
+      this.saveReportBossProgress();
+      this.repairCoreVisual();
+      this.createOrUpdateReportBossOverlay();
+      return;
+    }
+
+    this.recordGameplayMetric('report_retries');
+    AudioManager.playSfx(this, SFX.REPORT_REJECTED);
+    this.reportAwaitingContinue = false;
+    this.reportFeedback = phase.feedbackWrong;
+    this.createOrUpdateReportBossOverlay();
+  }
+
+  private continueReportBoss(): void {
+    this.reportAwaitingContinue = false;
+    this.reportFeedback = '';
+
+    if (this.currentReportPhaseIndex >= REPORT_PHASES.length) {
+      this.completeBossReport();
+      return;
+    }
+
+    this.createOrUpdateReportBossOverlay();
+  }
+
+  private saveReportBossProgress(): void {
+    const phaseMetrics = Object.fromEntries(
+      Array.from(this.completedReportPhaseKeys).map(phaseKey => [
+        IR_PROGRESS_METRICS.bossReportPhase(phaseKey),
+        1,
+      ])
+    );
+
+    this.saveIncidentProgress(BOSS_GATE_ZONE, {
+      ...phaseMetrics,
+      [IR_PROGRESS_METRICS.bossReportPhaseIndex]: this.currentReportPhaseIndex,
+    });
+  }
+
+  private getReportProgress(): number {
+    return Phaser.Math.Clamp(
+      this.completedReportPhaseKeys.size / REPORT_PHASES.length,
+      0,
+      1
+    );
+  }
+
+  private repairCoreVisual(animate = true): void {
+    const progress = this.getReportProgress();
+    const alpha = 1 - progress * 0.55;
+
+    this.bossVisual?.setAlpha(alpha);
+    this.bossAura
+      ?.setFillStyle(0x5deeff, 0.12 + progress * 0.18)
+      .setStrokeStyle(2, 0xbffcff, 0.35 + progress * 0.35);
+
+    if (animate) {
+      this.cameras.main.shake(120, 0.003 + progress * 0.003);
+    }
+  }
+
+  private highlightReportResponder(): void {
+    this.wizards.forEach((wizard, zone) => {
+      if (!wizard.freed || wizard.sealed) return;
+
+      if (zone === this.currentReportPhaseIndex + 1) {
+        this.setContainerTint(wizard.visual, 0xb7f7c9);
         return;
       }
 
-      this.showInfo(
-        'Report Rejected',
-        'The incident report must follow the response process. Review the evidence and try this section again.',
-        () => this.startBossReportQuestion(index)
-      );
+      this.clearContainerTint(wizard.visual);
     });
+  }
+
+  private destroyReportBossOverlay(restoreInputs = true): void {
+    this.reportBossOverlay?.removeListeners();
+    this.reportBossOverlay?.element.remove();
+    this.reportBossOverlay = undefined;
+
+    if (restoreInputs) {
+      this.restoreReportBlockingInputs();
+      this.restoreGameplayUiLayer();
+    }
+  }
+
+  private suspendReportBlockingInputs(): void {
+    if (this.reportOverlaySuspendedInputs.length > 0) return;
+
+    ['ui-scene', 'admin-devtools-scene'].forEach(sceneKey => {
+      const scene = this.scene.get(sceneKey);
+
+      if (!scene || scene === this || !scene.scene.isActive()) return;
+
+      this.reportOverlaySuspendedInputs.push({
+        scene,
+        enabled: scene.input.enabled,
+      });
+      scene.input.enabled = false;
+    });
+
+    this.scene.bringToTop(this.scene.key);
+  }
+
+  private restoreReportBlockingInputs(): void {
+    this.reportOverlaySuspendedInputs.forEach(({ scene, enabled }) => {
+      if (scene.scene.isActive()) {
+        scene.input.enabled = enabled;
+      }
+    });
+    this.reportOverlaySuspendedInputs = [];
+  }
+
+  private restoreGameplayUiLayer(): void {
+    if (this.scene.isActive('ui-scene')) {
+      this.scene.bringToTop('ui-scene');
+    }
   }
 
   private completeBossReport(): void {
     this.bossReportComplete = true;
+    this.destroyReportBossOverlay();
+    AudioManager.playSfx(this, SFX.REPORT_ACCEPTED);
+    this.recordGameplayMetric('report_completed');
     this.leverReady = true;
     this.inAssessment = false;
     this.player.unlockMovement();
 
     this.bossBlocker?.destroy();
     this.openDoorByZone(FINAL_EXIT_ZONE);
+    this.saveIncidentProgress(FINAL_EXIT_ZONE, {
+      [IR_PROGRESS_METRICS.bossReportComplete]: 1,
+    });
 
     if (!this.lever) {
       this.showInfo(
@@ -1403,6 +2179,7 @@ export class IRLevel extends BaseIntegratedLevel {
         'The report is complete. No shutdown lever was found, so the reconstruction is closing automatically.',
         () => {
           this.finalShutdownComplete = true;
+          this.recordGameplayMetric('final_shutdown');
           void this.completeAssessment();
         }
       );
@@ -1435,6 +2212,7 @@ export class IRLevel extends BaseIntegratedLevel {
 
   private handleLeverInteraction(): void {
     if (!this.leverReady) {
+      AudioManager.playSfx(this, SFX.LEVER_LOCKED);
       this.showInfo(
         'Lever Locked',
         'The shutdown lever will not respond until the incident report is complete.'
@@ -1445,13 +2223,39 @@ export class IRLevel extends BaseIntegratedLevel {
     if (!this.lever || this.finalShutdownComplete) return;
 
     this.finalShutdownComplete = true;
+    this.recordGameplayMetric('final_shutdown');
+    AudioManager.playSfx(this, SFX.LEVER_PULL);
+    AudioManager.playSfx(this, SFX.FINAL_SHUTDOWN);
     this.lever.setFrame(LEVER_ON_FRAME);
     this.tweens.killTweensOf(this.lever);
     this.lever.setScale(1.55);
     this.cameras.main.shake(420, 0.008);
     this.flashShutdownEffects();
+    this.inAssessment = true;
+    this.player.lockMovement();
+    this.interactionPrompt?.setVisible(false);
 
-    this.showDialogue('ir_ending', () => {
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.cameras.main.fadeIn(520, 0, 0, 0);
+      this.showFinalCutscene();
+    });
+    this.cameras.main.fadeOut(720, 0, 0, 0);
+  }
+
+  private showFinalCutscene(): void {
+    AudioManager.playSfx(this, SFX.ENDING_START);
+    const dialogueData = this.cache.json.get('general_dialogues');
+    const scenario = dialogueData?.scenarios?.find(
+      (item: any) => item.id === 'ir_final_cutscene'
+    );
+
+    if (!scenario) {
+      void this.completeAssessment();
+      return;
+    }
+
+    const runner = new DialogueRunner(this, scenario);
+    runner.start(() => {
       void this.completeAssessment();
     });
   }
@@ -1460,6 +2264,10 @@ export class IRLevel extends BaseIntegratedLevel {
     if (this.roomChallengesComplete.has(zone)) return;
 
     this.roomChallengesComplete.add(zone);
+    this.saveIncidentProgress(zone, {
+      [IR_PROGRESS_METRICS.roomComplete(zone)]: 1,
+    });
+    AudioManager.playSfx(this, SFX.RESPONDER_SEAL_ACTIVATE);
     const trigger = this.spikeTriggers.get(zone);
     if (!trigger) return;
 
@@ -1516,6 +2324,7 @@ export class IRLevel extends BaseIntegratedLevel {
   private openSpikeGate(zone: number, animate: boolean): void {
     const gate = this.spikeGates.get(zone);
     if (!gate) return;
+    if (animate) AudioManager.playSfx(this, SFX.SPIKE_GATE_RETRACT);
 
     gate.forEach(spike => {
       this.physics.world.disable(spike);
@@ -1536,9 +2345,17 @@ export class IRLevel extends BaseIntegratedLevel {
     if (!wizard || wizard.freed) return;
 
     wizard.freed = true;
+    AudioManager.playSfx(this, SFX.RESPONDER_RELEASED);
+    this.recordGameplayMetric('responders_released');
     this.roomRespondersReleased.add(zone);
+    this.saveIncidentProgress(Math.min(zone + 1, BOSS_GATE_ZONE), {
+      [IR_PROGRESS_METRICS.roomReleased(zone)]: 1,
+    });
+    this.tweens.killTweensOf(wizard.visual);
+    const releasePoint = this.getWizardReleasePoint(zone);
+    wizard.visual.setPosition(releasePoint.x, releasePoint.y);
     this.clearContainerTint(wizard.visual);
-    wizard.visual.setAlpha(1);
+    wizard.visual.setVisible(true).setAlpha(1);
 
     this.tweens.add({
       targets: wizard.visual,
@@ -1555,10 +2372,31 @@ export class IRLevel extends BaseIntegratedLevel {
     );
   }
 
+  private getWizardReleasePoint(zone: number): Phaser.Math.Vector2 {
+    const trigger = this.spikeTriggers.get(zone);
+
+    if (trigger) {
+      return this.resolveNearestWalkablePoint(
+        trigger.sprite.x,
+        trigger.sprite.y - 28
+      );
+    }
+
+    if (this.player) {
+      return this.resolveNearestWalkablePoint(
+        this.player.x - 28,
+        this.player.y
+      );
+    }
+
+    return new Phaser.Math.Vector2(0, 0);
+  }
+
   private startMinionSealing(): void {
     if (this.minionSealingStarted || !this.allRespondersReleased()) return;
 
     this.minionSealingStarted = true;
+    AudioManager.playSfx(this, SFX.MINION_SEALING_START);
     this.inAssessment = true;
     this.player.lockMovement();
     this.interactionPrompt?.setVisible(false);
@@ -1603,6 +2441,7 @@ export class IRLevel extends BaseIntegratedLevel {
     if (minion.sealed) return;
 
     minion.sealed = true;
+    AudioManager.playSfx(this, SFX.MINION_SEALED);
     wizard.sealed = true;
     minion.timer?.destroy();
     this.tweens.killTweensOf([minion.sprite, minion.aura]);
@@ -1631,7 +2470,11 @@ export class IRLevel extends BaseIntegratedLevel {
 
   private finishMinionSealing(): void {
     this.bossReady = true;
+    AudioManager.playSfx(this, SFX.CORE_GATE_OPEN);
     this.openDoorByZone(BOSS_GATE_ZONE);
+    this.saveIncidentProgress(BOSS_GATE_ZONE, {
+      [IR_PROGRESS_METRICS.coreDoorOpened]: 1,
+    });
     this.inAssessment = false;
     this.player.unlockMovement();
 
@@ -1641,9 +2484,10 @@ export class IRLevel extends BaseIntegratedLevel {
     );
   }
 
-  private openDoorByZone(zone: number): void {
+  private openDoorByZone(zone: number, silent = false): void {
     const doors = this.doors.get(zone);
     if (!doors) return;
+    if (!silent) AudioManager.playSfx(this, SFX.DOOR_OPEN);
 
     doors.forEach(door => {
       if (door.opened) return;
@@ -1714,10 +2558,10 @@ export class IRLevel extends BaseIntegratedLevel {
       );
 
       if (distance > 180) {
-        wizard.visual.setPosition(target.x, target.y);
+        const safeTarget = this.resolveNearestWalkablePoint(target.x, target.y);
+        wizard.visual.setPosition(safeTarget.x, safeTarget.y);
       } else {
-        wizard.visual.x = Phaser.Math.Linear(wizard.visual.x, target.x, 0.18);
-        wizard.visual.y = Phaser.Math.Linear(wizard.visual.y, target.y, 0.18);
+        this.moveFollowerToward(wizard.visual, target, 0.18);
       }
 
       if (wizard.visual.x < oldX - 0.1) {
@@ -1728,8 +2572,227 @@ export class IRLevel extends BaseIntegratedLevel {
         wizard.visual.scaleX = Math.abs(wizard.visual.scaleX);
       }
 
-      wizard.visual.setDepth(wizard.visual.y < this.player.y ? 6 : 9);
+      wizard.visual.setDepth(ACTOR_DEPTH);
     });
+  }
+
+  private updateRoomPatrols(): void {
+    const now = this.time.now;
+
+    this.wizards.forEach(wizard => {
+      if (wizard.freed || wizard.sealed) return;
+      this.updatePatrolActor(
+        wizard.visual,
+        wizard,
+        WIZARD_PATROL_SPEED,
+        now
+      );
+    });
+
+    this.psBosses.forEach(boss => {
+      if (boss.completed) return;
+      this.updatePatrolActor(
+        boss.sprite,
+        boss,
+        PASSWORD_BOSS_PATROL_SPEED,
+        now
+      );
+    });
+
+    if (this.bossVisual && this.bossPatrol && !this.bossReportComplete) {
+      this.updatePatrolActor(
+        this.bossVisual,
+        this.bossPatrol,
+        MAIN_BOSS_PATROL_SPEED,
+        now,
+        MAIN_BOSS_PATROL_RADIUS
+      );
+      this.bossAura?.setPosition(this.bossVisual.x, this.bossVisual.y + 16);
+      this.bossBlocker?.setPosition(this.bossVisual.x, this.bossVisual.y + 16);
+    }
+  }
+
+  private updatePatrolActor(
+    visual: Phaser.GameObjects.Container,
+    patrol: {
+      homeX: number;
+      homeY: number;
+      targetX: number;
+      targetY: number;
+      nextMoveAt: number;
+    },
+    speed: number,
+    now: number,
+    radius = ROOM_PATROL_RADIUS
+  ): void {
+    if (
+      now >= patrol.nextMoveAt ||
+      Phaser.Math.Distance.Between(
+        visual.x,
+        visual.y,
+        patrol.targetX,
+        patrol.targetY
+      ) <= 3
+    ) {
+      const target = this.pickPatrolTarget(patrol.homeX, patrol.homeY, radius);
+      patrol.targetX = target.x;
+      patrol.targetY = target.y;
+      patrol.nextMoveAt = now + Phaser.Math.Between(1100, 2200);
+    }
+
+    const oldX = visual.x;
+    this.moveFollowerToward(
+      visual,
+      new Phaser.Math.Vector2(patrol.targetX, patrol.targetY),
+      speed
+    );
+
+    if (visual.x < oldX - 0.1) {
+      visual.scaleX = -Math.abs(visual.scaleX);
+    } else if (visual.x > oldX + 0.1) {
+      visual.scaleX = Math.abs(visual.scaleX);
+    }
+  }
+
+  private pickPatrolTarget(
+    x: number,
+    y: number,
+    radius = ROOM_PATROL_RADIUS
+  ): Phaser.Math.Vector2 {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const distance = Phaser.Math.Between(10, radius);
+      const targetX = x + Math.cos(angle) * distance;
+      const targetY = y + Math.sin(angle) * distance;
+
+      if (this.isEntityWalkable(targetX, targetY)) {
+        return new Phaser.Math.Vector2(targetX, targetY);
+      }
+    }
+
+    return this.resolveNearestWalkablePoint(x, y);
+  }
+
+  private updateActorDepths(): void {
+    this.player?.setDepth(ACTOR_DEPTH);
+    this.wizards.forEach(wizard => wizard.visual.setDepth(ACTOR_DEPTH));
+    this.psBosses.forEach(boss => {
+      if (!boss.completed && boss.sprite.active) boss.sprite.setDepth(ACTOR_DEPTH);
+    });
+    this.witnesses.forEach(witness => witness.visual.setDepth(ACTOR_DEPTH));
+    this.malwareThreats.forEach(threat => {
+      threat.sprite.setDepth(ACTOR_DEPTH);
+      threat.aura.setDepth(ACTOR_DEPTH - 0.1);
+    });
+    this.minions.forEach(minion => {
+      minion.sprite.setDepth(ACTOR_DEPTH);
+      minion.aura.setDepth(ACTOR_DEPTH - 0.1);
+    });
+    this.bossVisual?.setDepth(ACTOR_DEPTH);
+    this.bossAura?.setDepth(ACTOR_DEPTH - 0.1);
+    this.lever?.setDepth(ACTOR_DEPTH);
+  }
+
+  private moveFollowerToward(
+    visual: Phaser.GameObjects.Container,
+    target: Phaser.Math.Vector2,
+    amount: number
+  ): void {
+    const nextX = Phaser.Math.Linear(visual.x, target.x, amount);
+    const nextY = Phaser.Math.Linear(visual.y, target.y, amount);
+
+    if (this.isEntityWalkable(nextX, nextY)) {
+      visual.setPosition(nextX, nextY);
+      return;
+    }
+
+    if (this.isEntityWalkable(nextX, visual.y)) {
+      visual.x = nextX;
+    }
+
+    if (this.isEntityWalkable(visual.x, nextY)) {
+      visual.y = nextY;
+    }
+  }
+
+  private resolveNearestWalkablePoint(x: number, y: number): Phaser.Math.Vector2 {
+    if (this.isEntityWalkable(x, y)) {
+      return new Phaser.Math.Vector2(x, y);
+    }
+
+    const offsets = [
+      [0, 0],
+      [0, 16],
+      [0, -16],
+      [-16, 0],
+      [16, 0],
+      [-16, 16],
+      [16, 16],
+      [-16, -16],
+      [16, -16],
+      [0, 32],
+      [0, -32],
+      [-32, 0],
+      [32, 0],
+    ];
+
+    for (const [dx, dy] of offsets) {
+      const candidateX = x + dx;
+      const candidateY = y + dy;
+      if (this.isEntityWalkable(candidateX, candidateY)) {
+        return new Phaser.Math.Vector2(candidateX, candidateY);
+      }
+    }
+
+    return new Phaser.Math.Vector2(this.player.x, this.player.y);
+  }
+
+  private isEntityWalkable(x: number, y: number): boolean {
+    const samples = [
+      [0, 0],
+      [-10, 0],
+      [10, 0],
+      [0, -8],
+      [0, 8],
+    ];
+
+    return samples.every(([dx, dy]) => this.isPointWalkable(x + dx, y + dy));
+  }
+
+  private isPointWalkable(x: number, y: number): boolean {
+    const bounds = this.physics.world.bounds;
+    if (x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom) {
+      return false;
+    }
+
+    const floorTile = this.getTileAtWorld('Floor', x, y);
+    if (!floorTile) return false;
+
+    return ![
+      this.wallsLayer,
+      this.wallsLayer2,
+    ].some(layer => this.tileBlocksAt(layer, x, y));
+  }
+
+  private getTileAtWorld(
+    layerName: string,
+    x: number,
+    y: number
+  ): Phaser.Tilemaps.Tile | null {
+    const layer = this.map.getLayer(layerName)?.tilemapLayer as
+      | Phaser.Tilemaps.TilemapLayer
+      | undefined;
+
+    return layer?.getTileAtWorldXY(x, y, false) ?? null;
+  }
+
+  private tileBlocksAt(
+    layer: Phaser.Tilemaps.TilemapLayer | undefined,
+    x: number,
+    y: number
+  ): boolean {
+    const tile = layer?.getTileAtWorldXY(x, y, false);
+    return Boolean(tile?.collides);
   }
 
   private updateMalwareThreats(): void {
@@ -1741,6 +2804,13 @@ export class IRLevel extends BaseIntegratedLevel {
     this.malwareThreats.forEach(threat => {
       if (threat.disabled || !threat.sprite.active) return;
 
+      if (threat.quarantined || threat.stunnedUntil > this.time.now) {
+        threat.sprite.setVelocity(0, 0);
+        threat.aura.setPosition(threat.sprite.x, threat.sprite.y + 5);
+        this.updateQuarantineEffects(threat);
+        return;
+      }
+
       const distanceToPlayer = Phaser.Math.Distance.Between(
         threat.sprite.x,
         threat.sprite.y,
@@ -1750,6 +2820,7 @@ export class IRLevel extends BaseIntegratedLevel {
 
       if (
         distanceToPlayer < 150 &&
+        this.isInsideMalwareRoom(threat, this.player.x, this.player.y) &&
         this.canMalwareSeePlayer(threat.sprite)
       ) {
         this.physics.moveToObject(threat.sprite, this.player, 62);
@@ -1771,6 +2842,7 @@ export class IRLevel extends BaseIntegratedLevel {
       }
 
       threat.aura.setPosition(threat.sprite.x, threat.sprite.y + 5);
+      this.keepMalwareInsideRoom(threat);
       const body = threat.sprite.body as Phaser.Physics.Arcade.Body | null;
       if (body) {
         threat.sprite.setFlipX(body.velocity.x < 0);
@@ -1798,19 +2870,54 @@ export class IRLevel extends BaseIntegratedLevel {
   }
 
   private handleMalwareHit(threat: MalwareThreat): void {
-    if (this.inAssessment || threat.disabled) return;
+    if (this.inAssessment || threat.disabled || threat.quarantined) return;
 
     const now = this.time.now;
     const lastHitAt = Number(threat.sprite.getData('lastHitAt') ?? 0);
-    if (now - lastHitAt < 1300) return;
+    if (now - lastHitAt < MALWARE_ATTACK_COOLDOWN) return;
 
     threat.sprite.setData('lastHitAt', now);
+
+    if (this.player.isBlocking()) {
+      this.blockMalwareHit(threat);
+      return;
+    }
+
+    this.recordGameplayMetric('malware_hits');
+    AudioManager.playSfx(this, SFX.MALWARE_HIT_PLAYER);
+    AudioManager.playSfx(this, SFX.PLAYER_HIT);
     this.damagePlayer(threat.sprite, MALWARE_TOUCH_DAMAGE);
     this.knockPlayerAwayFrom(threat.sprite);
 
     if (this.playerHealth <= 0) {
       this.respawnPlayerAtZoneThree();
     }
+  }
+
+  private blockMalwareHit(threat: MalwareThreat): void {
+    if (threat.quarantined) return;
+
+    threat.stunnedUntil = this.time.now + MALWARE_BLOCK_STUN_DURATION;
+    AudioManager.playSfx(this, SFX.MALWARE_BLOCKED);
+    threat.sprite.setVelocity(0, 0);
+    threat.sprite.setTint(0x9df7ff);
+    threat.aura.setFillStyle(0x79f7ff, 0.32);
+    this.recordGameplayMetric('malware_blocks');
+
+    this.tweens.add({
+      targets: threat.sprite,
+      alpha: 0.45,
+      duration: 80,
+      yoyo: true,
+      repeat: 5,
+    });
+
+    this.time.delayedCall(MALWARE_BLOCK_STUN_DURATION, () => {
+      if (!threat.sprite.active || threat.disabled || threat.quarantined) return;
+
+      threat.sprite.clearTint();
+      threat.aura.setFillStyle(0xff3333, 0.18);
+    });
   }
 
   private canMalwareSeePlayer(
@@ -1883,6 +2990,7 @@ export class IRLevel extends BaseIntegratedLevel {
     target?: Phaser.GameObjects.Sprite,
     amount = 1
   ): void {
+    this.recordGameplayMetric('incident_damage_taken', amount);
     this.playerHealth = Math.max(0, this.playerHealth - amount);
     this.updateHealthUI();
 
@@ -1917,6 +3025,7 @@ export class IRLevel extends BaseIntegratedLevel {
 
   private respawnPlayerAtZoneThree(): void {
     this.inAssessment = true;
+    AudioManager.playSfx(this, SFX.PLAYER_RESPAWN);
     this.player.lockMovement();
     this.playerHealth = MAX_PLAYER_HEALTH;
     this.updateHealthUI();
@@ -1934,22 +3043,117 @@ export class IRLevel extends BaseIntegratedLevel {
 
   private disableMalwareThreats(): void {
     this.malwareThreats.forEach(threat => {
-      threat.disabled = true;
+      if (threat.disabled || threat.quarantined) return;
+
+      threat.quarantined = true;
+      AudioManager.playSfx(this, SFX.MALWARE_QUARANTINE_ACTIVATE);
       threat.sprite.setVelocity(0);
-      threat.sprite.disableBody(false, false);
       this.tweens.killTweensOf([threat.sprite, threat.aura]);
+      threat.sprite.stop();
+      threat.sprite.setData('quarantined', true);
+      threat.sprite.setTint(0x7df7ff);
+      threat.sprite.disableBody(false, false);
+
+      const ring = this.add
+        .circle(threat.sprite.x, threat.sprite.y + 2, 18, 0x6beeff, 0.08)
+        .setStrokeStyle(2, 0x9df7ff, 0.72)
+        .setDepth(threat.sprite.depth + 1);
+      const label = this.add
+        .text(threat.sprite.x, threat.sprite.y - 24, 'QUARANTINED', {
+          fontSize: '9px',
+          color: '#bffcff',
+          fontStyle: 'bold',
+        })
+        .setOrigin(0.5)
+        .setDepth(threat.sprite.depth + 2);
+
+      threat.quarantineEffects = [ring, label];
+      threat.aura
+        .setPosition(threat.sprite.x, threat.sprite.y + 5)
+        .setFillStyle(0x59e7ff, 0.32)
+        .setStrokeStyle(2, 0xbffcff, 0.58)
+        .setAlpha(1)
+        .setScale(1);
+
       this.tweens.add({
-        targets: [threat.sprite, threat.aura],
-        alpha: 0,
-        scale: 0.3,
-        duration: 360,
-        ease: 'Back.In',
-        onComplete: () => {
-          threat.sprite.destroy();
-          threat.aura.destroy();
-        },
+        targets: [threat.sprite, threat.aura, ring],
+        alpha: { from: 0.58, to: 1 },
+        duration: 110,
+        yoyo: true,
+        repeat: -1,
+      });
+      this.tweens.add({
+        targets: ring,
+        scale: { from: 0.9, to: 1.28 },
+        duration: 680,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+
+      this.time.delayedCall(MALWARE_QUARANTINE_DURATION, () => {
+        this.releaseMalwareThreat(threat);
       });
     });
+  }
+
+  private releaseMalwareThreat(threat: MalwareThreat): void {
+    if (!threat.sprite.active || threat.disabled || !threat.quarantined) return;
+
+    threat.quarantined = false;
+    threat.stunnedUntil = 0;
+    threat.sprite.setData('quarantined', false);
+    threat.sprite.clearTint();
+    threat.sprite.enableBody(false, threat.sprite.x, threat.sprite.y, true, true);
+    threat.aura
+      .setPosition(threat.sprite.x, threat.sprite.y + 5)
+      .setFillStyle(0xff3333, 0.18)
+      .setStrokeStyle(1, 0xff7777, 0.42)
+      .setAlpha(0.24)
+      .setScale(1);
+    this.tweens.killTweensOf([
+      threat.sprite,
+      threat.aura,
+      ...(threat.quarantineEffects ?? []),
+    ]);
+    threat.quarantineEffects?.forEach(effect => effect.destroy());
+    threat.quarantineEffects = undefined;
+
+    this.tweens.add({
+      targets: threat.aura,
+      scale: { from: 0.85, to: 1.25 },
+      alpha: { from: 0.1, to: 0.36 },
+      duration: 620,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  private updateQuarantineEffects(threat: MalwareThreat): void {
+    const [ring, label] = threat.quarantineEffects ?? [];
+    if (ring instanceof Phaser.GameObjects.Arc) {
+      ring.setPosition(threat.sprite.x, threat.sprite.y + 2);
+    }
+    if (label instanceof Phaser.GameObjects.Text) {
+      label.setPosition(threat.sprite.x, threat.sprite.y - 24);
+    }
+  }
+
+  private isInsideMalwareRoom(
+    threat: MalwareThreat,
+    x: number,
+    y: number
+  ): boolean {
+    return Phaser.Math.Distance.Between(threat.homeX, threat.homeY, x, y) <= MALWARE_ROOM_RADIUS;
+  }
+
+  private keepMalwareInsideRoom(threat: MalwareThreat): void {
+    if (this.isInsideMalwareRoom(threat, threat.sprite.x, threat.sprite.y)) return;
+
+    threat.targetX = threat.homeX;
+    threat.targetY = threat.homeY;
+    this.physics.moveTo(threat.sprite, threat.homeX, threat.homeY, 55);
   }
 
   private getPSChallenge(index: number): {
@@ -2107,6 +3311,88 @@ export class IRLevel extends BaseIntegratedLevel {
     };
   }
 
+  private createDragonBossActor(
+    x: number,
+    y: number,
+    frame: number,
+    scale: number,
+    depth: number
+  ): {
+    visual: Phaser.GameObjects.Container;
+    parts: Phaser.GameObjects.Sprite[];
+  } {
+    const aura = this.add
+      .circle(0, 4, 14, 0xffd166, 0.12)
+      .setStrokeStyle(1, 0xfff0a8, 0.3);
+    const dragon = this.add
+      .sprite(0, 0, 'tiles_spr', frame)
+      .setOrigin(0.5);
+    const visual = this.add
+      .container(x, y, [aura, dragon])
+      .setScale(scale)
+      .setDepth(depth);
+
+    this.tweens.add({
+      targets: aura,
+      scale: { from: 0.85, to: 1.28 },
+      alpha: { from: 0.08, to: 0.24 },
+      duration: 780,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    return {
+      visual,
+      parts: [dragon],
+    };
+  }
+
+  private createThreePartBossActor(
+    x: number,
+    y: number,
+    frameSets: number[][],
+    scale: number,
+    depth: number
+  ): {
+    visual: Phaser.GameObjects.Container;
+    parts: Phaser.GameObjects.Sprite[];
+    timer: Phaser.Time.TimerEvent;
+  } {
+    const top = this.add.sprite(0, -32, 'tiles_spr', frameSets[0][0]);
+    const middle = this.add.sprite(0, 0, 'tiles_spr', frameSets[0][1]);
+    const bottom = this.add.sprite(0, 32, 'tiles_spr', frameSets[0][2]);
+    const visual = this.add
+      .container(x, y, [top, middle, bottom])
+      .setScale(scale)
+      .setDepth(depth);
+    const parts = [top, middle, bottom];
+
+    visual.setData('frameIndex', 0);
+
+    const timer = this.time.addEvent({
+      delay: 150,
+      loop: true,
+      callback: () => {
+        if (!visual.active) return;
+        const nextIndex =
+          ((visual.getData('frameIndex') as number) + 1) % frameSets.length;
+        visual.setData('frameIndex', nextIndex);
+        parts.forEach((part, partIndex) => {
+          part.setFrame(frameSets[nextIndex][partIndex]);
+        });
+      },
+    });
+
+    this.animationTimers.push(timer);
+
+    return {
+      visual,
+      parts,
+      timer,
+    };
+  }
+
   private createPulseAura(
     x: number,
     y: number,
@@ -2214,12 +3500,16 @@ export class IRLevel extends BaseIntegratedLevel {
 
   private showDialogue(
     scenarioId: string,
-    onComplete?: () => void
+    onComplete?: () => void,
+    options: { unlockOnComplete?: boolean } = {}
   ): void {
     const dialogueData = this.cache.json.get('general_dialogues');
 
     this.dialogueManager = new DialogueManager(dialogueData);
-    this.dialogueUI = new DialogueUI(this);
+    this.dialogueUI = new DialogueUI(this, {
+      continueSfx: scenarioId === 'ir_ending' ? SFX.UI_CLICK : undefined,
+      typewriter: scenarioId === 'ir_ending',
+    });
 
     this.inAssessment = true;
     this.player.lockMovement();
@@ -2229,14 +3519,18 @@ export class IRLevel extends BaseIntegratedLevel {
       const scenario = this.dialogueManager.getScenarioById(scenarioId);
 
       this.dialogueUI.start(scenario, () => {
-        this.inAssessment = false;
-        this.player.unlockMovement();
+        if (options.unlockOnComplete !== false) {
+          this.inAssessment = false;
+          this.player.unlockMovement();
+        }
         onComplete?.();
       });
     } catch (error) {
       console.error(error);
-      this.inAssessment = false;
-      this.player.unlockMovement();
+      if (options.unlockOnComplete !== false) {
+        this.inAssessment = false;
+        this.player.unlockMovement();
+      }
       onComplete?.();
     }
   }
@@ -2272,6 +3566,218 @@ export class IRLevel extends BaseIntegratedLevel {
       x: spawn.x ?? this.player.x,
       y: spawn.y ?? this.player.y,
     };
+  }
+
+  private async loadSavedLevelProgress(): Promise<void> {
+    try {
+      gameAPI.setToken(this.userData.token);
+      const response = await gameAPI.getUserProgress(this.userData.userId);
+      const saved = response.data?.progress?.progress?.[this.config.topic];
+      const metrics = saved?.gameplay?.metrics ?? {};
+
+      this.currentZone = Number(saved?.current_zone ?? 0);
+      this.unlockedZone = Number(saved?.unlocked_zone ?? 1);
+      this.savedProgressMetrics = Object.fromEntries(
+        Object.entries(metrics).map(([key, value]) => [key, Number(value)])
+      );
+    } catch (error) {
+      console.error('Failed to load Incident Response progress', error);
+      this.currentZone = 0;
+      this.unlockedZone = 1;
+      this.savedProgressMetrics = {};
+    }
+  }
+
+  private applySavedLevelProgress(): void {
+    ROOM_ZONES.forEach(zone => {
+      if (
+        this.hasSavedMetric(IR_PROGRESS_METRICS.roomReleased(zone)) ||
+        this.unlockedZone > zone
+      ) {
+        this.restoreRoomAsReleased(zone);
+        return;
+      }
+
+      if (this.hasSavedMetric(IR_PROGRESS_METRICS.roomComplete(zone))) {
+        this.restoreRoomChallengeComplete(zone);
+      }
+    });
+
+    if (
+      this.hasSavedMetric(IR_PROGRESS_METRICS.passwordRoomComplete) ||
+      this.unlockedZone > 2
+    ) {
+      this.restorePasswordRoomComplete();
+    }
+
+    if (
+      this.hasSavedMetric(IR_PROGRESS_METRICS.coreDoorOpened) ||
+      this.unlockedZone >= BOSS_GATE_ZONE
+    ) {
+      this.restoreCoreDoorOpened();
+    }
+
+    this.restoreReportBossProgress();
+
+    if (
+      this.hasSavedMetric(IR_PROGRESS_METRICS.bossReportComplete) ||
+      this.unlockedZone >= FINAL_EXIT_ZONE
+    ) {
+      this.restoreBossReportComplete();
+    }
+  }
+
+  private restoreRoomChallengeComplete(zone: number): void {
+    this.roomChallengesComplete.add(zone);
+    this.restoreFragmentOpened(zone);
+    this.openDoorByZone(zone, true);
+
+    const trigger = this.spikeTriggers.get(zone);
+    if (trigger) {
+      trigger.active = true;
+      this.tweens.killTweensOf([trigger.sprite, trigger.aura]);
+      trigger.sprite.clearTint().setAlpha(1).setScale(1.6);
+      trigger.aura
+        .setFillStyle(0x8cf7ff, 0.16)
+        .setStrokeStyle(2, 0xd9ffff, 0.5)
+        .setAlpha(0.55)
+        .setScale(1);
+    }
+
+    if (zone === 1) {
+      this.destroyRestoredQuestionPoints();
+    }
+    if (zone === 2) {
+      this.restorePasswordRoomComplete();
+    }
+    if (zone === 4) {
+      this.witnesses.forEach(witness => {
+        witness.completed = true;
+        this.setContainerTint(witness.visual, 0x8cff9a);
+      });
+    }
+  }
+
+  private restoreRoomAsReleased(zone: number): void {
+    this.restoreRoomChallengeComplete(zone);
+    this.roomRespondersReleased.add(zone);
+    this.openSpikeGate(zone, false);
+
+    const trigger = this.spikeTriggers.get(zone);
+    if (trigger) {
+      trigger.completed = true;
+      trigger.sprite.setTint(0x8cff9a).setAlpha(1).setScale(1.55);
+      trigger.aura.setVisible(false);
+      trigger.sparks.forEach(spark => spark.destroy());
+      trigger.sparks = [];
+    }
+
+    const wizard = this.wizards.get(zone);
+    if (!wizard) return;
+
+    wizard.freed = true;
+    wizard.sealed = false;
+    this.tweens.killTweensOf(wizard.visual);
+    const releasePoint = this.getWizardReleasePoint(zone);
+    wizard.visual.setPosition(releasePoint.x, releasePoint.y);
+    this.clearContainerTint(wizard.visual);
+    wizard.visual.setVisible(true).setAlpha(1).setDepth(ACTOR_DEPTH);
+  }
+
+  private restorePasswordRoomComplete(): void {
+    this.roomChallengesComplete.add(2);
+    this.psBosses.forEach(boss => {
+      boss.completed = true;
+      this.tweens.killTweensOf(boss.sprite);
+      boss.sprite.destroy();
+    });
+  }
+
+  private restoreCoreDoorOpened(): void {
+    ROOM_ZONES.forEach(zone => this.restoreRoomAsReleased(zone));
+    this.minionSealingStarted = true;
+    this.bossReady = true;
+    this.openDoorByZone(BOSS_GATE_ZONE, true);
+
+    this.minions.forEach(minion => {
+      minion.sealed = true;
+      minion.timer?.destroy();
+      this.tweens.killTweensOf([minion.sprite, minion.aura]);
+      minion.sprite.setTint(0x8cff9a).setAlpha(0.42);
+      minion.aura.setVisible(false);
+    });
+  }
+
+  private restoreBossReportComplete(): void {
+    this.restoreCoreDoorOpened();
+    REPORT_PHASES.forEach(phase => {
+      this.completedReportPhaseKeys.add(phase.key);
+    });
+    this.currentReportPhaseIndex = REPORT_PHASES.length;
+    this.bossReportComplete = true;
+    this.leverReady = true;
+    this.bossBlocker?.destroy();
+    this.openDoorByZone(FINAL_EXIT_ZONE, true);
+    this.lever?.clearTint().setAlpha(1);
+    this.bossVisual?.setAlpha(0.45);
+    this.bossAura?.setAlpha(0.35);
+  }
+
+  private restoreReportBossProgress(): void {
+    REPORT_PHASES.forEach(phase => {
+      if (this.hasSavedMetric(IR_PROGRESS_METRICS.bossReportPhase(phase.key))) {
+        this.completedReportPhaseKeys.add(phase.key);
+      }
+    });
+
+    const savedPhaseIndex = Number(
+      this.savedProgressMetrics[IR_PROGRESS_METRICS.bossReportPhaseIndex] ?? 0
+    );
+    this.currentReportPhaseIndex = Phaser.Math.Clamp(
+      Math.max(savedPhaseIndex, this.completedReportPhaseKeys.size),
+      0,
+      REPORT_PHASES.length
+    );
+    this.repairCoreVisual(false);
+  }
+
+  private restoreFragmentOpened(zone: number): void {
+    const fragment = this.fragments.get(zone);
+    if (!fragment) return;
+
+    fragment.opened = true;
+    this.tweens.killTweensOf(fragment.sprite);
+    fragment.sprite.setTint(0x8cf7ff).setAlpha(1);
+  }
+
+  private destroyRestoredQuestionPoints(): void {
+    this.questionPoints.forEach((pointPair: any) => {
+      pointPair.forEach?.((sprite: Phaser.GameObjects.Sprite) => {
+        sprite.destroy();
+      });
+    });
+    this.questionPoints = [];
+  }
+
+  private hasSavedMetric(metric: string): boolean {
+    return Number(this.savedProgressMetrics[metric] ?? 0) > 0;
+  }
+
+  private saveIncidentProgress(
+    milestoneZone: number,
+    metrics: Record<string, number> = {}
+  ): void {
+    const nextZone = Math.max(this.currentZone || 0, milestoneZone);
+    const nextUnlocked = Math.max(this.unlockedZone || 1, milestoneZone);
+
+    this.currentZone = nextZone;
+    this.unlockedZone = nextUnlocked;
+    void this.saveCurrentZone(nextZone, nextUnlocked);
+
+    Object.entries(metrics).forEach(([metric, amount]) => {
+      this.recordGameplayMetric(metric, amount, 'set');
+      this.savedProgressMetrics[metric] = amount;
+    });
   }
 
   private async saveCurrentZone(
