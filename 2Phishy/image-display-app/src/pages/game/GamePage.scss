@@ -1,5 +1,6 @@
 .game-page {
-    height: calc(100vh - 120px); /* Account for navbar and footer */
+    height: 100%;
+    min-height: calc(100vh - 120px); /* Account for navbar and footer */
     width: 100%;
     padding: 0;
     margin: 0;
@@ -10,6 +11,80 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    overscroll-behavior: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+html.phishy-game-immersive-root,
+html.phishy-game-immersive-root body,
+body.phishy-game-immersive {
+  width: 100vw;
+  height: 100dvh;
+  max-width: 100vw;
+  max-height: 100dvh;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none;
+}
+
+html.phishy-game-immersive-root body {
+  position: fixed;
+  inset: 0;
+}
+
+body.phishy-game-immersive #root {
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.phishy-game-immersive .main {
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+body.phishy-game-immersive .navbar,
+body.phishy-game-immersive .menuContainer,
+body.phishy-game-immersive footer,
+body.phishy-game-immersive .footer {
+  display: none !important;
+}
+
+body.phishy-game-immersive .container,
+body.phishy-game-immersive .contentContainer {
+  display: block;
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  min-height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+}
+
+body.phishy-game-immersive .game-page {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+}
+
+.game-page:fullscreen,
+.game-page:-webkit-full-screen {
+    height: 100dvh;
+    width: 100vw;
+}
+
+.game-page.mobile-play-mode {
+    height: 100dvh;
+    min-height: 100dvh;
 }
 
 .game-container {
@@ -21,6 +96,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    overscroll-behavior: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .phaser-game-container {
@@ -29,11 +109,74 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   
   canvas {
     display: block;
     margin: auto;
+    outline: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
   }
+}
+
+.mobile-play-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.72);
+  box-sizing: border-box;
+}
+
+.mobile-play-panel {
+  width: min(360px, 100%);
+  border: 2px solid rgba(125, 227, 255, 0.86);
+  background: rgba(7, 17, 28, 0.96);
+  color: #ffffff;
+  padding: 18px;
+  text-align: center;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.42);
+}
+
+.mobile-play-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.mobile-play-copy {
+  margin-top: 8px;
+  color: #c7d7e5;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.mobile-play-button {
+  margin-top: 16px;
+  min-width: 180px;
+  min-height: 44px;
+  border: 0;
+  background: #1d6d84;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mobile-play-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 // Responsive design - removed all constraints for full screen

@@ -11,6 +11,8 @@ export class SocialEngineer extends Enemy {
   private detectionRadius = 200;
   private engageRadius = 32;
   private behaviorState: 'idle' | 'chasing' | 'returning' | 'talking' = 'idle';
+  private aggressiveUntil = 0;
+  private decoy = false;
 
 
   constructor(
@@ -38,6 +40,15 @@ export class SocialEngineer extends Enemy {
       return;
     }
 
+    const sceneBusy =
+      typeof (this.scene as any).isInteractionBusy === 'function' &&
+      (this.scene as any).isInteractionBusy();
+    if (sceneBusy && this.behaviorState !== 'talking') {
+      this.setVelocity(0);
+      this.play('npc-idle', true);
+      return;
+    }
+
     const distToPlayer = Phaser.Math.Distance.Between(
       this.x,
       this.y,
@@ -52,7 +63,9 @@ export class SocialEngineer extends Enemy {
       this.spawnY
     );
 
-    const speed = 80;
+    const aggressive = this.scene.time.now < this.aggressiveUntil;
+    const speed = aggressive ? 126 : 80;
+    const detectionRadius = aggressive ? this.detectionRadius + 90 : this.detectionRadius;
 
     switch (this.behaviorState) {
 
@@ -60,7 +73,7 @@ export class SocialEngineer extends Enemy {
 
         this.setVelocity(0);
 
-        if (distToPlayer < this.detectionRadius) {
+        if (distToPlayer < detectionRadius) {
           this.behaviorState = 'chasing';
         }
 
@@ -68,7 +81,7 @@ export class SocialEngineer extends Enemy {
 
       case 'chasing':
 
-        if (distToPlayer > this.detectionRadius) {
+        if (distToPlayer > detectionRadius) {
           this.behaviorState = 'returning';
           break;
         }
@@ -136,6 +149,29 @@ export class SocialEngineer extends Enemy {
 
   finishInteraction(): void {
     this.destroy();
+  }
+
+  deferInteraction(): void {
+    this.behaviorState = 'returning';
+    this.setVelocity(0);
+  }
+
+  setAggressive(durationMs: number): void {
+    this.aggressiveUntil = Math.max(
+      this.aggressiveUntil,
+      this.scene.time.now + durationMs
+    );
+    if (this.behaviorState === 'idle') {
+      this.behaviorState = 'chasing';
+    }
+  }
+
+  setDecoy(value = true): void {
+    this.decoy = value;
+  }
+
+  isDecoy(): boolean {
+    return this.decoy;
   }
 }
 

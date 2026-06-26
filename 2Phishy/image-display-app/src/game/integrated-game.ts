@@ -1,7 +1,6 @@
 import Phaser, { Game, Types } from 'phaser';
 import { LoadingScene, AssessmentLevel, UIScene } from './scenes';
 import { WIN_SCORE } from './consts';
-import {PrologueScene} from "./scenes/dialogues/prologue.ts";
 
 type GameConfigExtended = Types.Core.GameConfig & {
   winScore: number;
@@ -55,7 +54,7 @@ export const createPhaserGame = (parentElement: HTMLElement, userData?: any): Ga
       antialiasGL: false,
       roundPixels: true,
     },
-    canvasStyle: `display: block; margin: auto;`,
+    canvasStyle: 'display: block; margin: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;',
     autoFocus: true,
     input: {
       keyboard: true,

@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { gameAPI } from '../../helpers/game-api';
 import AssessmentPopup from '../../helpers/assessment-popup';
 import { LEVEL_FLOW } from '../core/LevelFlow';
+import { AudioManager, MUSIC, SFX } from '../../audio';
 
 export class MainMenuScene extends Scene {
   private playButton!: Phaser.GameObjects.Text;
@@ -14,6 +15,7 @@ export class MainMenuScene extends Scene {
   }
 
   create(): void {
+    AudioManager.playMusic(this, MUSIC.MAIN_MENU);
     const centerX = this.cameras.main.width / 2;
     const centerY = this.cameras.main.height / 2;
 
@@ -40,6 +42,7 @@ export class MainMenuScene extends Scene {
   }
 
   private async handlePlayClick() {
+    AudioManager.playSfx(this, SFX.UI_CLICK);
     this.playButton.disableInteractive();
     this.loadingText.setText('Loading your progress...');
 

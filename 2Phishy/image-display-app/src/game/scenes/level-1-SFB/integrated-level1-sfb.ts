@@ -1,13 +1,20 @@
-import { BaseIntegratedLevel } from '../core/BaseIntegratedLevel';
+import { BaseIntegratedLevel, LevelInteractable } from '../core/BaseIntegratedLevel';
 import { LEVEL_CONFIGS } from '../core/LevelConfigurations';
 import {Tilemaps} from "phaser";
 import {gameAPI} from "../../helpers/game-api.ts";
+import { AudioManager, SFX } from "../../audio";
+
+type TrapChestState = {
+  sprite: Phaser.GameObjects.Sprite;
+  configuredZone: number | undefined;
+  triggered: boolean;
+};
 
 export class SFBLevel extends BaseIntegratedLevel {
 
   private correctDoors: Record<number, Phaser.GameObjects.Sprite[]> = {};
   private wrongDoors: Record<number, Phaser.GameObjects.Sprite[]> = {};
-  private trapChests: Phaser.GameObjects.Sprite[] = [];
+  private trapChests: TrapChestState[] = [];
   private spawnedPlatforms: Phaser.GameObjects.Sprite[] = [];
   private doorWallsLayer!: Tilemaps.TilemapLayer;
   private unlockedZone = 1;
@@ -48,6 +55,7 @@ export class SFBLevel extends BaseIntegratedLevel {
         }
 
     }
+    this.advancePastEmptyZones(this.currentZone || this.unlockedZone || 1);
     this.initTrapChests();
 
   }
@@ -102,11 +110,13 @@ export class SFBLevel extends BaseIntegratedLevel {
           q => q.question_id === knowledge.question_id
       );
 
+      if (!linkedQuestion) return undefined;
+
       return {
         ...knowledge,
-        zone: linkedQuestion?.zone ?? 1,
+        zone: linkedQuestion.zone,
       };
-    });
+    }).filter(Boolean);
 
     this.knowledgeList = updatedKnowledgeList;
 
@@ -200,6 +210,7 @@ export class SFBLevel extends BaseIntegratedLevel {
     if (progress.failed) {
 
       console.log(`Zone ${zone} failed`);
+      this.recordGameplayMetric('zone_failures');
 
       this.currentZone = zone;
 
@@ -210,6 +221,7 @@ export class SFBLevel extends BaseIntegratedLevel {
     else {
 
       console.log(`   Zone ${zone} cleared`);
+      this.recordGameplayMetric('zones_cleared');
 
       const newZone = zone + 1;
 
@@ -224,12 +236,9 @@ export class SFBLevel extends BaseIntegratedLevel {
         return;
       }
 
-      gameAPI.updateCurrentZone({
-        userid: this.userData.userId,
-        topic: this.config.topic,
-        current_zone: newZone,
-        unlocked_zone: this.unlockedZone
-      }).catch(console.error);
+      if (!this.advancePastEmptyZones(newZone)) {
+        this.persistCurrentZone();
+      }
 
     }
 
@@ -281,6 +290,82 @@ export class SFBLevel extends BaseIntegratedLevel {
     }).catch(console.error);
 
     void this.completeAssessment();
+  }
+
+  private advancePastEmptyZones(startZone: number): boolean {
+    const highestZone = this.getHighestConfiguredZone();
+    let zone = this.normalizeZone(startZone);
+    let advanced = false;
+
+    while (zone <= highestZone && !this.zoneHasAvailableQuestionWands(zone)) {
+      console.warn(
+        `SFB zone ${zone} has no active question wands; opening the next correct door.`
+      );
+
+      this.openDoor(this.correctDoors[zone]);
+      this.currentZone = zone + 1;
+      this.unlockedZone = Math.max(this.unlockedZone, zone + 1);
+      advanced = true;
+      zone += 1;
+    }
+
+    if (!advanced) {
+      return false;
+    }
+
+    if (zone > highestZone) {
+      this.openAllCorrectDoorsAndComplete();
+      return true;
+    }
+
+    this.persistCurrentZone();
+    return true;
+  }
+
+  private zoneHasAvailableQuestionWands(zone: number): boolean {
+    return this.questionPoints.some((pair: any) => {
+      const questionZone = Number(pair.zone ?? pair.questionData?.zone);
+
+      if (questionZone !== zone) {
+        return false;
+      }
+
+      return pair.some((sprite: Phaser.Physics.Arcade.Sprite) => {
+        const bodyEnabled = !sprite.body || sprite.body.enable !== false;
+
+        return sprite.active && sprite.visible && bodyEnabled;
+      });
+    });
+  }
+
+  private getHighestConfiguredZone(): number {
+    const zones = [
+      3,
+      ...Object.keys(this.correctDoors).map(Number),
+      ...Object.keys(this.zoneProgress).map(Number),
+      ...this.questionPoints.map((pair: any) =>
+        Number(pair.zone ?? pair.questionData?.zone)
+      ),
+    ].filter(zone => Number.isFinite(zone));
+
+    return Math.max(...zones);
+  }
+
+  private normalizeZone(zone: number): number {
+    const parsedZone = Math.floor(Number(zone));
+
+    return Number.isFinite(parsedZone) && parsedZone > 0
+      ? parsedZone
+      : 1;
+  }
+
+  private persistCurrentZone(): void {
+    gameAPI.updateCurrentZone({
+      userid: this.userData.userId,
+      topic: this.config.topic,
+      current_zone: this.currentZone,
+      unlocked_zone: this.unlockedZone
+    }).catch(console.error);
   }
 /*
    protected onQuestionAnswered(result: any, context: any): void {
@@ -362,6 +447,10 @@ export class SFBLevel extends BaseIntegratedLevel {
       };
 
       this.assessmentResults.push(result);
+      this.recordGameplayMetric('questions_answered');
+      this.recordGameplayMetric(
+        result.is_correct ? 'correct_answers' : 'wrong_answers'
+      );
 
       this.onQuestionAnswered(result, q.zone);
 
@@ -400,6 +489,8 @@ export class SFBLevel extends BaseIntegratedLevel {
 
       this.game.events.emit('questions:update', total, answered);
 
+    }, {
+      hint: this.getQuestionHint(q),
     });
   }
 
@@ -449,6 +540,7 @@ export class SFBLevel extends BaseIntegratedLevel {
 
   private openDoor(door: Phaser.GameObjects.Sprite[]) {
     if (!door) return;
+    AudioManager.playSfx(this, SFX.DOOR_OPEN);
     const OPEN = {
       topL: 453,
       topR: 454,
@@ -526,30 +618,59 @@ export class SFBLevel extends BaseIntegratedLevel {
       chest.setImmovable(true);
       chest.body.allowGravity = false;
 
-      let triggered = false;
+      const state: TrapChestState = {
+        sprite: chest,
+        configuredZone,
+        triggered: false,
+      };
 
-      this.physics.add.overlap(this.player, chest, () => {
 
-        if (triggered) return;
-        triggered = true;
+      this.trapChests.push(state);
 
-        chest.play('trap_open');
+    });
 
-        this.player.lockMovement();
-        this.cameras.main.shake(200, 0.01);
+  }
 
-        this.tweens.add({
-          targets: this.player,
-          alpha: 0,
-          duration: 150,
-          yoyo: true,
-        });
-        this.popup.showInfo(
-          "Trap!",
-          "That was a malicious link!",
-          () => {
+  protected getAdditionalLevelInteractables(): LevelInteractable[] {
+    return this.trapChests
+      .filter(chest => !chest.triggered)
+      .map(chest => ({
+        x: chest.sprite.x,
+        y: chest.sprite.y,
+        prompt: 'Press E / ACT to open chest',
+        action: () => this.triggerTrapChest(chest),
+        range: this.interactionDistance,
+      }));
+  }
 
-        const failedZone = this.resolveTrapZone(configuredZone);
+  private triggerTrapChest(state: TrapChestState): void {
+    if (state.triggered || this.inAssessment) return;
+
+    const chest = state.sprite;
+    state.triggered = true;
+    this.recordGameplayMetric('trap_hits');
+    AudioManager.playSfx(this, SFX.TRAP_TRIGGER);
+    AudioManager.playSfx(this, SFX.TRAP_CHEST_OPEN);
+    AudioManager.playSfx(this, SFX.MALICIOUS_LINK_HIT);
+
+    chest.play('trap_open');
+
+    this.inAssessment = true;
+    this.player.lockMovement();
+    this.cameras.main.shake(200, 0.01);
+
+    this.tweens.add({
+      targets: this.player,
+      alpha: 0,
+      duration: 150,
+      yoyo: true,
+    });
+
+    this.popup.showInfo(
+      "Trap!",
+      "That was a malicious link!",
+      () => {
+        const failedZone = this.resolveTrapZone(state.configuredZone);
         this.currentZone = failedZone;
 
         this.resetZone(failedZone);
@@ -564,13 +685,8 @@ export class SFBLevel extends BaseIntegratedLevel {
         }).catch(console.error);
 
         this.player.bodyRef().stop();
-
         this.player.setVelocity(0, 0);
-
-        this.player.setPosition(
-            spawn.x,
-            spawn.y - 4
-        );
+        this.player.setPosition(spawn.x, spawn.y - 4);
 
         chest.anims.stop();
         chest.setFrame(659);
@@ -578,25 +694,19 @@ export class SFBLevel extends BaseIntegratedLevel {
         this.player.setAlpha(0);
 
         this.tweens.add({
-            targets: this.player,
-            alpha: 1,
-            duration: 250
+          targets: this.player,
+          alpha: 1,
+          duration: 250
         });
 
+        this.inAssessment = false;
         this.player.unlockMovement();
 
         this.time.delayedCall(1000, () => {
-            triggered = false;
+          state.triggered = false;
         });
-          }
-        );
-
-      });
-
-      this.trapChests.push(chest);
-
-    });
-
+      }
+    );
   }
 
   private spawnDoor(obj: any) {
@@ -650,6 +760,7 @@ export class SFBLevel extends BaseIntegratedLevel {
 
   private closeDoor(door: Phaser.GameObjects.Sprite[]) {
       if (!door) return;
+      AudioManager.playSfx(this, SFX.DOOR_CLOSE);
       const CLOSED = {
           topL: 450,
           topR: 451,
@@ -708,6 +819,7 @@ export class SFBLevel extends BaseIntegratedLevel {
   private resetZone(zone: number) {
 
       console.log(`Resetting Zone ${zone}`);
+      AudioManager.playSfx(this, SFX.ZONE_RESET);
 
       const progress = this.zoneProgress[zone];
       if (!progress) {
@@ -779,6 +891,7 @@ export class SFBLevel extends BaseIntegratedLevel {
 
 
   protected initKnowledge(): void {
+    this.knowledgePoints = [];
 
     const allPoints = this.map.filterObjects(
       'KnowledgePoints',
@@ -839,22 +952,8 @@ export class SFBLevel extends BaseIntegratedLevel {
   }
 
 
-  protected setupAssessmentCollision(): void {
-
-    this.questionPoints.forEach((pointPair: any) => {
-
-      this.physics.add.overlap(this.player, pointPair, () => {
-
-        if (this.inAssessment) return;
-
-        const questionData = pointPair.questionData;
-
-        this.startQuestionAtPoint(pointPair, questionData);
-
-      });
-
-    });
-
+  protected getQuestionInteractContext(pointPair: any): any {
+    return pointPair.questionData;
   }
 
   private initializeZoneProgress() {

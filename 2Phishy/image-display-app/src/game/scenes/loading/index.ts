@@ -7,6 +7,7 @@ import {SELevel} from "../level-4-SE";
 import {IRLevel} from "../level-5-IR";
 import {PrologueScene} from "../dialogues/prologue.ts";
 import { AdminDevToolsScene } from "../admin-devtools";
+import { loadAudioAssets } from "../../audio";
 
 export class LoadingScene extends Scene {
   constructor() {
@@ -14,6 +15,7 @@ export class LoadingScene extends Scene {
   }
   preload(): void {
     this.load.baseURL = 'phaser-assets/';
+    loadAudioAssets(this);
     this.load.json('assessmentData', 'initial_assessment.json');
     this.load.json('se-dialogues', 'se-level_dialogues.json')
     this.load.json('general_dialogues', 'general_dialogues.json');

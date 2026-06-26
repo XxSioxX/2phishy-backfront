@@ -1,7 +1,12 @@
 export enum EVENTS_NAME {
   gameEnd = 'game-end',
   chestLoot = 'chest-loot',
-  attack = 'attack',
+  block = 'block',
+}
+
+export enum TOUCH_EVENTS {
+  continue = 'touch-controls:continue',
+  interact = 'touch-controls:interact',
 }
 
 export enum GameStatus {

@@ -1,12 +1,142 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import "./GamePage.scss";
 
 const GamePage: React.FC = () => {
+    const gamePageRef = useRef<HTMLDivElement>(null);
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<any>(null);
     const gameInitializedRef = useRef<boolean>(false); // Prevent double initialization
+    const [isPhoneViewport, setIsPhoneViewport] = useState(false);
+    const [isPortrait, setIsPortrait] = useState(false);
+    const [mobilePlayRequested, setMobilePlayRequested] = useState(false);
+    const [mobileModeBusy, setMobileModeBusy] = useState(false);
+    const [mobileModeMessage, setMobileModeMessage] = useState("");
     const { user, isAuthenticated } = useAuth();
+
+    useEffect(() => {
+        const updateMobileState = () => {
+            const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches === true;
+            const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent);
+            const touchPoints = window.navigator.maxTouchPoints ?? 0;
+            const smallestSide = Math.min(window.innerWidth, window.innerHeight);
+
+            setIsPhoneViewport(coarsePointer || mobileUserAgent || touchPoints > 0 || smallestSide <= 900);
+            setIsPortrait(window.innerHeight >= window.innerWidth);
+        };
+
+        updateMobileState();
+        window.addEventListener('resize', updateMobileState);
+        window.addEventListener('orientationchange', updateMobileState);
+        document.addEventListener('fullscreenchange', updateMobileState);
+        document.addEventListener('webkitfullscreenchange', updateMobileState as EventListener);
+
+        return () => {
+            window.removeEventListener('resize', updateMobileState);
+            window.removeEventListener('orientationchange', updateMobileState);
+            document.removeEventListener('fullscreenchange', updateMobileState);
+            document.removeEventListener('webkitfullscreenchange', updateMobileState as EventListener);
+        };
+    }, []);
+
+    useEffect(() => {
+        document.documentElement.classList.add('phishy-game-immersive-root');
+        document.body.classList.add('phishy-game-route');
+        document.body.classList.add('phishy-game-immersive');
+
+        return () => {
+            document.documentElement.classList.remove('phishy-game-immersive-root');
+            document.body.classList.remove('phishy-game-route');
+            document.body.classList.remove('phishy-game-immersive');
+        };
+    }, []);
+
+    const getFullscreenElement = (): Element | null => {
+        return document.fullscreenElement || (document as any).webkitFullscreenElement || null;
+    };
+
+    const requestFullscreen = async (element: HTMLElement): Promise<boolean> => {
+        if (getFullscreenElement()) return true;
+
+        const fullscreenTarget = element as any;
+        const request =
+            fullscreenTarget.requestFullscreen ||
+            fullscreenTarget.webkitRequestFullscreen ||
+            fullscreenTarget.msRequestFullscreen;
+
+        if (!request) return false;
+
+        try {
+            await request.call(fullscreenTarget);
+            return true;
+        } catch (error) {
+            console.warn("Fullscreen request was blocked:", error);
+            return false;
+        }
+    };
+
+    const lockLandscape = async (): Promise<boolean> => {
+        const orientation = window.screen?.orientation as any;
+
+        if (!orientation?.lock) return false;
+
+        try {
+            await orientation.lock('landscape');
+            return true;
+        } catch (error) {
+            console.warn("Landscape orientation lock was blocked:", error);
+            return false;
+        }
+    };
+
+    const refreshGameSize = () => {
+        [0, 80, 260, 700].forEach(delay => {
+            window.setTimeout(() => {
+                const game = gameInstanceRef.current || (window as any).game;
+                game?.scale?.refresh?.();
+                game?.canvas?.focus?.();
+                window.dispatchEvent(new Event('resize'));
+            }, delay);
+        });
+    };
+
+    useEffect(() => {
+        document.documentElement.classList.add('phishy-game-immersive-root');
+        document.body.classList.add('phishy-game-immersive');
+        window.scrollTo(0, 0);
+        refreshGameSize();
+    }, [isPhoneViewport, mobilePlayRequested, isPortrait]);
+
+    const handleEnterMobilePlayMode = async () => {
+        if (mobileModeBusy) return;
+
+        setMobileModeBusy(true);
+        setMobileModeMessage("");
+        setMobilePlayRequested(true);
+        document.body.classList.add('phishy-game-immersive');
+        window.scrollTo(0, 0);
+        refreshGameSize();
+
+        const closestGamePage = gameContainerRef.current?.closest('.game-page') as HTMLElement | null;
+        const target =
+            gamePageRef.current ??
+            closestGamePage ??
+            gameContainerRef.current?.parentElement ??
+            gameContainerRef.current;
+
+        const fullscreenOk = target ? await requestFullscreen(target) : false;
+        const orientationOk = await lockLandscape();
+
+        setMobileModeBusy(false);
+
+        if (!fullscreenOk && !orientationOk) {
+            setMobileModeMessage("Fullscreen was blocked. Rotate your phone to play.");
+        } else if (!orientationOk) {
+            setMobileModeMessage("Rotate your phone if the game stays portrait.");
+        }
+
+        refreshGameSize();
+    };
 
     // Development mode warning
     if (process.env.NODE_ENV === 'development') {
@@ -305,14 +435,42 @@ const GamePage: React.FC = () => {
         );
     }
 
+    const showMobilePlayPrompt = isPhoneViewport && !mobilePlayRequested;
+    const showRotateHint = isPhoneViewport && mobilePlayRequested && isPortrait;
+
     return (
-        <div className="game-page">
+        <div
+            ref={gamePageRef}
+            className={`game-page${mobilePlayRequested ? ' mobile-play-mode' : ''}`}
+        >
             <div className="game-container">
                 <div 
                     ref={gameContainerRef} 
                     id="game" 
                     className="phaser-game-container"
                 />
+                {(showMobilePlayPrompt || showRotateHint) && (
+                    <div className="mobile-play-overlay">
+                        <div className="mobile-play-panel">
+                            <div className="mobile-play-title">
+                                {showMobilePlayPrompt ? 'Mobile play mode' : 'Rotate your phone'}
+                            </div>
+                            <div className="mobile-play-copy">
+                                {showMobilePlayPrompt
+                                    ? 'Fullscreen landscape gives the controls enough room.'
+                                    : mobileModeMessage || 'Landscape is best for movement and action buttons.'}
+                            </div>
+                            <button
+                                type="button"
+                                className="mobile-play-button"
+                                onClick={handleEnterMobilePlayMode}
+                                disabled={mobileModeBusy}
+                            >
+                                {mobileModeBusy ? 'Opening...' : showMobilePlayPrompt ? 'Play fullscreen' : 'Try again'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

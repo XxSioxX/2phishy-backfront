@@ -50,7 +50,7 @@ export const LEVEL_CONFIGS = {
       title: 'Level 2 — Password Security',
       description:
         'Explore each chamber, learn how passwords are attacked, and test a fictional password against its guardian.\n' +
-        'Defeat all four guardians to assemble your knight escort and unlock the next level.',
+        'Remember the first password you create, challenge all four guardians, and unlock the next level.',
       dialogueId: 'level2_spawn_intro',
     },
 
@@ -81,8 +81,8 @@ export const LEVEL_CONFIGS = {
     intro: {
       title: 'Level 3 — Malware',
       description:
-        'Track down infected programs, collect malware notes, and quarantine each threat.\n' +
-        'Finish every scan to unlock the quarantine door. Malware contact and wrong answers drain HP.',
+        'Track down infected programs, collect malware notes, and reach each scanner angel.\n' +
+        'Block malware strikes, quarantine each zone, and answer carefully to protect HP.',
       dialogueId: 'level3_spawn_intro',
     },
 

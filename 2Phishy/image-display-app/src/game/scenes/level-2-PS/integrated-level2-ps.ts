@@ -1,10 +1,14 @@
-import { BaseIntegratedLevel } from '../core/BaseIntegratedLevel';
+import {
+  BaseIntegratedLevel,
+  LevelInteractable,
+} from '../core/BaseIntegratedLevel';
 import { LEVEL_CONFIGS } from '../core/LevelConfigurations';
 import {
   PasswordChallengePopup,
   PasswordEvaluation,
 } from '../../helpers/password-challenge-popup';
 import { gameAPI } from '../../helpers/game-api';
+import { AudioManager, SFX } from '../../audio';
 
 type BossState = {
   zone: number;
@@ -15,6 +19,8 @@ type BossState = {
 };
 
 const FINAL_ZONE = 4;
+const FIRST_PASSWORD_ZONE = 1;
+const PASSWORD_RECALL_FAILURE_LIMIT = 2;
 const INTERACTION_DISTANCE = 58;
 const SPIKE_CLOSED_FRAME = 356;
 const SPIKE_RETRACT_FRAMES = [355, 354, 353];
@@ -81,10 +87,11 @@ export class PSLevel extends BaseIntegratedLevel {
   private challengePasswords = new Map<number, string>();
   private followers: Phaser.GameObjects.Container[] = [];
   private movementHistory: Phaser.Math.Vector2[] = [];
-  private interactKey?: Phaser.Input.Keyboard.Key;
-  private interactionPrompt?: Phaser.GameObjects.Text;
   private passwordPopup!: PasswordChallengePopup;
   private unlockedZone = 1;
+  private firstChallengePassword?: string;
+  private passwordRecallFailures = 0;
+  private pendingFinalPassword?: string;
 
   constructor() {
     super(LEVEL_CONFIGS.PS);
@@ -102,20 +109,19 @@ export class PSLevel extends BaseIntegratedLevel {
     this.assessmentResults = [];
     this.assessmentCompleted = false;
     this.inAssessment = false;
+    this.firstChallengePassword = undefined;
+    this.passwordRecallFailures = 0;
+    this.pendingFinalPassword = undefined;
 
     await this.loadSavedZoneProgress();
     await super.create();
 
     this.createAdditionalMapLayers();
     this.passwordPopup = new PasswordChallengePopup(this);
-    this.interactKey = this.input.keyboard?.addKey(
-      Phaser.Input.Keyboard.KeyCodes.E
-    );
-
     this.initSpikeGates();
     this.initBosses();
+    this.restoreRememberedFirstPassword();
     this.restoreCompletedZones();
-    this.createInteractionPrompt();
 
     if (this.allRequiredBossesConquered()) {
       await this.completeAssessment();
@@ -123,14 +129,12 @@ export class PSLevel extends BaseIntegratedLevel {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.passwordPopup.destroy();
-      this.interactKey?.removeAllListeners();
       this.bosses.forEach(boss => boss.animationTimer?.destroy());
     });
   }
 
   update(): void {
     super.update();
-    this.updateBossInteraction();
     this.updateFollowers();
   }
 
@@ -141,6 +145,21 @@ export class PSLevel extends BaseIntegratedLevel {
 
     if (!allQuestionsAnswered || !allBossesConquered) return;
     await super.completeAssessment();
+    this.clearRememberedFirstPassword();
+  }
+
+  protected getAdditionalLevelInteractables(): LevelInteractable[] {
+    const boss = this.getCurrentBoss();
+
+    if (!boss || boss.completed) return [];
+
+    return [{
+      x: boss.visual.x,
+      y: boss.visual.y,
+      prompt: 'Press E / ACT to challenge guardian',
+      action: () => this.startBossChallenge(boss),
+      range: INTERACTION_DISTANCE,
+    }];
   }
 
   protected initAssessment(): void {
@@ -442,57 +461,10 @@ export class PSLevel extends BaseIntegratedLevel {
     }
   }
 
-  private createInteractionPrompt(): void {
-    this.interactionPrompt = this.add
-      .text(0, 0, 'Press E to challenge', {
-        fontSize: '12px',
-        color: '#ffffff',
-        backgroundColor: '#111820',
-        padding: { x: 6, y: 4 },
-      })
-      .setOrigin(0.5)
-      .setScale(1 / this.cameras.main.zoom)
-      .setDepth(100)
-      .setVisible(false);
-  }
-
-  private updateBossInteraction(): void {
-    if (!this.player || this.inAssessment) {
-      this.interactionPrompt?.setVisible(false);
-      return;
-    }
-
-    const boss = this.getCurrentBoss();
-    if (!boss || boss.completed) {
-      this.interactionPrompt?.setVisible(false);
-      return;
-    }
-
-    const distance = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      boss.visual.x,
-      boss.visual.y
-    );
-    const inRange = distance <= INTERACTION_DISTANCE;
-
-    this.interactionPrompt
-      ?.setPosition(boss.visual.x, boss.visual.y - 38)
-      .setVisible(inRange);
-
-    if (
-      inRange &&
-      this.interactKey &&
-      Phaser.Input.Keyboard.JustDown(this.interactKey)
-    ) {
-      this.startBossChallenge(boss);
-    }
-  }
-
   private startBossChallenge(boss: BossState): void {
     this.inAssessment = true;
     this.player.lockMovement();
-    this.interactionPrompt?.setVisible(false);
+    AudioManager.playSfx(this, SFX.GUARDIAN_CHALLENGE_START);
 
     const challenge = this.getChallenge(boss.zone);
 
@@ -501,10 +473,32 @@ export class PSLevel extends BaseIntegratedLevel {
         title: challenge.title,
         instructions: challenge.instructions,
         evaluate: challenge.evaluate,
+        onAttempt: result => {
+          this.recordGameplayMetric('password_attempts');
+          this.recordGameplayMetric(
+            result.passed ? 'password_successes' : 'password_failures'
+          );
+
+          if (!result.passed) {
+            AudioManager.playSfx(this, SFX.PASSWORD_FAIL);
+            return this.consumeKnightFailsafe(
+              'A knight intercepts the failed attempt. Refine the password and try again.'
+            );
+          }
+        },
       },
       password => {
         if (boss.zone === FINAL_ZONE) {
-          this.startMfaChallenge(boss, password);
+          this.pendingFinalPassword = password;
+          this.startPasswordRecall(boss);
+          return;
+        }
+
+        if (boss.zone === FIRST_PASSWORD_ZONE) {
+          this.rememberFirstChallengePassword(password);
+          this.showFirstPasswordReminder(() => {
+            void this.completeBoss(boss);
+          });
           return;
         }
 
@@ -515,6 +509,164 @@ export class PSLevel extends BaseIntegratedLevel {
         this.inAssessment = false;
         this.player.unlockMovement();
       }
+    );
+  }
+
+  private startPasswordRecall(boss: BossState): void {
+    this.passwordRecallFailures = 0;
+
+    this.passwordPopup.show(
+      {
+        title: 'Final Guardian: Password Recall',
+        instructions:
+          'Re-enter the exact fictional password you created for the first guardian. Case, symbols, and spacing must match.',
+        evaluate: password => this.evaluatePasswordRecall(password),
+        showStrengthMeter: false,
+        onAttempt: result => {
+          this.recordGameplayMetric('password_recall_attempts');
+          this.recordGameplayMetric(
+            result.passed ? 'password_recall_successes' : 'password_recall_failures'
+          );
+
+          if (!result.passed) {
+            AudioManager.playSfx(this, SFX.PASSWORD_RECALL_FAIL);
+            const shield = this.consumeKnightFailsafe(
+              'A knight preserves the memory trial. Try the exact first password again.'
+            );
+
+            if (shield) {
+              this.passwordRecallFailures = Math.max(
+                0,
+                this.passwordRecallFailures - 1
+              );
+              return shield;
+            }
+          }
+
+          if (
+            !result.passed &&
+            this.passwordRecallFailures >= PASSWORD_RECALL_FAILURE_LIMIT
+          ) {
+            this.time.delayedCall(260, () => {
+              this.showForgotPasswordOptions(boss);
+            });
+          }
+        },
+      },
+      () => {
+        AudioManager.playSfx(this, SFX.PASSWORD_RECALL_SUCCESS);
+        this.passwordRecallFailures = 0;
+        this.startMfaChallenge(boss, this.pendingFinalPassword ?? '');
+      },
+      () => {
+        this.pendingFinalPassword = undefined;
+        this.inAssessment = false;
+        this.player.unlockMovement();
+      }
+    );
+  }
+
+  private evaluatePasswordRecall(password: string): PasswordEvaluation {
+    if (this.firstChallengePassword === undefined) {
+      this.passwordRecallFailures = PASSWORD_RECALL_FAILURE_LIMIT;
+      return {
+        passed: false,
+        message:
+          'The first password memory is missing. Reset the password trial to continue.',
+      };
+    }
+
+    if (password === this.firstChallengePassword) {
+      return {
+        passed: true,
+        message: 'Password matched exactly. The guardian accepts your memory.',
+      };
+    }
+
+    this.passwordRecallFailures += 1;
+
+    return {
+      passed: false,
+      message:
+        this.passwordRecallFailures >= PASSWORD_RECALL_FAILURE_LIMIT
+          ? 'That still does not match. You can retry or reset the password memory.'
+          : 'That does not match the first password exactly. Try again.',
+    };
+  }
+
+  private showForgotPasswordOptions(boss: BossState): void {
+    this.passwordPopup.destroy();
+    this.popup.mode = 'assessment';
+    this.popup.correctAnswer = '';
+    this.popup.show(
+      'The final guardian rejects the password. What do you want to do?',
+      [
+        'Keep trying the remembered password',
+        'Reset only the password memory trial',
+      ],
+      choice => {
+        if (choice === 'Reset only the password memory trial') {
+          this.startFirstPasswordReset(boss);
+          return;
+        }
+
+        this.passwordRecallFailures = 0;
+        this.startPasswordRecall(boss);
+      }
+    );
+  }
+
+  private startFirstPasswordReset(boss: BossState): void {
+    this.challengePasswords.delete(FIRST_PASSWORD_ZONE);
+    this.clearRememberedFirstPassword();
+    AudioManager.playSfx(this, SFX.PASSWORD_MEMORY_RESET);
+
+    this.popup.showInfo(
+      'Password Memory Reset',
+      'Already answered questions stay saved. Create a new first password now, remember it, then prove it to the final guardian.',
+      () => {
+        const challenge = this.getChallenge(FIRST_PASSWORD_ZONE);
+
+        this.passwordPopup.show(
+          {
+            title: 'Small Dragon: Password Memory Reset',
+            instructions:
+              'Create a fictional password with at least 8 characters. You must remember this exact password for the final guardian.',
+            evaluate: challenge.evaluate,
+            onAttempt: result => {
+              this.recordGameplayMetric('password_attempts');
+              this.recordGameplayMetric(
+                result.passed ? 'password_successes' : 'password_failures'
+              );
+
+              if (!result.passed) {
+                return this.consumeKnightFailsafe(
+                  'A knight absorbs the failed reset attempt. Try a safer password.'
+                );
+              }
+            },
+          },
+          password => {
+            this.rememberFirstChallengePassword(password);
+            this.showFirstPasswordReminder(() => {
+              this.startPasswordRecall(boss);
+            });
+          },
+          () => {
+            this.pendingFinalPassword = undefined;
+            this.inAssessment = false;
+            this.player.unlockMovement();
+          }
+        );
+      }
+    );
+  }
+
+  private showFirstPasswordReminder(onClose: () => void): void {
+    this.popup.showInfo(
+      'Remember This Password',
+      'You will need to re-enter this exact fictional password near the end of the level. Case, symbols, and spacing count.',
+      onClose
     );
   }
 
@@ -533,8 +685,24 @@ export class PSLevel extends BaseIntegratedLevel {
       ],
       choice => {
         if (choice === correctAnswer) {
+          this.recordGameplayMetric('mfa_correct');
+          AudioManager.playSfx(this, SFX.MFA_CORRECT);
           this.challengePasswords.set(boss.zone, password);
           void this.completeBoss(boss);
+          return;
+        }
+
+        this.recordGameplayMetric('mfa_wrong');
+        AudioManager.playSfx(this, SFX.MFA_WRONG);
+
+        if (this.consumeKnightFailsafe(
+          'A knight blocks the weak MFA choice. Pick the separate authentication factor.'
+        )) {
+          this.popup.showInfo(
+            'Knight Protected You',
+            'The knight absorbed that mistake. The final guardian still needs a better answer.',
+            () => this.startMfaChallenge(boss, password)
+          );
           return;
         }
 
@@ -559,7 +727,7 @@ export class PSLevel extends BaseIntegratedLevel {
       return {
         title: 'Small Dragon: Common Passwords',
         instructions:
-          'Create a fictional password with at least 8 characters that is not common or easily guessed.',
+          'Create a fictional password with at least 8 characters that is not common or easily guessed. Remember it exactly for a later test.',
         evaluate: password => this.evaluateCommonPasswordChallenge(password),
       };
     }
@@ -585,7 +753,7 @@ export class PSLevel extends BaseIntegratedLevel {
     return {
       title: 'Final Guardian: Layered Security',
       instructions:
-        'Create one more strong, unique fictional password. The guardian has one final trick afterward.',
+        'Create one more strong, unique fictional password. The guardian will also test whether you remember your first password.',
       evaluate: password => this.evaluateFinalChallenge(password),
     };
   }
@@ -773,10 +941,54 @@ export class PSLevel extends BaseIntegratedLevel {
     );
   }
 
+  private rememberFirstChallengePassword(password: string): void {
+    this.firstChallengePassword = password;
+    this.challengePasswords.set(FIRST_PASSWORD_ZONE, password);
+
+    try {
+      localStorage.setItem(this.getFirstPasswordStorageKey(), password);
+    } catch (error) {
+      console.warn('Failed to store Password Security memory challenge', error);
+    }
+  }
+
+  private restoreRememberedFirstPassword(): void {
+    if (this.unlockedZone <= FIRST_PASSWORD_ZONE) {
+      this.clearRememberedFirstPassword();
+      return;
+    }
+
+    try {
+      const stored = localStorage.getItem(this.getFirstPasswordStorageKey());
+      if (!stored) return;
+
+      this.firstChallengePassword = stored;
+      this.challengePasswords.set(FIRST_PASSWORD_ZONE, stored);
+    } catch (error) {
+      console.warn('Failed to restore Password Security memory challenge', error);
+    }
+  }
+
+  private clearRememberedFirstPassword(): void {
+    this.firstChallengePassword = undefined;
+
+    try {
+      localStorage.removeItem(this.getFirstPasswordStorageKey());
+    } catch (error) {
+      console.warn('Failed to clear Password Security memory challenge', error);
+    }
+  }
+
+  private getFirstPasswordStorageKey(): string {
+    return `phishy:password-security:first-password:${this.userData.userId}`;
+  }
+
   private async completeBoss(boss: BossState): Promise<void> {
     if (boss.completed) return;
 
     boss.completed = true;
+    AudioManager.playSfx(this, SFX.GUARDIAN_DEFEATED);
+    this.recordGameplayMetric('bosses_completed');
     this.completedBosses.add(boss.zone);
     boss.animationTimer?.destroy();
     boss.blocker.destroy();
@@ -816,9 +1028,42 @@ export class PSLevel extends BaseIntegratedLevel {
     }
   }
 
+  private consumeKnightFailsafe(message: string): PasswordEvaluation | undefined {
+    const knight = this.followers.pop();
+    if (!knight) return undefined;
+
+    AudioManager.playSfx(this, SFX.KNIGHT_PROTECT);
+    this.recordGameplayMetric('knight_failsafes_used');
+    this.tweens.killTweensOf(knight);
+    this.tweens.add({
+      targets: knight,
+      alpha: 0,
+      scaleX: Math.abs(knight.scaleX) * 1.45,
+      scaleY: Math.abs(knight.scaleY) * 1.45,
+      duration: 260,
+      ease: 'Back.In',
+      onComplete: () => knight.destroy(true),
+    });
+
+    this.tweens.add({
+      targets: this.player,
+      alpha: 0.45,
+      duration: 80,
+      yoyo: true,
+      repeat: 2,
+      ease: 'Sine.easeInOut',
+    });
+
+    return {
+      passed: false,
+      message,
+    };
+  }
+
   private openSpikeGate(zone: number, animate: boolean): void {
     const gate = this.spikeGates.get(zone);
     if (!gate) return;
+    if (animate) AudioManager.playSfx(this, SFX.SPIKE_GATE_OPEN);
 
     gate.forEach(spike => {
       this.physics.world.disable(spike);
@@ -871,6 +1116,7 @@ export class PSLevel extends BaseIntegratedLevel {
     this.followers.push(knight);
 
     if (animate) {
+      AudioManager.playSfx(this, SFX.FOLLOWER_JOIN);
       knight.setAlpha(0).setScale(0.4);
 
       this.tweens.add({

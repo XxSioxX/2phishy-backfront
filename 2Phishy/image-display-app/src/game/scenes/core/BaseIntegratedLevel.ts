@@ -7,7 +7,16 @@ import {Player} from "../../classes/player";
 import {gameObjectsToObjectPoints} from "../../helpers/gameobject-to-object-point";
 import { DialogueManager } from "../../helpers/DialogueManager";
 import { DialogueUI } from "../ui/DialogueUI";
+import { AudioManager, LEVEL_MUSIC_BY_TOPIC, SFX } from "../../audio";
+import { TOUCH_EVENTS } from "../../consts";
 
+export type LevelInteractable = {
+    x: number;
+    y: number;
+    prompt: string;
+    action: () => void;
+    range?: number;
+};
 
 export abstract class BaseIntegratedLevel extends Phaser.Scene {
     protected player!: Player;
@@ -16,6 +25,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
     protected knowledgeList: any[] = [];
     protected knowledgePoints: any[] = [];
+    protected studiedKnowledgeHints = new Map<string, string>();
 
     protected popup!: AssessmentPopup;
     protected map!: Tilemaps.Tilemap;
@@ -28,10 +38,12 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     protected assessmentResults: AssessmentResult[] = [];
     protected backendQuestionMapTotal = 0;
     protected backendLevelCompleted = false;
+    protected readonly interactionDistance = 52;
 
     protected inAssessment = false;
     protected assessmentCompleted = false;
     protected userData = (window as any).userData;
+    protected skipIntroOnCreate = false;
 
     protected readonly config: LevelConfig;
 
@@ -40,10 +52,20 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
     private exitMessageShown = false;
     private exitPlatforms: Phaser.GameObjects.Sprite[] = [];
+    private knowledgeInteractionPrompt?: Phaser.GameObjects.Text;
+    private knowledgeInteractKey?: Phaser.Input.Keyboard.Key;
+    private knowledgeTouchInteractRequested = false;
 
     private exitActivated = false;
     private exitTransitioning = false;
     private completeWhenReady = false;
+    private readonly knowledgeStudyDelayMs = 1500;
+    private handleWindowBlur = () => {
+      this.player?.forceStopAllInput();
+    };
+    private handleGameOut = () => {
+      this.player?.forceStopAllInput();
+    };
     protected currentZone = 0;
 
     constructor(config: LevelConfig) {
@@ -51,8 +73,14 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.config = config;
     }
 
+    init(data?: { skipIntro?: boolean }): void {
+        this.skipIntroOnCreate = data?.skipIntro === true;
+    }
+
     async create(): Promise<void> {
         console.log(`${this.scene.key} - create()`);
+        const levelMusic = LEVEL_MUSIC_BY_TOPIC[this.config.topic];
+        if (levelMusic) AudioManager.playMusic(this, levelMusic);
         this.initMap();
         this.popup = new AssessmentPopup(this);
         await this.createQuestionMap();
@@ -68,7 +96,9 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         this.createKnowledgeAnimations();
         this.initKnowledge();
         this.setupKnowledgeCollision();
-        await this.introDialogue();
+        if (!this.skipIntroOnCreate) {
+          await this.introDialogue();
+        }
         this.initUI();
 
         if (this.completeWhenReady || this.questions.length === 0) {
@@ -91,6 +121,10 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
           this.knowledgeList = Array.isArray(knowledgeResponse.data?.knowledge)
             ? knowledgeResponse.data.knowledge
             : [];
+
+          if (this.knowledgeList.length === 0) {
+            console.warn(`No knowledge points returned for ${this.config.topic}; no wands will spawn.`);
+          }
         } catch (error) {
           console.error(
             `Failed to load knowledge list for ${this.config.topic}`,
@@ -98,6 +132,35 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
           );
           this.knowledgeList = [];
         }
+    }
+
+    protected getQuestionHint(question: any): string | undefined {
+      const questionId = String(question?.question_id ?? '');
+      if (!questionId) return undefined;
+
+      return this.studiedKnowledgeHints.get(questionId);
+    }
+
+    protected rememberStudiedKnowledge(knowledge: any): void {
+      const questionId = String(knowledge?.question_id ?? '');
+      const content = String(knowledge?.knowledge_content ?? '').trim();
+
+      if (!questionId || !content) return;
+
+      this.studiedKnowledgeHints.set(
+        questionId,
+        this.toShortKnowledgeHint(content)
+      );
+    }
+
+    private toShortKnowledgeHint(content: string): string {
+      const firstSentence =
+        content.match(/[^.!?]+[.!?]?/)?.[0]?.trim() ?? content;
+      const compact = firstSentence.replace(/\s+/g, ' ').trim();
+
+      return compact.length > 120
+        ? `${compact.slice(0, 117).trim()}...`
+        : compact;
     }
 
     async introDialogue(): Promise<void> {
@@ -182,12 +245,21 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
             point.wasTouching = touching;
         });
+
+        if (this.shouldUpdateKnowledgeInteractionPrompt()) {
+            this.updateKnowledgeInteractionPrompt();
+        }
     }
 
     private initUI(): void {
+        if (this.scene.isActive('ui-scene')) {
+          this.scene.stop('ui-scene');
+        }
+
         this.scene.launch('ui-scene', {
           player: this.player,
-          showControls: this.sys.game.device.input.touch
+          showControls: this.shouldShowTouchControls(),
+          showQuestionUI: true
         });
         this.scene.bringToTop('ui-scene');
 
@@ -200,12 +272,35 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
             this.game.events.emit('questions:init', total, answered);
         });
-        this.game.events.on('blur', () => {
-          this.player.forceStopAllInput();
+        this.game.events.off('blur', this.handleWindowBlur);
+        this.input.off('gameout', this.handleGameOut);
+        this.game.events.on('blur', this.handleWindowBlur);
+        this.input.on('gameout', this.handleGameOut);
+
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+          this.game.events.off('blur', this.handleWindowBlur);
+          this.input.off('gameout', this.handleGameOut);
+          this.knowledgeInteractKey?.removeAllListeners();
+          this.game.events.off(
+            TOUCH_EVENTS.interact,
+            this.handleKnowledgeTouchInteract,
+            this
+          );
         });
-        this.input.on('gameout', () => {
-          this.player.forceStopAllInput();
-        });
+    }
+
+    protected shouldShowTouchControls(): boolean {
+        const params = new URLSearchParams(window.location.search);
+        const override = params.get('touchControls');
+
+        if (override === '1' || override === 'true') return true;
+        if (override === '0' || override === 'false') return false;
+
+        return (
+          this.sys.game.device.input.touch ||
+          window.matchMedia?.('(pointer: coarse)').matches === true ||
+          window.innerWidth <= 900
+        );
     }
 
     private initMap(): void {
@@ -351,6 +446,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     private async startNextLevel(): Promise<void> {
       this.exitTransitioning = true;
       this.player.lockMovement();
+      AudioManager.playSfx(this, SFX.NEXT_LEVEL_PORTAL);
       this.scene.stop('ui-scene');
 
       const nextLevel = this.config.next;
@@ -396,6 +492,32 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         console.error('Failed to check next topic assessment', error);
         return true;
       }
+    }
+
+    protected recordGameplayMetric(
+      metric: string,
+      amount = 1,
+      mode: 'inc' | 'set' | 'max' = 'inc',
+      metadata?: Record<string, unknown>
+    ): void {
+      const userData = this.userData ?? (window as any).userData;
+
+      if (!userData?.token || !userData?.userId) return;
+
+      gameAPI.setToken(userData.token);
+      void gameAPI.recordGameplayMetric({
+        userid: userData.userId,
+        topic: this.config.topic,
+        metric,
+        amount,
+        mode,
+        metadata,
+      }).catch(error => {
+        console.warn(
+          `Failed to record gameplay metric '${metric}' for ${this.config.topic}`,
+          error
+        );
+      });
     }
 
     private async redirectToInitialAssessmentIfNeeded(): Promise<boolean> {
@@ -562,7 +684,23 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         );
     }
 
+    protected dedupeQuestionsById(questions: any[]): any[] {
+      const seen = new Set<string>();
+
+      return questions.filter((question) => {
+        const questionId = String(question?.question_id ?? '').trim();
+        if (!questionId) return true;
+        if (seen.has(questionId)) return false;
+
+        seen.add(questionId);
+        return true;
+      });
+    }
+
     protected initAssessment(): void {
+      this.questions = this.dedupeQuestionsById(this.questions);
+      this.totalquestions = this.questions.length;
+
       const allPoints = gameObjectsToObjectPoints(
         this.map.filterObjects('QuestionPoints', obj => obj.name === 'QuestionPoint') || []
       );
@@ -610,17 +748,12 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
       });
     }
 
-    protected  setupAssessmentCollision(): void {
-        this.questionPoints.forEach((pointPair: any) => {
-          this.physics.add.overlap(this.player, pointPair, () => {
-            if (this.inAssessment) return;
-
-            const qIndex = pointPair.questionIndex;
-            this.startQuestionAtPoint(pointPair, qIndex);
-          });
-        });
-      }
+    protected setupAssessmentCollision(): void {}
     protected onQuestionAnswered(result: AssessmentResult, context: any): void {}
+    protected getQuestionInteractContext(pointPair: any): any {
+      return pointPair.questionIndex;
+    }
+
     protected async startQuestionAtPoint(
         pointPair: any,
         qIndex: number
@@ -667,6 +800,10 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
 
             this.assessmentResults.push(result);
             this.onQuestionAnswered(result, qIndex);
+            this.recordGameplayMetric('questions_answered');
+            this.recordGameplayMetric(
+              result.is_correct ? 'correct_answers' : 'wrong_answers'
+            );
 
             try {
                 await this.submitAnswer({
@@ -702,6 +839,8 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
             this.game.events.emit('questions:update', total, answered);
 
 
+        }, {
+          hint: this.getQuestionHint(q),
         });
       }
     protected  async submitAnswer(result: AssessmentResult): Promise<void> {
@@ -731,6 +870,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     protected  async completeAssessment(): Promise<void> {
         if (this.assessmentCompleted) return;
         this.assessmentCompleted = true;
+        AudioManager.playSfx(this, SFX.LEVEL_COMPLETE);
 
         try {
             gameAPI.setToken(this.userData.token);
@@ -890,57 +1030,188 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         });
     }
     private setupKnowledgeCollision(): void {
-        this.knowledgePoints.forEach((point: any) => {
+        this.createKnowledgeInteractionPrompt();
+        this.knowledgeInteractKey = this.input.keyboard?.addKey(
+          Phaser.Input.Keyboard.KeyCodes.E
+        );
+        this.game.events.on(
+          TOUCH_EVENTS.interact,
+          this.handleKnowledgeTouchInteract,
+          this
+        );
+    }
 
-            const sprite = point[0];
+    private createKnowledgeInteractionPrompt(): void {
+      this.knowledgeInteractionPrompt = this.add
+        .text(0, 0, 'Press E / ACT', {
+          fontFamily: 'Verdana, Arial, Helvetica, sans-serif',
+          fontSize: '13px',
+          color: '#ffffff',
+          backgroundColor: '#101820',
+          padding: { x: 7, y: 5 },
+        })
+        .setOrigin(0.5)
+        .setScale(1 / this.cameras.main.zoom)
+        .setDepth(200)
+        .setVisible(false);
+    }
 
-            this.physics.add.overlap(this.player, sprite, () => {
+    private updateKnowledgeInteractionPrompt(): void {
+      const touchInteract = this.consumeKnowledgeTouchInteractRequest();
+      const interactable = this.findNearestLevelInteractable();
 
-            if (point.isOpen || point.isAnimating) return;
+      if (!interactable || this.inAssessment) {
+        this.knowledgeInteractionPrompt?.setVisible(false);
+        return;
+      }
 
-            this.inAssessment = true;
-            this.player.lockMovement();
+      this.knowledgeInteractionPrompt
+        ?.setText(interactable.prompt)
+        .setPosition(interactable.x, interactable.y - 34)
+        .setVisible(true);
 
-            point.isAnimating = true;
+      if (
+        touchInteract ||
+        (
+          this.knowledgeInteractKey &&
+          Phaser.Input.Keyboard.JustDown(this.knowledgeInteractKey)
+        )
+      ) {
+        interactable.action();
+      }
+    }
 
-            // ✨ feedback
-            this.tweens.add({
-              targets: sprite,
-              scale: 1.65,
-              duration: 90,
-              yoyo: true,
-              ease: 'Sine.easeOut',
-            });
+    private findNearestLevelInteractable(): LevelInteractable | undefined {
+      const candidates: LevelInteractable[] = [];
 
-            this.tweens.add({
-              targets: sprite,
-              y: sprite.y - 4,
-              duration: 120,
-              yoyo: true,
-              ease: 'Quad.easeOut',
-            });
-
-            sprite.play('knowledge_open');
-
-            sprite.once('animationcomplete-knowledge_open', () => {
-              sprite.setFrame(629);
-              point.isOpen = true;
-              point.isAnimating = false;
-
-              this.popup.showInfo(
-                "Knowledge",
-                point.knowledge.knowledge_content,
-                () => {
-                      this.inAssessment = false;
-                      this.player.unlockMovement();
-                    }
-                );
-
-            });
-
-            });
+      this.knowledgePoints.forEach((point: any) => {
+        if (point.isOpen || point.isAnimating) return;
+        const sprite = point[0] as Phaser.GameObjects.Sprite;
+        candidates.push({
+          x: sprite.x,
+          y: sprite.y,
+          prompt: 'Press E / ACT to open chest',
+          action: () => this.openKnowledgeChest(point),
         });
+      });
 
+      this.questionPoints.forEach((pointPair: any) => {
+        const sprite = pointPair[0] as Phaser.GameObjects.Sprite | undefined;
+        const questionContext = this.getQuestionInteractContext(pointPair);
+        const hasQuestion =
+          typeof questionContext === 'number'
+            ? this.questions[questionContext] !== undefined
+            : questionContext !== undefined;
+
+        if (
+          pointPair.taskDone ||
+          !sprite?.active ||
+          !hasQuestion
+        ) {
+          return;
+        }
+
+        candidates.push({
+          x: sprite.x,
+          y: sprite.y,
+          prompt: 'Press E / ACT to answer question',
+          action: () => this.startQuestionAtPoint(
+            pointPair,
+            questionContext
+          ),
+        });
+      });
+
+      candidates.push(...this.getAdditionalLevelInteractables());
+
+      return candidates
+        .map(candidate => ({
+          candidate,
+          distance: Phaser.Math.Distance.Between(
+            this.player.x,
+            this.player.y,
+            candidate.x,
+            candidate.y
+          ),
+        }))
+        .filter(item => item.distance <= (item.candidate.range ?? this.interactionDistance))
+        .sort((a, b) => a.distance - b.distance)[0]?.candidate;
+    }
+
+    protected getAdditionalLevelInteractables(): LevelInteractable[] {
+      return [];
+    }
+
+    protected shouldUpdateKnowledgeInteractionPrompt(): boolean {
+      return true;
+    }
+
+    private handleKnowledgeTouchInteract(): void {
+      this.knowledgeTouchInteractRequested = true;
+    }
+
+    private consumeKnowledgeTouchInteractRequest(): boolean {
+      const requested = this.knowledgeTouchInteractRequested;
+      this.knowledgeTouchInteractRequested = false;
+      return requested;
+    }
+
+    protected openKnowledgeChest(point: any): void {
+      if (point.isOpen || point.isAnimating || this.inAssessment) return;
+
+      const sprite = point[0] as Phaser.GameObjects.Sprite;
+      this.inAssessment = true;
+      this.player.lockMovement();
+      this.knowledgeInteractionPrompt?.setVisible(false);
+
+      point.isAnimating = true;
+      AudioManager.playSfx(this, SFX.KNOWLEDGE_OPEN);
+
+      this.tweens.add({
+        targets: sprite,
+        scale: 1.65,
+        duration: 90,
+        yoyo: true,
+        ease: 'Sine.easeOut',
+      });
+
+      this.tweens.add({
+        targets: sprite,
+        y: sprite.y - 4,
+        duration: 120,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+      });
+
+      sprite.play('knowledge_open');
+
+      sprite.once('animationcomplete-knowledge_open', () => {
+        sprite.setFrame(629);
+        point.isOpen = true;
+        point.isAnimating = false;
+
+        let studied = false;
+        const studyTimer = this.time.delayedCall(
+          this.knowledgeStudyDelayMs,
+          () => {
+            studied = true;
+            this.rememberStudiedKnowledge(point.knowledge);
+            AudioManager.playSfx(this, SFX.KNOWLEDGE_STUDIED);
+          }
+        );
+
+        this.popup.showInfo(
+          "Knowledge",
+          point.knowledge.knowledge_content,
+          () => {
+            if (!studied) {
+              studyTimer.remove(false);
+            }
+            this.inAssessment = false;
+            this.player.unlockMovement();
+          }
+        );
+      });
     }
 
     // UI Helper
@@ -950,6 +1221,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
     ): void {
 
       this.inAssessment = true;
+      AudioManager.playSfx(this, SFX.LEVEL_INTRO);
       this.player.lockMovement();
 
       const cam = this.cameras.main;
@@ -969,8 +1241,8 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
       .setDepth(1000)
       .setScale(1 / zoom);
 
-      const bannerWidth = 760; // slightly bigger
-      const padding = 80;
+      const bannerWidth = Math.min(760, cam.width - 72);
+      const padding = 88;
 
       const container = this.add.container(centerX, centerY)
         .setScrollFactor(0)
@@ -978,30 +1250,37 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
         .setAlpha(0)
         .setScale(1 / zoom);
 
-      const titleText = this.add.text(0, -70, title, {
-        fontSize: '32px',   // compensate for zoom
+      const titleText = this.add.text(0, -112, title, {
+        fontFamily: 'Verdana, Arial, Helvetica, sans-serif',
+        fontSize: '30px',
         color: '#ffffff',
         fontStyle: 'bold',
         align: 'center',
-        wordWrap: { width: bannerWidth - padding }
-      }).setOrigin(0.5);
+        wordWrap: { width: bannerWidth - padding },
+        lineSpacing: 8,
+      }).setOrigin(0.5, 0);
 
       const descText = this.add.text(0, 0, description, {
-        fontSize: '22px',   // compensate
+        fontFamily: 'Verdana, Arial, Helvetica, sans-serif',
+        fontSize: '21px',
         color: '#dddddd',
         align: 'center',
-        wordWrap: { width: bannerWidth - padding }
-      }).setOrigin(0.5);
+        wordWrap: { width: bannerWidth - padding },
+        lineSpacing: 7,
+      }).setOrigin(0.5, 0);
 
-      const continueText = this.add.text(0, 110, 'Tap or Press SPACE to continue', {
-        fontSize: '18px',
+      descText.setY(titleText.y + titleText.height + 18);
+
+      const continueText = this.add.text(0, descText.y + descText.height + 36, 'Tap or Press SPACE to continue', {
+        fontFamily: 'Verdana, Arial, Helvetica, sans-serif',
+        fontSize: '17px',
         color: '#aaaaaa',
         align: 'center',
-      }).setOrigin(0.5);
+      }).setOrigin(0.5, 0);
 
-      const top = titleText.y - titleText.height / 2;
-      const bottom = continueText.y + continueText.height / 2;
-      const panelHeight = bottom - top + 80;
+      const top = titleText.y - 38;
+      const bottom = continueText.y + continueText.height + 38;
+      const panelHeight = bottom - top;
 
       const panel = this.add.rectangle(
         0,
@@ -1051,6 +1330,7 @@ export abstract class BaseIntegratedLevel extends Phaser.Scene {
                 overlay.destroy();
                 this.inAssessment = false;
                 this.player.unlockMovement();
+                this.game.events.emit('movement-tutorial:show');
               },
             });
         };

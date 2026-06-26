@@ -19,6 +19,15 @@ export interface AdminRoleResponse {
   account_status: string;
 }
 
+export interface GameplayMetricPayload {
+  userid: string;
+  topic: string;
+  metric: string;
+  amount?: number;
+  mode?: 'inc' | 'set' | 'max';
+  metadata?: Record<string, unknown>;
+}
+
 class GameAPI {
   private token: string | null = null;
   private readonly apiRoot =
@@ -188,6 +197,27 @@ class GameAPI {
       const err = await response.text();
       console.error('markTopicCompleted error:', err);
       throw new Error(`Failed to mark topic completed: ${err}`);
+    }
+
+    return await response.json();
+  }
+
+  async recordGameplayMetric(payload: GameplayMetricPayload) {
+    const response = await fetch(`${this.baseUrl}/progress/gameplay`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        amount: 1,
+        mode: 'inc',
+        ...payload,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('recordGameplayMetric error:', err);
+      throw new Error(`Failed to record gameplay metric: ${err}`);
     }
 
     return await response.json();

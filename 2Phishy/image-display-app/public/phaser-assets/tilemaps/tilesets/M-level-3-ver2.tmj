@@ -919,7 +919,7 @@
                         {
                          "name":"zone_number",
                          "type":"int",
-                         "value":1
+                         "value":5
                         }],
                  "rotation":0,
                  "type":"",
@@ -937,7 +937,7 @@
                         {
                          "name":"zone_number",
                          "type":"int",
-                         "value":1
+                         "value":6
                         }],
                  "rotation":0,
                  "type":"",
@@ -1027,7 +1027,7 @@
                         {
                          "name":"zone_number",
                          "type":"int",
-                         "value":2
+                         "value":3
                         }],
                  "rotation":0,
                  "type":"",
@@ -1081,7 +1081,7 @@
                         {
                          "name":"zone_number",
                          "type":"int",
-                         "value":3
+                         "value":4
                         }],
                  "rotation":0,
                  "type":"",
@@ -1089,6 +1089,197 @@
                  "width":0,
                  "x":1431,
                  "y":1241.33333333333
+                }, 
+                {
+                 "height":0,
+                 "id":240,
+                 "name":"MalwareAngelPoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":2
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1992.66666666667,
+                 "y":844.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":246,
+                 "name":"MalwareAngelPoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":5
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1110.66666666667,
+                 "y":470.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":247,
+                 "name":"MalwarePoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":4
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1611.33333333333,
+                 "y":1171.33333333333
+                }, 
+                {
+                 "height":0,
+                 "id":248,
+                 "name":"MalwarePoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":5
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1066,
+                 "y":558
+                }, 
+                {
+                 "height":0,
+                 "id":249,
+                 "name":"MalwarePoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":6
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":795,
+                 "y":1031.5
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":19,
+         "name":"MalwareAngel",
+         "objects":[
+                {
+                 "height":0,
+                 "id":241,
+                 "name":"MalwareAngelPoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":3
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1928.66666666667,
+                 "y":1082
+                }, 
+                {
+                 "height":0,
+                 "id":242,
+                 "name":"MalwareAngelPoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":4
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1560,
+                 "y":1289.33333333333
+                }, 
+                {
+                 "height":0,
+                 "id":243,
+                 "name":"MalwareAngelPoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":3
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1720.66666666667,
+                 "y":1480.66666666667
+                }, 
+                {
+                 "height":0,
+                 "id":244,
+                 "name":"MalwareAngelPoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1145.33333333333,
+                 "y":858.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":245,
+                 "name":"MalwareAngelPoint",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"zone_number",
+                         "type":"int",
+                         "value":6
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":904,
+                 "y":1006
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -1780,8 +1971,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":19,
- "nextobjectid":240,
+ "nextlayerid":20,
+ "nextobjectid":250,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

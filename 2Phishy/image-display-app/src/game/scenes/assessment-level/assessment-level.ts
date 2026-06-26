@@ -19,6 +19,13 @@ export class AssessmentLevel extends Scene {
   private currentTopic!: string;
   private inAssessment = false;
   private nextScene!: string;
+  private skipIntroOnCreate = false;
+  private handleWindowBlur = () => {
+    this.player?.forceStopAllInput();
+  };
+  private handleGameOut = () => {
+    this.player?.forceStopAllInput();
+  };
 
   private dialogueManager!: DialogueManager;
   private dialogueUI!: DialogueUI;
@@ -42,6 +49,7 @@ export class AssessmentLevel extends Scene {
     this.initAssessment();
     this.setupAssessmentCollision();
     this.initCamera();
+    this.launchTouchUI();
 
     this.popup = new AssessmentPopup(this);
     this.popup.mode = "assessment";
@@ -57,35 +65,45 @@ export class AssessmentLevel extends Scene {
 
     console.log(`Loaded ${this.questions.length} questions for topic: ${this.currentTopic}`);
 
-    this.player.freeze();
-    this.inAssessment = true;
-
-    this.cameras.main.fadeIn(1000, 0, 0, 0);
-
-    const dialogueData = this.cache.json.get("general_dialogues");
-
-    this.dialogueManager = new DialogueManager(dialogueData);
-    this.dialogueUI = new DialogueUI(this);
-
-    const scenario = this.dialogueManager.getScenarioById("assessment_arrival");
-
-    this.dialogueUI.start(scenario, () => {
-      this.player.unfreeze();
+    if (this.skipIntroOnCreate) {
+      if (this.player?.active) {
+        this.player.unfreeze();
+      }
       this.inAssessment = false;
-    });
+    } else {
+      this.player.freeze();
+      this.inAssessment = true;
 
-    this.time.delayedCall(50, () =>
-      this.input.keyboard.emit('keydown-SPACE')
-    );
+      this.cameras.main.fadeIn(1000, 0, 0, 0);
+
+      const dialogueData = this.cache.json.get("general_dialogues");
+
+      this.dialogueManager = new DialogueManager(dialogueData);
+      this.dialogueUI = new DialogueUI(this);
+
+      const scenario = this.dialogueManager.getScenarioById("assessment_arrival");
+
+      this.dialogueUI.start(scenario, () => {
+        if (this.player?.active) {
+          this.player.unfreeze();
+        }
+        this.inAssessment = false;
+      });
+
+      this.time.delayedCall(50, () =>
+        this.input.keyboard.emit('keydown-SPACE')
+      );
+    }
   }
 
-  init(data: { topic: string; nextScene: string }) {
+  init(data: { topic: string; nextScene: string; skipIntro?: boolean }) {
     if (!data?.topic || !data?.nextScene) {
       throw new Error('AssessmentLevel requires topic and nextScene');
     }
 
     this.currentTopic = data.topic;
     this.nextScene = data.nextScene;
+    this.skipIntroOnCreate = data.skipIntro === true;
   }
 
 
@@ -203,7 +221,8 @@ export class AssessmentLevel extends Scene {
     }
 
     this.popup.show('Assessment Complete!', ['Proceed'], () => {
-            this.scene.start(this.nextScene, {
+      this.scene.stop('ui-scene');
+      this.scene.start(this.nextScene, {
         topic: this.currentTopic,
       });
 
@@ -216,5 +235,42 @@ export class AssessmentLevel extends Scene {
         this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
         this.cameras.main.setZoom(2);
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+    }
+
+    private launchTouchUI(): void {
+      if (this.scene.isActive('ui-scene')) {
+        this.scene.stop('ui-scene');
+      }
+
+      this.scene.launch('ui-scene', {
+        player: this.player,
+        showControls: this.shouldShowTouchControls(),
+        showQuestionUI: false,
+      });
+      this.scene.bringToTop('ui-scene');
+
+      this.game.events.off('blur', this.handleWindowBlur);
+      this.input.off('gameout', this.handleGameOut);
+      this.game.events.on('blur', this.handleWindowBlur);
+      this.input.on('gameout', this.handleGameOut);
+
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.game.events.off('blur', this.handleWindowBlur);
+        this.input.off('gameout', this.handleGameOut);
+      });
+    }
+
+    private shouldShowTouchControls(): boolean {
+      const params = new URLSearchParams(window.location.search);
+      const override = params.get('touchControls');
+
+      if (override === '1' || override === 'true') return true;
+      if (override === '0' || override === 'false') return false;
+
+      return (
+        this.sys.game.device.input.touch ||
+        window.matchMedia?.('(pointer: coarse)').matches === true ||
+        window.innerWidth <= 900
+      );
     }
 }

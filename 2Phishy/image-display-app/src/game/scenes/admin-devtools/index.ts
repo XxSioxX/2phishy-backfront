@@ -12,6 +12,7 @@ export class AdminDevToolsScene extends Scene {
   private f10Key?: Phaser.Input.Keyboard.Key;
   private isOpen = false;
   private adminRole?: AdminRoleResponse;
+  private panelHitZones: Phaser.GameObjects.Zone[] = [];
   private readonly userData = (window as any).userData;
 
   constructor() {
@@ -181,6 +182,7 @@ export class AdminDevToolsScene extends Scene {
       .container(x, y, buttons)
       .setScrollFactor(0)
       .setDepth(50001);
+    this.setPanelInteractive(false);
   }
 
   private createButton(
@@ -210,16 +212,32 @@ export class AdminDevToolsScene extends Scene {
       .on('pointerout', () => bg.setFillStyle(0x172333, 0.96))
       .on('pointerdown', onClick);
 
+    this.panelHitZones.push(hit);
+
     return [bg, text, hit];
   }
 
   private togglePanel(force?: boolean): void {
     this.isOpen = force ?? !this.isOpen;
     this.panel?.setVisible(this.isOpen);
+    this.setPanelInteractive(this.isOpen);
 
     if (this.isOpen) {
       this.scene.bringToTop(this.scene.key);
+    } else {
+      this.parkDevToolsScene();
+      this.focusGameCanvas();
     }
+  }
+
+  private setPanelInteractive(enabled: boolean): void {
+    this.panelHitZones.forEach(zone => {
+      if (enabled) {
+        zone.setInteractive({ useHandCursor: true });
+      } else {
+        zone.disableInteractive();
+      }
+    });
   }
 
   private jumpToAssessment(topic: string, nextScene: string): void {
@@ -228,15 +246,20 @@ export class AdminDevToolsScene extends Scene {
     this.scene.launch('assessment-scene', {
       topic,
       nextScene,
+      skipIntro: true,
     });
-    this.scene.bringToTop(this.scene.key);
+    this.afterSceneJump('assessment-scene');
   }
 
   private jumpToScene(sceneKey: string, data: Record<string, unknown> = {}): void {
     this.togglePanel(false);
     this.stopManagedScenes();
-    this.scene.launch(sceneKey, data);
-    this.scene.bringToTop(this.scene.key);
+    this.scene.launch(sceneKey, {
+      ...data,
+      skipIntro: true,
+      fromDevTools: true,
+    });
+    this.afterSceneJump(sceneKey);
   }
 
   private stopManagedScenes(): void {
@@ -248,6 +271,55 @@ export class AdminDevToolsScene extends Scene {
     LEVEL_FLOW.forEach(level => {
       this.scene.stop(level.sceneKey);
     });
+  }
+
+  private afterSceneJump(sceneKey: string): void {
+    [0, 180, 700, 1400].forEach(delay => {
+      this.time.delayedCall(delay, () => this.recoverSceneInput(sceneKey));
+    });
+  }
+
+  private recoverSceneInput(sceneKey: string): void {
+    const targetScene = this.scene.get(sceneKey);
+
+    if (targetScene?.scene.isPaused()) {
+      this.scene.resume(sceneKey);
+    }
+
+    if (this.scene.isActive('ui-scene')) {
+      this.scene.bringToTop('ui-scene');
+    }
+
+    this.parkDevToolsScene();
+    this.focusGameCanvas();
+  }
+
+  private parkDevToolsScene(): void {
+    if (this.isOpen) {
+      this.scene.bringToTop(this.scene.key);
+      return;
+    }
+
+    if (this.scene.isActive('ui-scene')) {
+      this.scene.moveBelow(this.scene.key, 'ui-scene');
+      return;
+    }
+
+    this.scene.bringToTop(this.scene.key);
+  }
+
+  private focusGameCanvas(): void {
+    const canvas = this.game.canvas;
+
+    if (!canvas) return;
+
+    canvas.setAttribute('tabindex', '0');
+
+    try {
+      canvas.focus({ preventScroll: true });
+    } catch {
+      canvas.focus();
+    }
   }
 
   private shortTopic(topic: string): string {

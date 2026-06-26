@@ -54,6 +54,20 @@ export class DialogueManager {
     return Phaser.Utils.Array.GetRandom(pool);
   }
 
+  getScenarioByStrategyExcluding(
+    strategy: string,
+    excludedIds: Set<string>
+  ): DialogueScenario {
+    const pool = this.scenarios.filter(s => s.strategy === strategy);
+
+    if (pool.length === 0) {
+      throw new Error(`No dialogue scenarios for strategy: ${strategy}`);
+    }
+
+    const unusedPool = pool.filter(s => !excludedIds.has(s.id));
+    return Phaser.Utils.Array.GetRandom(unusedPool.length > 0 ? unusedPool : pool);
+  }
+
   getScenarioById(id: string): DialogueScenario {
     const scenario = this.scenarios.find(s => s.id === id);
 

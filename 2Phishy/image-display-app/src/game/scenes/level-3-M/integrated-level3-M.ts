@@ -1,5 +1,6 @@
 import { BaseIntegratedLevel } from '../core/BaseIntegratedLevel';
 import { LEVEL_CONFIGS } from '../core/LevelConfigurations';
+import { AudioManager, SFX } from '../../audio';
 
 type MalwareKind = 'trojan' | 'worm' | 'virus' | 'spyware';
 type TaskSource = 'question' | 'malware';
@@ -20,15 +21,27 @@ type SpawnedMalware = {
   sprite: Phaser.Physics.Arcade.Sprite;
   aura: Phaser.GameObjects.Arc;
   kind: MalwareKind;
+  zone: number;
   homeX: number;
   homeY: number;
   targetX: number;
   targetY: number;
   nextDecisionAt: number;
   retreatUntil: number;
+  stunnedUntil: number;
+  quarantined: boolean;
   speed: number;
   alertRadius: number;
   wanderRadius: number;
+  quarantineEffects?: Phaser.GameObjects.GameObject[];
+};
+
+type MalwareAngel = {
+  zone: number;
+  sprite: Phaser.Physics.Arcade.Sprite;
+  aura: Phaser.GameObjects.Arc;
+  activated: boolean;
+  timer: Phaser.Time.TimerEvent;
 };
 
 const HEART_COUNT = 3;
@@ -37,6 +50,10 @@ const MAX_PLAYER_HEALTH = HEART_COUNT * HEART_UNITS;
 const MALWARE_TOUCH_DAMAGE = 1;
 const WRONG_ANSWER_DAMAGE = 2;
 const CORRECT_ANSWER_HEAL = 2;
+const MALWARE_ATTACK_COOLDOWN = 2300;
+const MALWARE_BLOCK_STUN_DURATION = 1400;
+const MALWARE_QUARANTINE_DURATION = 9000;
+const ANGEL_FRAMES = [759, 760, 761, 762, 763, 764, 765, 766];
 
 const DOOR_CLOSED = { topL: 450, topR: 451, botL: 482, botR: 483 };
 const DOOR_OPEN = { topL: 453, topR: 454, botL: 485, botR: 486 };
@@ -83,6 +100,8 @@ export class MLevel extends BaseIntegratedLevel {
   private doorWallsLayer?: Phaser.Tilemaps.TilemapLayer;
   private malwareSprites: Phaser.Physics.Arcade.Sprite[] = [];
   private malwareDoorBlockers: Phaser.Physics.Arcade.Sprite[] = [];
+  private malwareAngels: MalwareAngel[] = [];
+  private quarantinedZones = new Set<number>();
   private doorOpened = false;
 
   constructor() {
@@ -97,6 +116,8 @@ export class MLevel extends BaseIntegratedLevel {
     this.correctDoors = [];
     this.malwareSprites = [];
     this.malwareDoorBlockers = [];
+    this.malwareAngels = [];
+    this.quarantinedZones.clear();
     this.doorOpened = false;
     this.createMalwareAnimations();
 
@@ -106,12 +127,21 @@ export class MLevel extends BaseIntegratedLevel {
     this.createSystemHealthUI();
     this.initCorrectDoors();
     this.initRoamingMalware();
+    this.initMalwareAngels();
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.emit('health:hide');
       this.roamingMalware.forEach(malware => {
-        this.tweens.killTweensOf([malware.sprite, malware.aura]);
+        this.tweens.killTweensOf([
+          malware.sprite,
+          malware.aura,
+          ...(malware.quarantineEffects ?? []),
+        ]);
         malware.sprite.body?.stop();
+      });
+      this.malwareAngels.forEach(angel => {
+        angel.timer.destroy();
+        this.tweens.killTweensOf([angel.sprite, angel.aura]);
       });
     });
   }
@@ -204,9 +234,16 @@ export class MLevel extends BaseIntegratedLevel {
 
       pointPair.taskDone = true;
       this.assessmentResults.push(result);
+      this.recordGameplayMetric('questions_answered');
+      this.recordGameplayMetric(
+        result.is_correct ? 'correct_answers' : 'wrong_answers'
+      );
       this.onQuestionAnswered(result, qIndex);
 
       if (pointPair.taskSource === 'malware') {
+        this.recordGameplayMetric(
+          result.is_correct ? 'malware_cleaned' : 'malware_cleanup_failed'
+        );
         this.cleanMalware(pointPair, result.is_correct);
       } else {
         this.cleanQuestionMarker(pointPair, result.is_correct);
@@ -215,6 +252,7 @@ export class MLevel extends BaseIntegratedLevel {
       if (result.is_correct) {
         this.healPlayer(CORRECT_ANSWER_HEAL);
       } else {
+        this.recordGameplayMetric('wrong_answer_damage', WRONG_ANSWER_DAMAGE);
         this.damagePlayer(pointPair[0], WRONG_ANSWER_DAMAGE);
       }
 
@@ -258,6 +296,8 @@ export class MLevel extends BaseIntegratedLevel {
       }
 
       finish();
+    }, {
+      hint: this.getQuestionHint(q),
     });
   }
 
@@ -349,7 +389,8 @@ export class MLevel extends BaseIntegratedLevel {
     const malware = this.spawnMalwareSprite(
       assignment.point.x ?? 0,
       assignment.point.y ?? 0,
-      kind
+      kind,
+      this.getZoneNumber(assignment.point)
     );
 
     this.startMalwarePulse(malware);
@@ -376,7 +417,8 @@ export class MLevel extends BaseIntegratedLevel {
       const malware = this.spawnMalwareSprite(
         point.x ?? 0,
         point.y ?? 0,
-        kind
+        kind,
+        this.getZoneNumber(point)
       );
 
       this.startMalwarePulse(malware);
@@ -411,9 +453,11 @@ export class MLevel extends BaseIntegratedLevel {
   private spawnMalwareSprite(
     x: number,
     y: number,
-    kind: MalwareKind
+    kind: MalwareKind,
+    zone: number
   ): SpawnedMalware {
     const data = MALWARE_DATA[kind];
+    AudioManager.playSfx(this, SFX.MALWARE_SPAWN);
 
     const aura = this.add
       .circle(x, y + 5, 11, data.color, 0.28)
@@ -443,12 +487,15 @@ export class MLevel extends BaseIntegratedLevel {
       sprite,
       aura,
       kind,
+      zone,
       homeX: x,
       homeY: y - 4,
       targetX: x,
       targetY: y - 4,
       nextDecisionAt: 0,
       retreatUntil: 0,
+      stunnedUntil: 0,
+      quarantined: false,
       ...this.getMalwareMovement(kind),
     };
   }
@@ -465,6 +512,193 @@ export class MLevel extends BaseIntegratedLevel {
     });
   }
 
+  private initMalwareAngels(): void {
+    const angelPoints = [
+      ...(this.map.filterObjects(
+        'MalwareAngel',
+        obj => obj.name === 'MalwareAngelPoint'
+      ) ?? []),
+      ...(this.map.filterObjects(
+        'MalwarePoints',
+        obj => obj.name === 'MalwareAngelPoint'
+      ) ?? []),
+    ];
+    const seen = new Set<string>();
+
+    angelPoints.forEach(point => {
+      const zone = this.getZoneNumber(point);
+      const key = this.getPointKey(point);
+      if (!zone || seen.has(key)) return;
+      seen.add(key);
+
+      const sprite = this.physics.add
+        .sprite(point.x ?? 0, point.y ?? 0, 'tiles_spr', ANGEL_FRAMES[0])
+        .setScale(1.45)
+        .setDepth(7);
+      const aura = this.add
+        .circle(sprite.x, sprite.y + 4, 23, 0x93f7ff, 0.18)
+        .setStrokeStyle(2, 0xcfffff, 0.36)
+        .setDepth(6);
+
+      sprite.setName('MalwareAngelActor');
+      sprite.setImmovable(true);
+      sprite.body.allowGravity = false;
+      sprite.setData('frameIndex', 0);
+
+      const timer = this.time.addEvent({
+        delay: 140,
+        loop: true,
+        callback: () => {
+          if (!sprite.active) return;
+
+          const nextIndex =
+            ((sprite.getData('frameIndex') as number) + 1) %
+            ANGEL_FRAMES.length;
+          sprite.setData('frameIndex', nextIndex);
+          sprite.setFrame(ANGEL_FRAMES[nextIndex]);
+        },
+      });
+
+      this.tweens.add({
+        targets: aura,
+        scale: { from: 0.86, to: 1.22 },
+        alpha: { from: 0.1, to: 0.38 },
+        duration: 900,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+
+      const angel: MalwareAngel = {
+        zone,
+        sprite,
+        aura,
+        activated: false,
+        timer,
+      };
+      this.malwareAngels.push(angel);
+
+      this.physics.add.overlap(this.player, sprite, () => {
+        this.activateMalwareAngel(angel);
+      });
+    });
+  }
+
+  private activateMalwareAngel(angel: MalwareAngel): void {
+    if (this.quarantinedZones.has(angel.zone)) return;
+
+    angel.activated = true;
+    AudioManager.playSfx(this, SFX.MALWARE_QUARANTINE_ACTIVATE);
+    this.quarantinedZones.add(angel.zone);
+    this.recordGameplayMetric('malware_zones_quarantined');
+    this.quarantineZoneMalware(angel.zone);
+
+    angel.sprite.setTint(0xffffff);
+    angel.aura.setFillStyle(0xcfffff, 0.46);
+
+    this.tweens.add({
+      targets: [angel.sprite, angel.aura],
+      scale: '+=0.18',
+      duration: 160,
+      yoyo: true,
+      repeat: 2,
+      ease: 'Quad.easeOut',
+    });
+  }
+
+  private quarantineZoneMalware(zone: number): void {
+    this.roamingMalware
+      .filter(malware => malware.zone === zone && !malware.quarantined)
+      .forEach(malware => this.quarantineMalware(malware));
+  }
+
+  private quarantineMalware(malware: SpawnedMalware): void {
+    malware.quarantined = true;
+    malware.stunnedUntil = this.time.now + MALWARE_QUARANTINE_DURATION;
+    malware.sprite.setVelocity(0, 0);
+    malware.sprite.stop();
+    malware.sprite.setTint(0x7df7ff);
+    malware.sprite.disableBody(false, false);
+    this.tweens.killTweensOf([malware.sprite, malware.aura]);
+
+    const ring = this.add
+      .circle(malware.sprite.x, malware.sprite.y + 2, 18, 0x6beeff, 0.08)
+      .setStrokeStyle(2, 0x9df7ff, 0.72)
+      .setDepth(malware.sprite.depth + 1);
+    const label = this.add
+      .text(malware.sprite.x, malware.sprite.y - 24, 'QUARANTINED', {
+        fontSize: '9px',
+        color: '#bffcff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setDepth(malware.sprite.depth + 2);
+
+    malware.quarantineEffects = [ring, label];
+    malware.aura
+      .setPosition(malware.sprite.x, malware.sprite.y + 5)
+      .setFillStyle(0x59e7ff, 0.32)
+      .setStrokeStyle(2, 0xbffcff, 0.58)
+      .setAlpha(1)
+      .setScale(1);
+
+    this.tweens.add({
+      targets: [malware.sprite, malware.aura, ring],
+      alpha: { from: 0.58, to: 1 },
+      duration: 110,
+      yoyo: true,
+      repeat: -1,
+    });
+    this.tweens.add({
+      targets: ring,
+      scale: { from: 0.9, to: 1.28 },
+      duration: 680,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    this.time.delayedCall(MALWARE_QUARANTINE_DURATION, () => {
+      this.releaseQuarantinedMalware(malware);
+    });
+  }
+
+  private releaseQuarantinedMalware(malware: SpawnedMalware): void {
+    if (!malware.sprite.active || !malware.quarantined) return;
+
+    malware.quarantined = false;
+    AudioManager.playSfx(this, SFX.MALWARE_QUARANTINE_RELEASE);
+    malware.stunnedUntil = this.time.now + 450;
+    malware.retreatUntil = this.time.now + 900;
+    malware.nextDecisionAt = 0;
+    this.quarantinedZones.delete(malware.zone);
+
+    this.tweens.killTweensOf([
+      malware.sprite,
+      malware.aura,
+      ...(malware.quarantineEffects ?? []),
+    ]);
+    malware.quarantineEffects?.forEach(effect => effect.destroy());
+    malware.quarantineEffects = undefined;
+
+    malware.sprite.enableBody(
+      false,
+      malware.sprite.x,
+      malware.sprite.y,
+      true,
+      true
+    );
+    malware.sprite.clearTint();
+    malware.sprite.setAlpha(1);
+    malware.sprite.play(MALWARE_DATA[malware.kind].anim, true);
+    malware.aura
+      .setPosition(malware.sprite.x, malware.sprite.y + 5)
+      .setFillStyle(MALWARE_DATA[malware.kind].color, 0.28)
+      .setAlpha(1)
+      .setScale(1);
+    this.startMalwarePulse(malware);
+  }
+
   private updateRoamingMalware(): void {
     if (!this.player || this.inAssessment || this.assessmentCompleted) {
       this.roamingMalware.forEach(malware => {
@@ -478,6 +712,18 @@ export class MLevel extends BaseIntegratedLevel {
       if (!malware.sprite.active) return;
 
       const now = this.time.now;
+      if (malware.quarantined) {
+        malware.sprite.setVelocity(0, 0);
+        malware.aura.setPosition(malware.sprite.x, malware.sprite.y + 5);
+        return;
+      }
+
+      if (malware.stunnedUntil > now) {
+        malware.sprite.setVelocity(0, 0);
+        malware.aura.setPosition(malware.sprite.x, malware.sprite.y + 5);
+        return;
+      }
+
       const distanceToPlayer = Phaser.Math.Distance.Between(
         malware.sprite.x,
         malware.sprite.y,
@@ -617,16 +863,27 @@ export class MLevel extends BaseIntegratedLevel {
   private handleRoamingMalwareHit(
     malware: SpawnedMalware
   ): void {
-    if (this.inAssessment || this.assessmentCompleted) return;
+    if (this.inAssessment || this.assessmentCompleted || malware.quarantined) {
+      return;
+    }
 
     const now = this.time.now;
     const sprite = malware.sprite;
     const lastHitAt = Number(sprite.getData('lastHitAt') ?? 0);
 
-    if (now - lastHitAt < 1800) return;
+    if (now - lastHitAt < MALWARE_ATTACK_COOLDOWN) return;
 
     sprite.setData('lastHitAt', now);
+
+    if (this.player.isBlocking()) {
+      this.blockRoamingMalwareHit(malware);
+      return;
+    }
+
     malware.retreatUntil = now + 900;
+    this.recordGameplayMetric('malware_hits');
+    AudioManager.playSfx(this, SFX.MALWARE_HIT_PLAYER);
+    AudioManager.playSfx(this, SFX.PLAYER_HIT);
     this.damagePlayer(sprite, MALWARE_TOUCH_DAMAGE);
     this.knockPlayerAwayFrom(sprite);
 
@@ -647,6 +904,32 @@ export class MLevel extends BaseIntegratedLevel {
         this.player.unlockMovement();
       });
     }
+  }
+
+  private blockRoamingMalwareHit(malware: SpawnedMalware): void {
+    malware.retreatUntil = this.time.now + MALWARE_BLOCK_STUN_DURATION;
+    malware.stunnedUntil = this.time.now + MALWARE_BLOCK_STUN_DURATION;
+    AudioManager.playSfx(this, SFX.MALWARE_BLOCKED);
+    malware.sprite.setVelocity(0, 0);
+    malware.sprite.setTint(0x9df7ff);
+    malware.aura.setFillStyle(0x79f7ff, 0.32);
+    this.recordGameplayMetric('malware_blocks');
+
+    this.tweens.add({
+      targets: malware.sprite,
+      alpha: 0.45,
+      duration: 80,
+      yoyo: true,
+      repeat: 5,
+    });
+
+    this.time.delayedCall(MALWARE_BLOCK_STUN_DURATION, () => {
+      if (!malware.sprite.active || malware.quarantined) return;
+
+      malware.sprite.clearTint();
+      const data = MALWARE_DATA[malware.kind];
+      malware.aura.setFillStyle(data.color, 0.28);
+    });
   }
 
   private cleanQuestionMarker(pointPair: any, correct: boolean): void {
@@ -673,6 +956,10 @@ export class MLevel extends BaseIntegratedLevel {
   private cleanMalware(pointPair: any, correct: boolean): void {
     const malware = pointPair[0] as Phaser.Physics.Arcade.Sprite;
     const aura = pointPair.aura as Phaser.GameObjects.Arc | undefined;
+    AudioManager.playSfx(
+      this,
+      correct ? SFX.MALWARE_CLEAN_SUCCESS : SFX.MALWARE_CLEAN_FAIL
+    );
 
     malware.disableBody(false, false);
     malware.stop();
@@ -698,6 +985,7 @@ export class MLevel extends BaseIntegratedLevel {
     target?: Phaser.GameObjects.Sprite,
     amount = 1
   ): void {
+    this.recordGameplayMetric('damage_taken', amount);
     this.playerHealth = Math.max(0, this.playerHealth - amount);
     this.updateHealthUI();
 
@@ -718,6 +1006,7 @@ export class MLevel extends BaseIntegratedLevel {
 
     if (nextHealth === this.playerHealth) return;
 
+    this.recordGameplayMetric('health_restored', nextHealth - this.playerHealth);
     this.playerHealth = nextHealth;
     this.updateHealthUI();
 
@@ -751,6 +1040,8 @@ export class MLevel extends BaseIntegratedLevel {
   }
 
   private showSystemReset(onClose: () => void): void {
+    this.recordGameplayMetric('system_resets');
+    AudioManager.playSfx(this, SFX.SYSTEM_RESET);
     this.popup.showInfo(
       "Quarantine Reset",
       "Health dropped too low. Restoring protection before you continue.",
@@ -857,6 +1148,7 @@ export class MLevel extends BaseIntegratedLevel {
   }
 
   private openDoor(door: Phaser.GameObjects.Sprite[]): void {
+    AudioManager.playSfx(this, SFX.DOOR_OPEN);
     door.forEach(sprite => {
       this.tweens.killTweensOf(sprite);
       this.physics.world.disable(sprite);
@@ -983,5 +1275,9 @@ export class MLevel extends BaseIntegratedLevel {
     const y = Math.round((point.y ?? 0) * 10);
 
     return `${x}:${y}`;
+  }
+
+  private getZoneNumber(object: any): number {
+    return this.getObjectNumberProperty(object, 'zone_number');
   }
 }
