@@ -1,20 +1,25 @@
 <!DOCTYPE html>
-<html>
-  <body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
-    <table width="100%" cellpadding="0" cellspacing="0">
+<html lang="en">
+  <body style="margin:0;padding:0;background:#eef2f6;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#eef2f6;">
       <tr>
-        <td align="center" style="padding:40px 0;">
-          <table width="600" cellpadding="0" cellspacing="0"
-                 style="background:#ffffff;border-radius:8px;padding:40px;">
+        <td align="center" style="padding:32px 16px;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;background:#ffffff;border:1px solid #d9e2ec;border-radius:8px;overflow:hidden;">
             <tr>
-              <td>
+              <td style="padding:24px 32px;background:#0f172a;color:#ffffff;">
+                <p style="margin:0;font-size:20px;font-weight:700;letter-spacing:0;">2Phishy</p>
+                <p style="margin:6px 0 0;font-size:13px;color:#cbd5e1;">Account security notification</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
                 {% block content %}{% endblock %}
               </td>
             </tr>
           </table>
 
-          <p style="font-size:12px;color:#999;margin-top:20px;">
-            © {{ year }} Your Company. All rights reserved.
+          <p style="max-width:600px;font-size:12px;line-height:18px;color:#64748b;margin:18px 0 0;">
+            &copy; {{ year }} 2Phishy. This automated message was sent for account security.
           </p>
         </td>
       </tr>
