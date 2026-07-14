@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
-from jose import JWTError, jwt
+from jose import JWTError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from app.core.database_postgres import get_db
 from app.modules.user.models.user import User, AccountStatus
 from app.utils.logger import get_logger
-import os
 
 try:
     from app.modules.email.services.service import EmailService
@@ -18,18 +17,12 @@ except (ImportError, RuntimeError):
 from app.modules.auth.models.models import PasswordResetToken
 import secrets
 import hashlib
-from datetime import datetime, timedelta
 from app.core.cache_redis import redis_client as redis
 from app.core.security import create_access_token, verify_token
 from app.core.config import settings
 import bcrypt
 
 logger = get_logger("auth.py")
-
-# Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "2phishy-production-perez-amarillento-key")
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # JWT token scheme
 security = HTTPBearer()
