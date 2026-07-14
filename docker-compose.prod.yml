@@ -65,4 +65,4 @@ services:
 volumes:
   postgres_data:
   mongo_data:
-  postgres_data:
+  redis_data:
