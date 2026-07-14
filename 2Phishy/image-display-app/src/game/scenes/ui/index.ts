@@ -1,4 +1,4 @@
-import { Player } from "../../classes/player.ts";
+import { Player } from "../../classes/player";
 import { TOUCH_EVENTS } from "../../consts";
 import { AudioManager, SFX } from "../../audio";
 import type { AudioVolumeKind } from "../../audio";

@@ -152,7 +152,8 @@ $score-low-bg:  rgba(231, 76, 60, 0.12);
     }
   }
 
-  .qi-topic-filter {
+  .qi-topic-filter,
+  .qi-limit-filter {
     flex: 0 1 220px;
     padding: 9px 12px;
     border-radius: 8px;
@@ -165,6 +166,10 @@ $score-low-bg:  rgba(231, 76, 60, 0.12);
     transition: border-color 0.2s;
     &:focus { border-color: $main-color; }
     option { background: $soft-bg; }
+  }
+
+  .qi-limit-filter {
+    flex-basis: 130px;
   }
 }
 .qi-table-card {

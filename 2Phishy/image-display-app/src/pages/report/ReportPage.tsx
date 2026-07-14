@@ -1,7 +1,7 @@
 import "./reportPage.scss";
 import { Report } from "../../types";
 import { api } from '../../services/api';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface ReportWithResolved extends Report {
@@ -10,10 +10,12 @@ interface ReportWithResolved extends Report {
 
 const ReportPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
+  const userId = user?.userid;
+  const userRole = user?.role;
   const [studentReports, setStudentReports] = useState<ReportWithResolved[]>([]);
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
-  const loadReports = () => {
+  const loadReports = useCallback(() => {
     (async () => {
       try {
         const backendReports = await api.getReports();
@@ -36,8 +38,8 @@ const ReportPage: React.FC = () => {
 
         // Filter reports based on user role
         let filteredReports = reportsWithStatus;
-        if (user && user.role === 'student') {
-          filteredReports = reportsWithStatus.filter(report => report.studentId === user.userid);
+        if (userRole === 'student') {
+          filteredReports = reportsWithStatus.filter(report => report.studentId === userId);
         }
 
         setStudentReports(filteredReports);
@@ -46,25 +48,25 @@ const ReportPage: React.FC = () => {
         setStudentReports([]);
       }
     })();
-  };
+  }, [userId, userRole]);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && userId) {
       loadReports();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, loadReports, userId]);
 
   useEffect(() => {
     const handleStorageChange = () => {
       console.log('Storage changed, reloading reports...');
-      if (isAuthenticated && user) {
+      if (isAuthenticated && userId) {
         loadReports();
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, loadReports, userId]);
 
   const handleMarkResolved = (reportId: string) => {
     (async () => {

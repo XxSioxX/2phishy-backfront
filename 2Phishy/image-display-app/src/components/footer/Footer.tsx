@@ -1,10 +1,13 @@
+import { useBranding } from "../../contexts/BrandingContext"
 import "./footer.scss"
 
 const Footer = () => {
+    const { branding } = useBranding();
+
     return(
         <div className="footer">
-            <span> MAPUA UNIVERSITY MAKATI </span>
-            <span> © 2Phishy by Group AP </span>
+            <span> {branding.institution_name} </span>
+            <span> (c) {branding.system_name} by Group AP </span>
         </div>
         
     )

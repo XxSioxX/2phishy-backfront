@@ -1,11 +1,15 @@
 import "./privacy-policy.scss";
+import { useBranding } from "../../contexts/BrandingContext";
 
 const PrivacyPolicy: React.FC = () => {
+  const { branding } = useBranding();
+  const appName = branding.system_name;
+
   return (
     <div className="privacyPolicyPage">
       <div className="privacyPolicyCard">
         <div className="privacyPolicyHeader">
-          <p className="eyebrow">2Phishy</p>
+          <p className="eyebrow">{appName}</p>
           <h1>Privacy Policy</h1>
           <p className="lastUpdated">Last Updated: June 2026</p>
         </div>
@@ -13,19 +17,19 @@ const PrivacyPolicy: React.FC = () => {
         <section>
           <h2>1. Introduction</h2>
           <p>
-            Welcome to 2Phishy, an educational cybersecurity awareness game designed to help users
+            Welcome to {appName}, an educational cybersecurity awareness game designed to help users
             identify and avoid phishing attacks. This Privacy Policy explains how we collect, use,
             store, and protect information when users access and use the system.
           </p>
           <p>
-            By using 2Phishy, you agree to the collection and use of information in accordance with
+            By using {appName}, you agree to the collection and use of information in accordance with
             this Privacy Policy.
           </p>
         </section>
 
         <section>
           <h2>2. Information We Collect</h2>
-          <p>To provide educational services and monitor user progress, 2Phishy may collect the following information:</p>
+          <p>To provide educational services and monitor user progress, {appName} may collect the following information:</p>
           <h3>Account Information</h3>
           <ul>
             <li>Full name</li>
@@ -53,7 +57,7 @@ const PrivacyPolicy: React.FC = () => {
           <h2>3. How We Use Information</h2>
           <p>The collected information is used solely for educational and administrative purposes, including:</p>
           <ul>
-            <li>Providing access to the 2Phishy platform</li>
+            <li>Providing access to the {appName} platform</li>
             <li>Tracking learning progress and performance</li>
             <li>Generating educational reports and analytics</li>
             <li>Improving phishing awareness training content</li>
@@ -65,7 +69,7 @@ const PrivacyPolicy: React.FC = () => {
         <section>
           <h2>4. Data Protection</h2>
           <p>
-            2Phishy implements reasonable technical and organizational measures to protect user
+            {appName} implements reasonable technical and organizational measures to protect user
             information from unauthorized access, alteration, disclosure, or destruction.
           </p>
           <ul>
@@ -79,7 +83,7 @@ const PrivacyPolicy: React.FC = () => {
 
         <section>
           <h2>5. Data Sharing and Disclosure</h2>
-          <p>2Phishy does not sell, rent, or trade user information to third parties.</p>
+          <p>{appName} does not sell, rent, or trade user information to third parties.</p>
           <p>
             User information may only be accessed by authorized administrators for educational,
             research, system maintenance, and security monitoring purposes.
@@ -114,7 +118,7 @@ const PrivacyPolicy: React.FC = () => {
         <section>
           <h2>8. Research and Academic Use</h2>
           <p>
-            As 2Phishy is developed as an educational cybersecurity awareness platform and academic
+            As {appName} is developed as an educational cybersecurity awareness platform and academic
             research project, anonymized and aggregated performance data may be used for research
             analysis, academic presentations, thesis documentation, and system evaluation and
             improvement.
@@ -135,14 +139,14 @@ const PrivacyPolicy: React.FC = () => {
           <h2>10. Contact Information</h2>
           <p>
             For questions, concerns, or requests regarding this Privacy Policy, please contact the
-            system administrator through the official 2Phishy platform.
+            system administrator through the official {appName} platform.
           </p>
         </section>
 
         <section className="notice">
           <h2>Data Privacy Notice</h2>
           <p>
-            2Phishy is committed to protecting user privacy and handling personal information
+            {appName} is committed to protecting user privacy and handling personal information
             responsibly in accordance with applicable data protection principles and educational
             research standards. All collected data is used exclusively for educational, research,
             security, and system management purposes.

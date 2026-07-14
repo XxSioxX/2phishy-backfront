@@ -1,32 +1,80 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { api } from "../../services/api";
 import { User } from "../../types";
 import { useAuth } from "../../contexts/AuthContext";
 import { formatDatePH } from "../../utils/dateUtils";
 import "./users.scss";
 
+interface InitialAssessmentTopic {
+  topic: string;
+  completed: boolean;
+  completedAt?: string | null;
+  questionMapCount: number;
+  subcatScores: Record<string, unknown>;
+}
+
+const buildInitialAssessmentTopics = (initialAssessmentDoc: any): InitialAssessmentTopic[] => {
+  const assessments = initialAssessmentDoc?.assessments;
+  if (!assessments || typeof assessments !== "object") return [];
+
+  return Object.entries(assessments).map(([topic, assessment]: [string, any]) => {
+    const questionMap = Array.isArray(assessment?.question_map) ? assessment.question_map : [];
+    return {
+      topic,
+      completed: assessment?.assessment_completed === true,
+      completedAt: assessment?.assessment_completed_at || null,
+      questionMapCount: questionMap.length,
+      subcatScores: assessment?.subcat_scores || {},
+    };
+  }).sort((a, b) => a.topic.localeCompare(b.topic));
+};
+
+const getUserIdString = (targetUser: User): string => {
+  return (targetUser.userid?.toString() || targetUser.id?.toString() || '').toString();
+};
+
+const getUserCardKey = (targetUser: User): string => {
+  const idKey = getUserIdString(targetUser).trim();
+  if (idKey) return idKey;
+  return `${targetUser.username || 'user'}::${targetUser.email || 'noemail'}`;
+};
+
+const getStatusLabel = (targetUser: User): string => {
+  const status = targetUser.account_status || "inactive";
+  return status
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
+const getStatusClass = (targetUser: User): string => {
+  return targetUser.account_status || "inactive";
+};
+
 const Users = () => {
   const { user, isAuthenticated } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [deactivateLoading, setDeactivateLoading] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [userToChangeRole, setUserToChangeRole] = useState<User | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>('student');
-  const [roleChangeLoading, setRoleChangeLoading] = useState(false);
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [detailsModalUserKey, setDetailsModalUserKey] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [onlineStatus, setOnlineStatus] = useState<Record<string, boolean>>({});
+  const [assessmentByUserId, setAssessmentByUserId] = useState<Record<string, InitialAssessmentTopic[]>>({});
+  const [assessmentLoadingByUserId, setAssessmentLoadingByUserId] = useState<Record<string, boolean>>({});
+  const [assessmentModalUser, setAssessmentModalUser] = useState<User | null>(null);
+  const [roleDraftByUserId, setRoleDraftByUserId] = useState<Record<string, User["role"]>>({});
+  const [actionBusyByUserId, setActionBusyByUserId] = useState<Record<string, boolean>>({});
 
   // Check if user is online (last seen within last 60 seconds, or is the current user)
   const isUserOnline = (userToCheck?: any, lastSeen?: string | null): boolean => {
     // Current user is always online if logged in
     if (user && userToCheck && (userToCheck.id === user.userid || userToCheck.userid === user.userid)) {
       return true;
+    }
+
+    const targetId = userToCheck?.userid || userToCheck?.id?.toString();
+    if (targetId && onlineStatus[targetId] !== undefined) {
+      return onlineStatus[targetId];
     }
 
     if (!lastSeen) return false;
@@ -41,7 +89,7 @@ const Users = () => {
   };
 
   // Fetch users from backend
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     // Double-check: only proceed if user is admin or super-admin
     if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
       console.log('Access denied: User is not admin or super-admin');
@@ -51,15 +99,22 @@ const Users = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getUsers();
+      const [data, statuses] = await Promise.all([
+        api.getUsers(),
+        api.getOnlineStatus().catch((err) => {
+          console.warn('Falling back to last_seen presence:', err);
+          return {};
+        }),
+      ]);
       setUsers(data);
+      setOnlineStatus(statuses);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch users");
       console.error("Error fetching users:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     // Only fetch users if user is authenticated, loaded, and is admin or super-admin
@@ -72,7 +127,7 @@ const Users = () => {
       // Cleanup interval on unmount
       return () => clearInterval(intervalId);
     }
-  }, [isAuthenticated, user]);
+  }, [fetchUsers, isAuthenticated, user]);
 
   // Show loading while user data is being loaded
   if (!isAuthenticated || !user) {
@@ -84,122 +139,105 @@ const Users = () => {
     return null;
   }
 
-  const handleDeleteClick = (user: User) => {
-    setUserToDelete(user);
-    setShowDeleteModal(true);
-  };
+  const fetchUserInitialAssessment = async (targetUser: User) => {
+    const userId = getUserIdString(targetUser);
+    if (!userId || assessmentByUserId[userId] || assessmentLoadingByUserId[userId]) return;
 
-  const handleDeleteConfirm = async () => {
-    if (!userToDelete) return;
-
-    setDeleteLoading(userToDelete.userid || userToDelete.id?.toString() || '');
-    setError(null);
-    setSuccessMessage(null);
-
+    setAssessmentLoadingByUserId((prev) => ({ ...prev, [userId]: true }));
     try {
-      await api.deleteUser(userToDelete.userid || userToDelete.id?.toString() || '');
-      // Remove user from local state
-      setUsers(prev => prev.filter(user => (user.userid || user.id?.toString()) !== (userToDelete.userid || userToDelete.id?.toString())));
-      setSuccessMessage(`User "${userToDelete.username}" has been deleted successfully.`);
-      setShowDeleteModal(false);
-      setUserToDelete(null);
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete user");
-      console.error("Error deleting user:", err);
+      const collectedData = await api.getUserCollectedGameData(userId);
+      setAssessmentByUserId((prev) => ({
+        ...prev,
+        [userId]: buildInitialAssessmentTopics(collectedData?.initial_assessments),
+      }));
+    } catch (error) {
+      console.warn(`Failed to fetch initial assessment for ${targetUser.username}:`, error);
+      setAssessmentByUserId((prev) => ({ ...prev, [userId]: [] }));
     } finally {
-      setDeleteLoading(null);
+      setAssessmentLoadingByUserId((prev) => ({ ...prev, [userId]: false }));
     }
   };
 
-  const handleDeleteCancel = () => {
-    setShowDeleteModal(false);
-    setUserToDelete(null);
+  const openUserDetailsModal = (targetUser: User) => {
+    setDetailsModalUserKey(getUserCardKey(targetUser));
   };
 
-  const handleDeactivate = async (user: User) => {
-    const userId = getUserIdString(user);
-    const newStatus = user.account_status === 'active' ? 'suspended' : 'active';
+  const closeUserDetailsModal = () => {
+    setDetailsModalUserKey(null);
+  };
 
-    setDeactivateLoading(userId);
-    setError(null);
-    setSuccessMessage(null);
+  const openInitialAssessmentModal = (targetUser: User) => {
+    setAssessmentModalUser(targetUser);
+    fetchUserInitialAssessment(targetUser);
+  };
 
+  const closeInitialAssessmentModal = () => {
+    setAssessmentModalUser(null);
+  };
+
+  const openInitialAssessmentFromDetails = (targetUser: User) => {
+    closeUserDetailsModal();
+    openInitialAssessmentModal(targetUser);
+  };
+
+  const setUserActionBusy = (targetUser: User, busy: boolean) => {
+    const userId = getUserIdString(targetUser);
+    if (!userId) return;
+    setActionBusyByUserId((prev) => ({ ...prev, [userId]: busy }));
+  };
+
+  const isSelf = (targetUser: User): boolean => {
+    return getUserIdString(targetUser) === String(user.userid || user.id || "");
+  };
+
+  const handleDeleteUser = async (targetUser: User) => {
+    const userId = getUserIdString(targetUser);
+    if (!userId || isSelf(targetUser)) return;
+    if (!window.confirm(`Delete ${targetUser.username}? This cannot be undone.`)) return;
+
+    setUserActionBusy(targetUser, true);
     try {
-      await api.changeUserStatus(userId, newStatus);
-      // Update user in local state
-      setUsers(prev => prev.map(u =>
-        getUserIdString(u) === userId
-          ? { ...u, account_status: newStatus as "active" | "inactive" | "suspended" }
-          : u
-      ));
-      setSuccessMessage(`User "${user.username}" has been ${newStatus === 'suspended' ? 'deactivated' : 'activated'} successfully.`);
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to change user status");
-      console.error("Error changing user status:", err);
+      await api.deleteUser(userId);
+      setUsers((prev) => prev.filter((item) => getUserIdString(item) !== userId));
+      setDetailsModalUserKey((current) => current === getUserCardKey(targetUser) ? null : current);
+      setAssessmentModalUser((current) => current && getUserCardKey(current) === getUserCardKey(targetUser) ? null : current);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to delete user");
     } finally {
-      setDeactivateLoading(null);
+      setUserActionBusy(targetUser, false);
     }
   };
 
-  const handleChangeRoleClick = (user: User) => {
-    setUserToChangeRole(user);
-    setSelectedRole(user.role || 'student');
-    setShowRoleModal(true);
-  };
+  const handleToggleSuspension = async (targetUser: User) => {
+    const userId = getUserIdString(targetUser);
+    if (!userId || isSelf(targetUser)) return;
+    const nextStatus = targetUser.account_status === "suspended" ? "active" : "suspended";
 
-  // Helper function to get consistent user ID string
-  const getUserIdString = (user: User): string => {
-    return (user.userid?.toString() || user.id?.toString() || '').toString();
-  };
-
-  const handleRoleChange = async () => {
-    if (!userToChangeRole) return;
-
-    const userId = getUserIdString(userToChangeRole);
-    setRoleChangeLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-
+    setUserActionBusy(targetUser, true);
     try {
-      await api.changeUserRole(userId, selectedRole);
-      // Update user in local state
-      setUsers(prev => prev.map(u =>
-        getUserIdString(u) === userId
-          ? { ...u, role: selectedRole as "student" | "admin" | "super-admin" }
-          : u
-      ));
-      setSuccessMessage(`User "${userToChangeRole.username}" role has been changed to "${selectedRole}" successfully.`);
-      setShowRoleModal(false);
-      setUserToChangeRole(null);
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to change user role");
-      console.error("Error changing user role:", err);
+      const updatedUser = await api.changeUserStatus(userId, nextStatus);
+      setUsers((prev) => prev.map((item) => getUserIdString(item) === userId ? updatedUser : item));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to update user status");
     } finally {
-      setRoleChangeLoading(false);
+      setUserActionBusy(targetUser, false);
     }
   };
 
-  const handleRoleCancel = () => {
-    setShowRoleModal(false);
-    setUserToChangeRole(null);
-  };
+  const handleChangeRole = async (targetUser: User) => {
+    const userId = getUserIdString(targetUser);
+    const nextRole = roleDraftByUserId[userId] || targetUser.role;
+    if (!userId || !nextRole || isSelf(targetUser) || nextRole === targetUser.role) return;
 
-  const getExpandKey = (targetUser: User): string => {
-    const idKey = getUserIdString(targetUser).trim();
-    if (idKey) return idKey;
-    // Fallback: username+email composite (no index — index shifts when search filters change)
-    return `${targetUser.username || 'user'}::${targetUser.email || 'noemail'}`;
-  };
-
-  const toggleUserExpanded = (expandKey: string) => {
-    setExpandedUserId((prev) => (prev === expandKey ? null : expandKey));
+    setUserActionBusy(targetUser, true);
+    try {
+      const updatedUser = await api.changeUserRole(userId, nextRole);
+      setUsers((prev) => prev.map((item) => getUserIdString(item) === userId ? updatedUser : item));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to change user role");
+    } finally {
+      setUserActionBusy(targetUser, false);
+    }
   };
 
   const filteredUsers = users.filter((targetUser) => {
@@ -220,6 +258,10 @@ const Users = () => {
       statusText.includes(query)
     );
   });
+
+  const detailsModalUser = detailsModalUserKey
+    ? users.find((targetUser) => getUserCardKey(targetUser) === detailsModalUserKey) || null
+    : null;
 
   if (loading) {
     return (
@@ -259,14 +301,6 @@ const Users = () => {
         </div>
       </div>
 
-      {/* Success Message */}
-      {successMessage && (
-        <div className="success-message">
-          <span className="success-icon">✓</span>
-          {successMessage}
-        </div>
-      )}
-
       {filteredUsers.length === 0 ? (
         <div className="no-users">
           <p>{users.length === 0 ? 'No users found' : 'No matching users found'}</p>
@@ -274,182 +308,181 @@ const Users = () => {
       ) : (
         <div className="users-grid">
           {filteredUsers.map((targetUser) => {
-            const expandKey = getExpandKey(targetUser);
+            const cardKey = getUserCardKey(targetUser);
+            const presenceLabel = isUserOnline(targetUser, targetUser.last_seen) ? "Online now" : "Offline";
             return (
-            <div
-              key={expandKey}
-              className={`user-card ${expandedUserId === expandKey ? 'expanded' : ''}`}
-            >
               <button
-                className="user-summary"
-                onClick={() => toggleUserExpanded(expandKey)}
-                aria-expanded={expandedUserId === expandKey}
+                key={cardKey}
+                type="button"
+                className="user-card"
+                onClick={() => openUserDetailsModal(targetUser)}
+                aria-label={`View details for ${targetUser.username}`}
               >
                 <div className="user-summary-left">
                   <h3>{targetUser.username}</h3>
                   <p className="email">{targetUser.email}</p>
                 </div>
                 <div className="user-summary-right">
-                  <span className={`status-dot ${isUserOnline(targetUser, targetUser.last_seen) ? 'online' : 'offline'}`}></span>
-                  <span className="summary-status">{targetUser.account_status || 'N/A'}</span>
-                  <span className={`expand-arrow ${expandedUserId === expandKey ? 'open' : ''}`}>▶</span>
+                  <span
+                    className={`account-status-badge ${getStatusClass(targetUser)}`}
+                    title={presenceLabel}
+                  >
+                    <span className="account-status-dot"></span>
+                    {getStatusLabel(targetUser)}
+                  </span>
+                  <span className="details-arrow" aria-hidden="true">&gt;</span>
                 </div>
               </button>
-
-              {expandedUserId === expandKey && (
-                <>
-                  <div className="user-info">
-                    <p className="user-id">ID: {targetUser.userid || targetUser.id}</p>
-                    <p className="user-role">Role: {targetUser.role || 'N/A'}</p>
-                    <p className="account-status">Status: {targetUser.account_status || 'N/A'}</p>
-                    <p className="last-login">
-                      Last Seen: {formatDatePH(targetUser.last_seen || '', true)}
-                    </p>
-                  </div>
-                  <div className="user-actions" onClick={(e) => e.stopPropagation()}>
-                    {user.role === 'super-admin' && targetUser.role !== 'super-admin' && (
-                      <>
-                        <button
-                          className="change-role-btn"
-                          onClick={() => handleChangeRoleClick(targetUser)}
-                          disabled={roleChangeLoading}
-                        >
-                          Change Role
-                        </button>
-                        <button
-                          className={`deactivate-btn ${targetUser.account_status === 'suspended' ? 'activate' : ''}`}
-                          onClick={() => handleDeactivate(targetUser)}
-                          disabled={deactivateLoading === (targetUser.userid || targetUser.id?.toString())}
-                        >
-                          {deactivateLoading === (targetUser.userid || targetUser.id?.toString()) ? (
-                            <>
-                              <span className="loading-spinner"></span>
-                              {targetUser.account_status === 'suspended' ? 'Activating...' : 'Deactivating...'}
-                            </>
-                          ) : (
-                            targetUser.account_status === 'suspended' ? 'Activate' : 'Deactivate'
-                          )}
-                        </button>
-                      </>
-                    )}
-                    {user.role === 'super-admin' && (
-                      <button
-                        className="delete-btn"
-                        onClick={() => handleDeleteClick(targetUser)}
-                        disabled={deleteLoading === (targetUser.userid || targetUser.id?.toString())}
-                      >
-                        {deleteLoading === (targetUser.userid || targetUser.id?.toString()) ? (
-                          <>
-                            <span className="loading-spinner"></span>
-                            Deleting...
-                          </>
-                        ) : (
-                          'Delete'
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
             );
           })}
         </div>
       )}
 
-      {/* Change Role Modal */}
-      {showRoleModal && userToChangeRole && (
-        <div className="modal-overlay" onClick={handleRoleCancel}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Change User Role</h3>
-              <button className="modal-close" onClick={handleRoleCancel}>
-                ×
+      {detailsModalUser && (
+        <div className="modal-overlay user-details-modal-overlay" onClick={closeUserDetailsModal}>
+          <div className="modal-content user-details-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header user-details-header">
+              <div>
+                <h3>{detailsModalUser.username}</h3>
+                <p>{detailsModalUser.email}</p>
+              </div>
+              <span className={`account-status-badge ${getStatusClass(detailsModalUser)}`}>
+                <span className="account-status-dot"></span>
+                {getStatusLabel(detailsModalUser)}
+              </span>
+              <button className="modal-close" onClick={closeUserDetailsModal}>
+                x
               </button>
             </div>
             <div className="modal-body">
-              <p>
-                Change role for user <strong>"{userToChangeRole.username}"</strong>
-              </p>
-              <div className="role-selection">
-                <label>Select New Role:</label>
-                <select 
-                  value={selectedRole} 
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  disabled={roleChangeLoading}
-                >
-                  <option value="student">Student</option>
-                  <option value="admin">Admin (IT Admin)</option>
-                  <option value="super-admin">Super Admin</option>
-                </select>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button 
-                className="cancel-btn" 
-                onClick={handleRoleCancel}
-                disabled={roleChangeLoading}
-              >
-                Cancel
-              </button>
-              <button 
-                className="confirm-btn" 
-                onClick={handleRoleChange}
-                disabled={roleChangeLoading}
-              >
-                {roleChangeLoading ? (
-                  <>
-                    <span className="loading-spinner"></span>
-                    Changing...
-                  </>
-                ) : (
-                  'Change Role'
-                )}
-              </button>
+              <section className="user-detail-section">
+                <h4>User Information</h4>
+                <div className="user-detail-grid">
+                  <div className="user-detail-item">
+                    <span>User ID</span>
+                    <strong>{detailsModalUser.userid || detailsModalUser.id || "N/A"}</strong>
+                  </div>
+                  <div className="user-detail-item">
+                    <span>Role</span>
+                    <strong>{detailsModalUser.role || "N/A"}</strong>
+                  </div>
+                  <div className="user-detail-item">
+                    <span>Account Status</span>
+                    <strong>{getStatusLabel(detailsModalUser)}</strong>
+                  </div>
+                  <div className="user-detail-item">
+                    <span>Last Seen</span>
+                    <strong>{formatDatePH(detailsModalUser.last_seen || "", true)}</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className="user-detail-section">
+                <h4>Actions</h4>
+                <div className="user-management-actions">
+                  <button
+                    type="button"
+                    className="assessment-link-button"
+                    onClick={() => openInitialAssessmentFromDetails(detailsModalUser)}
+                  >
+                    View Initial Assessment
+                  </button>
+                  {user.role === "super-admin" && (
+                    <div className="role-action">
+                      <select
+                        value={roleDraftByUserId[getUserIdString(detailsModalUser)] || detailsModalUser.role || "student"}
+                        onChange={(event) =>
+                          setRoleDraftByUserId((prev) => ({
+                            ...prev,
+                            [getUserIdString(detailsModalUser)]: event.target.value as User["role"],
+                          }))
+                        }
+                        disabled={actionBusyByUserId[getUserIdString(detailsModalUser)] || isSelf(detailsModalUser)}
+                      >
+                        <option value="student">Student</option>
+                        <option value="admin">Admin</option>
+                        <option value="super-admin">Super Admin</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => handleChangeRole(detailsModalUser)}
+                        disabled={actionBusyByUserId[getUserIdString(detailsModalUser)] || isSelf(detailsModalUser)}
+                      >
+                        Change Role
+                      </button>
+                    </div>
+                  )}
+                  <div className="user-action-row">
+                    <button
+                      type="button"
+                      className="suspend-user-button"
+                      onClick={() => handleToggleSuspension(detailsModalUser)}
+                      disabled={actionBusyByUserId[getUserIdString(detailsModalUser)] || isSelf(detailsModalUser)}
+                    >
+                      {detailsModalUser.account_status === "suspended" ? "Activate" : "Suspend"}
+                    </button>
+                    <button
+                      type="button"
+                      className="delete-user-button"
+                      onClick={() => handleDeleteUser(detailsModalUser)}
+                      disabled={actionBusyByUserId[getUserIdString(detailsModalUser)] || isSelf(detailsModalUser)}
+                    >
+                      Delete User
+                    </button>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && userToDelete && (
-        <div className="modal-overlay" onClick={handleDeleteCancel}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      {assessmentModalUser && (
+        <div className="modal-overlay assessment-modal-overlay" onClick={closeInitialAssessmentModal}>
+          <div className="modal-content assessment-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Confirm Deletion</h3>
-              <button className="modal-close" onClick={handleDeleteCancel}>
-                ×
+              <div>
+                <h3>{assessmentModalUser.username} Initial Assessment</h3>
+                <p>{assessmentModalUser.email}</p>
+              </div>
+              <button className="modal-close" onClick={closeInitialAssessmentModal}>
+                x
               </button>
             </div>
             <div className="modal-body">
-              <p>
-                Are you sure you want to delete user <strong>"{userToDelete.username}"</strong>?
-              </p>
-              <p className="warning-text">
-                This action cannot be undone.
-              </p>
+              {assessmentLoadingByUserId[getUserIdString(assessmentModalUser)] ? (
+                <p className="assessment-loading">Loading initial assessment...</p>
+              ) : (assessmentByUserId[getUserIdString(assessmentModalUser)] || []).length > 0 ? (
+                <div className="assessment-topic-list modal-topic-list">
+                  {(assessmentByUserId[getUserIdString(assessmentModalUser)] || []).map((assessment) => (
+                    <div className="assessment-topic-card" key={assessment.topic}>
+                      <div className="assessment-topic-header">
+                        <span>{assessment.topic}</span>
+                        <em className={assessment.completed ? "complete" : "pending"}>
+                          {assessment.completed ? "Completed" : "Pending"}
+                        </em>
+                      </div>
+                      <div className="assessment-topic-meta">
+                        <span>{assessment.questionMapCount} questions</span>
+                        {assessment.completedAt && <span>{formatDatePH(assessment.completedAt, true)}</span>}
+                      </div>
+                      {Object.keys(assessment.subcatScores).length > 0 && (
+                        <div className="assessment-topic-scores">
+                          {Object.entries(assessment.subcatScores).map(([label, value]) => (
+                            <span key={label}>{label}: <strong>{String(value)}</strong></span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="assessment-empty">No initial assessment data available.</p>
+              )}
             </div>
             <div className="modal-footer">
-              <button 
-                className="cancel-btn" 
-                onClick={handleDeleteCancel}
-                disabled={deleteLoading === (userToDelete.userid || userToDelete.id?.toString())}
-              >
-                Cancel
-              </button>
-              <button 
-                className="confirm-delete-btn" 
-                onClick={handleDeleteConfirm}
-                disabled={deleteLoading === (userToDelete.userid || userToDelete.id?.toString())}
-              >
-                {deleteLoading === (userToDelete.userid || userToDelete.id?.toString()) ? (
-                  <>
-                    <span className="loading-spinner"></span>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete User'
-                )}
+              <button className="cancel-btn" onClick={closeInitialAssessmentModal}>
+                Back
               </button>
             </div>
           </div>

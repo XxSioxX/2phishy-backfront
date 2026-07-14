@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./student-report.scss";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from '../../services/api';
 import { getCurrentDatePH } from "../../utils/dateUtils";
 
-interface StudentReport {
+interface StudentReportItem {
   id: string;
   message: string;
   status: "High" | "Mid" | "Low";
@@ -16,7 +16,7 @@ interface StudentReport {
 
 const StudentReport: React.FC = () => {
   const { user } = useAuth();
-  const [reports, setReports] = useState<StudentReport[]>([]);
+  const [reports, setReports] = useState<StudentReportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,25 +26,21 @@ const StudentReport: React.FC = () => {
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  useEffect(() => {
-    fetchMyReports();
-  }, []);
-
-  const fetchMyReports = async () => {
+  const fetchMyReports = useCallback(async () => {
     try {
       setIsLoading(true);
       // Fetch from backend and filter by current user
       try {
         const backendReports = await api.getReports();
-        const allReports: StudentReport[] = Array.isArray(backendReports) ? backendReports : [];
-        let userReports = allReports.filter(report => report.user_id === user?.userid);
+        const allReports: StudentReportItem[] = Array.isArray(backendReports) ? backendReports : [];
+        const userReports = allReports.filter(report => report.user_id === user?.userid);
         setReports(userReports);
       } catch (e) {
         console.error('Failed to fetch reports from backend, falling back to localStorage:', e);
         // Fallback to localStorage for offline/dev
         const storedReports = localStorage.getItem('studentReports');
         if (storedReports) {
-          const allReports: StudentReport[] = JSON.parse(storedReports);
+          const allReports: StudentReportItem[] = JSON.parse(storedReports);
           const userReports = allReports.filter(report => report.user_id === user?.userid);
           setReports(userReports);
         } else {
@@ -56,7 +52,11 @@ const StudentReport: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.userid]);
+
+  useEffect(() => {
+    fetchMyReports();
+  }, [fetchMyReports]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -123,7 +123,7 @@ const StudentReport: React.FC = () => {
         } catch (e) {
           console.warn('Failed to delete report via backend, falling back to localStorage:', e);
           const storedReports = localStorage.getItem('studentReports');
-          const allReports: StudentReport[] = storedReports ? JSON.parse(storedReports) : [];
+          const allReports: StudentReportItem[] = storedReports ? JSON.parse(storedReports) : [];
           const updatedReports = allReports.filter(report => report.id !== reportId);
           localStorage.setItem('studentReports', JSON.stringify(updatedReports));
           setReports(prev => prev.filter(report => report.id !== reportId));

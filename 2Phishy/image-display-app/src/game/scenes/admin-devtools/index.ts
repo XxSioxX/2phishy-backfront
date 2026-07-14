@@ -265,6 +265,7 @@ export class AdminDevToolsScene extends Scene {
   private stopManagedScenes(): void {
     this.scene.stop('ui-scene');
     this.scene.stop('prologue-scene');
+    this.scene.stop('credits-scene');
     this.scene.stop('assessment-scene');
     this.scene.stop('main-menu-scene');
 

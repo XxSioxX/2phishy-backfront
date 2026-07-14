@@ -108,7 +108,7 @@ export class MainMenuScene extends Scene {
     this.loadingText.setText('Starting new game...');
     this.playButton.setInteractive();
 
-    this.scene.start('assessment-scene', {
+    this.scene.start('prologue-scene', {
       topic: levelConfig.topic,
       nextScene: levelConfig.sceneKey,
     });

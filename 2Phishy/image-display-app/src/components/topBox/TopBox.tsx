@@ -1,27 +1,48 @@
 import "./topBox.scss";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "../../services/api";
 import { TopScore } from "../../types/data";
 import type { User } from "../../types";
-import { generateAvatarUrl } from "../../utils/avatarUtils";
+import { getAvatarUrl } from "../../utils/avatarUtils";
 import { parseBackendDate } from "../../utils/dateUtils";
 
 const TopBox: React.FC = () => {
     const [userScores, setUserScores] = useState<(TopScore & { last_seen?: string | null; user: User })[]>([]);
     const [loading, setLoading] = useState(true);
+    const [onlineStatus, setOnlineStatus] = useState<Record<string, boolean>>({});
+    const fetchInFlightRef = useRef(false);
 
     // Check if user is online
     const isOnline = (user: User): boolean => {
+        const userId = user.userid || user.id?.toString();
+        if (userId && onlineStatus[userId] !== undefined) {
+            return onlineStatus[userId];
+        }
+
         const lastSeen = parseBackendDate(user.last_seen);
         if (!lastSeen) return false;
         return new Date().getTime() - lastSeen.getTime() < 10 * 60 * 1000;
     };
 
     useEffect(() => {
+        let cancelled = false;
+
         const fetchUserScores = async () => {
+            if (fetchInFlightRef.current) return;
+            fetchInFlightRef.current = true;
+
             try {
-                const users = await api.getUsers();
-                const topScoresData = await api.getTopScores();
+                const [users, topScoresData, statuses] = await Promise.all([
+                    api.getUsers(),
+                    api.getTopScores(),
+                    api.getOnlineStatus().catch((err) => {
+                        console.warn('Falling back to last_seen presence:', err);
+                        return {};
+                    }),
+                ]);
+                if (cancelled) return;
+
+                setOnlineStatus(statuses);
                 const scoreMap = new Map(
                     topScoresData.map((item: any) => [
                         item.user_id,
@@ -51,15 +72,22 @@ const TopBox: React.FC = () => {
                     }));
                 setUserScores(sortedUsers);
             } catch (error) {
+                if (cancelled) return;
                 console.error('Failed to fetch user scores:', error);
                 setUserScores([]);
             } finally {
-                setLoading(false);
+                fetchInFlightRef.current = false;
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         };
         fetchUserScores();
-        const intervalId = setInterval(fetchUserScores, 5000);
-        return () => clearInterval(intervalId);
+        const intervalId = setInterval(fetchUserScores, 30000);
+        return () => {
+            cancelled = true;
+            clearInterval(intervalId);
+        };
     }, []);
 
     if (loading) {
@@ -84,7 +112,7 @@ const TopBox: React.FC = () => {
                         <div className="user">
                             <div className="profile-container">
                                 <img 
-                                    src={generateAvatarUrl(user.username, 48)}
+                                    src={getAvatarUrl(user.username, user.user.avatar_url || undefined, 48)}
                                     alt={`${user.username}'s avatar`}
                                     className="user-avatar"
                                 />

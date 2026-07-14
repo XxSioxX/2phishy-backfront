@@ -186,7 +186,8 @@ const BulletinPage = () => {
       alert("Post created successfully!");
     } catch (error) {
       console.error("Failed to create post:", error);
-      alert("Failed to create post");
+      const message = error instanceof Error ? error.message : "Failed to create post";
+      alert(message);
     }
   };
 

@@ -1,4 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  ReactNode,
+} from 'react';
 import { User } from '../types';
 import { isAuthenticated, getCurrentUser, logout as apiLogout } from '../services/api';
 import { api } from '../services/api';
@@ -25,75 +34,108 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
+const HEARTBEAT_INTERVAL_MS = 30 * 1000;
+const HEARTBEAT_FAILURE_BACKOFF_MS = 30 * 1000;
+const MAX_HEARTBEAT_FAILURES_BEFORE_BACKOFF = 3;
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const resetInactivityTimer = () => {
-    
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-    }
-    if (user) {
-      inactivityTimerRef.current = setTimeout(() => {
-        console.log('Auto-logout due to inactivity');
-        logout();
-      }, INACTIVITY_TIMEOUT);
-    }
-  };
-  const clearInactivityTimer = () => {
+  const heartbeatInFlightRef = useRef(false);
+  const heartbeatFailuresRef = useRef(0);
+  const heartbeatPausedUntilRef = useRef(0);
+  const userRef = useRef<User | null>(null);
+
+  userRef.current = user;
+
+  const clearInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = null;
     }
-  };
-  const startHeartbeat = () => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-    }
+  }, []);
 
-    // Send immediate heartbeat
-    api.updatePresence().catch(error => {
-      console.error('Initial heartbeat failed:', error);
-    });
-
-    heartbeatIntervalRef.current = setInterval(async () => {
-      try {
-        await api.updatePresence();
-      } catch (error) {
-        console.error('Heartbeat failed:', error);
-      }
-    }, 30000);
-  };
-
-
-  // Function to stop heartbeat
-  const stopHeartbeat = () => {
+  const stopHeartbeat = useCallback(() => {
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
     }
-  };
+  }, []);
+
+  const logout = useCallback(() => {
+    clearInactivityTimer();
+    stopHeartbeat();
+    apiLogout();
+    userRef.current = null;
+    setUser(null);
+  }, [clearInactivityTimer, stopHeartbeat]);
+
+  const resetInactivityTimer = useCallback(() => {
+    clearInactivityTimer();
+  }, [clearInactivityTimer]);
+
+  const sendHeartbeat = useCallback(async () => {
+    if (!userRef.current || !isAuthenticated()) {
+      return;
+    }
+
+    if (Date.now() < heartbeatPausedUntilRef.current || heartbeatInFlightRef.current) {
+      return;
+    }
+
+    heartbeatInFlightRef.current = true;
+
+    try {
+      await api.updatePresence();
+      heartbeatFailuresRef.current = 0;
+      heartbeatPausedUntilRef.current = 0;
+    } catch (error) {
+      heartbeatFailuresRef.current += 1;
+
+      if (heartbeatFailuresRef.current >= MAX_HEARTBEAT_FAILURES_BEFORE_BACKOFF) {
+        heartbeatPausedUntilRef.current = Date.now() + HEARTBEAT_FAILURE_BACKOFF_MS;
+        console.warn('Heartbeat temporarily paused after repeated failures:', error);
+      } else {
+        console.error('Heartbeat failed:', error);
+      }
+    } finally {
+      heartbeatInFlightRef.current = false;
+    }
+  }, []);
+
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+
+    sendHeartbeat();
+    heartbeatIntervalRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+  }, [sendHeartbeat]);
+
   useEffect(() => {
     if (isAuthenticated()) {
       const savedUser = getCurrentUser();
       if (savedUser) {
+        userRef.current = savedUser;
         setUser(savedUser);
-        resetInactivityTimer();
-        startHeartbeat();
       }
     }
+
     setLoading(false);
+  }, []);
+
+  useEffect(() => {
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
     const handleActivity = () => {
       resetInactivityTimer();
     };
+
     events.forEach(event => {
       document.addEventListener(event, handleActivity, true);
     });
+
     return () => {
       events.forEach(event => {
         document.removeEventListener(event, handleActivity, true);
@@ -101,41 +143,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       clearInactivityTimer();
       stopHeartbeat();
     };
-  }, []);
+  }, [clearInactivityTimer, resetInactivityTimer, stopHeartbeat]);
 
-  // Reset timer when user changes
   useEffect(() => {
     if (user) {
       resetInactivityTimer();
-      startHeartbeat();   // ← add this
+      startHeartbeat();
     } else {
       clearInactivityTimer();
-      stopHeartbeat();    // ← add this
+      stopHeartbeat();
     }
-  }, [user]);
+  }, [clearInactivityTimer, resetInactivityTimer, startHeartbeat, stopHeartbeat, user]);
 
-  const login = (userData: User, token: string) => {
+  const login = useCallback((userData: User, token: string) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
+    userRef.current = userData;
     setUser(userData);
-    resetInactivityTimer();
     startHeartbeat();
-  };
+  }, [startHeartbeat]);
 
-  const logout = () => {
-    clearInactivityTimer();
-    stopHeartbeat();
-    apiLogout();
-    setUser(null);
-  };
-
-  const value: AuthContextType = {
-    user,
-    isAuthenticated: !!user,
-    login,
-    logout,
-    loading,
-  };
+  const value: AuthContextType = useMemo(() => ({
+      user,
+      isAuthenticated: !!user,
+      login,
+      logout,
+      loading,
+    }),
+    [loading, login, logout, user]
+  );
 
   return (
     <AuthContext.Provider value={value}>

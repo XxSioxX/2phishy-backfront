@@ -24,7 +24,20 @@ const ChartBox: React.FC<ChartBoxProps> = (props) => {
                 </div>
                 <h1>{props.number}</h1>
                 {props.onViewAll ? (
-                    <a href="#" onClick={handleViewAll} style={{color:props.color}}>View all</a>
+                    <button
+                        type="button"
+                        onClick={handleViewAll}
+                        style={{
+                            color: props.color,
+                            background: "transparent",
+                            border: 0,
+                            padding: 0,
+                            cursor: "pointer",
+                            textAlign: "left",
+                        }}
+                    >
+                        View all
+                    </button>
                 ) : (
                     <Link to="/" style={{color:props.color}}>View all</Link>
                 )}

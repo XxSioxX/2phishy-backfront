@@ -6,7 +6,6 @@ import {
 } from '../../helpers/password-challenge-popup';
 import { AssessmentResult, gameAPI } from '../../helpers/game-api';
 import { DialogueManager } from '../../helpers/DialogueManager';
-import { DialogueRunner } from '../../helpers/DialogueRunner';
 import { DialogueUI } from '../ui/DialogueUI';
 import { TOUCH_EVENTS } from '../../consts';
 import { AudioManager, MUSIC, SFX } from '../../audio';
@@ -194,7 +193,7 @@ const WITNESS_FRAME_SETS = [
 ];
 
 const PS_BOSS_DRAGON_FRAMES = [424, 488];
-const BOSS_FRAME_SETS = makeFrameTriples(705, 737, 769, 16);
+const BOSS_FRAME_SETS = makeFrameQuads(737, 738, 769, 770, 8);
 const ANGEL_FRAMES = makeRange(759, 766);
 const MALWARE_FRAMES = [
   makeRange(375, 382),
@@ -301,17 +300,22 @@ function makeFramePairs(
   ]);
 }
 
-function makeFrameTriples(
-  topStart: number,
-  middleStart: number,
-  bottomStart: number,
+function makeFrameQuads(
+  topLeftStart: number,
+  topRightStart: number,
+  bottomLeftStart: number,
+  bottomRightStart: number,
   count: number
 ): number[][] {
-  return Array.from({ length: count }, (_, index) => [
-    topStart + index,
-    middleStart + index,
-    bottomStart + index,
-  ]);
+  return Array.from({ length: count }, (_, index) => {
+    const frameOffset = index * 2;
+    return [
+      topLeftStart + frameOffset,
+      topRightStart + frameOffset,
+      bottomLeftStart + frameOffset,
+      bottomRightStart + frameOffset,
+    ];
+  });
 }
 
 export class IRLevel extends BaseIntegratedLevel {
@@ -1035,7 +1039,7 @@ export class IRLevel extends BaseIntegratedLevel {
     )?.[0];
 
     if (bossPoint) {
-      const boss = this.createThreePartBossActor(
+      const boss = this.createFourPartBossActor(
         bossPoint.x ?? 0,
         bossPoint.y ?? 0,
         BOSS_FRAME_SETS,
@@ -1919,7 +1923,7 @@ export class IRLevel extends BaseIntegratedLevel {
       button.style.cursor = 'pointer';
       button.style.touchAction = 'manipulation';
       button.style.pointerEvents = 'auto';
-      button.style.webkitTapHighlightColor = 'rgba(93, 238, 255, 0.24)';
+      button.style.setProperty('-webkit-tap-highlight-color', 'rgba(93, 238, 255, 0.24)');
 
       let selected = false;
       const press = (event: Event) => {
@@ -2244,20 +2248,21 @@ export class IRLevel extends BaseIntegratedLevel {
 
   private showFinalCutscene(): void {
     AudioManager.playSfx(this, SFX.ENDING_START);
-    const dialogueData = this.cache.json.get('general_dialogues');
-    const scenario = dialogueData?.scenarios?.find(
-      (item: any) => item.id === 'ir_final_cutscene'
+    this.showDialogue(
+      'ir_ending',
+      () => void this.finishFinalStorySequence(),
+      { unlockOnComplete: false }
     );
+  }
 
-    if (!scenario) {
-      void this.completeAssessment();
-      return;
-    }
+  private async finishFinalStorySequence(): Promise<void> {
+    await this.completeAssessment();
+    this.scene.stop('ui-scene');
 
-    const runner = new DialogueRunner(this, scenario);
-    runner.start(() => {
-      void this.completeAssessment();
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.start('credits-scene');
     });
+    this.cameras.main.fadeOut(900, 0, 0, 0);
   }
 
   private markRoomChallengeComplete(zone: number): void {
@@ -3348,7 +3353,7 @@ export class IRLevel extends BaseIntegratedLevel {
     };
   }
 
-  private createThreePartBossActor(
+  private createFourPartBossActor(
     x: number,
     y: number,
     frameSets: number[][],
@@ -3359,14 +3364,15 @@ export class IRLevel extends BaseIntegratedLevel {
     parts: Phaser.GameObjects.Sprite[];
     timer: Phaser.Time.TimerEvent;
   } {
-    const top = this.add.sprite(0, -32, 'tiles_spr', frameSets[0][0]);
-    const middle = this.add.sprite(0, 0, 'tiles_spr', frameSets[0][1]);
-    const bottom = this.add.sprite(0, 32, 'tiles_spr', frameSets[0][2]);
+    const topLeft = this.add.sprite(-8, -8, 'tiles_spr', frameSets[0][0]);
+    const topRight = this.add.sprite(8, -8, 'tiles_spr', frameSets[0][1]);
+    const bottomLeft = this.add.sprite(-8, 8, 'tiles_spr', frameSets[0][2]);
+    const bottomRight = this.add.sprite(8, 8, 'tiles_spr', frameSets[0][3]);
     const visual = this.add
-      .container(x, y, [top, middle, bottom])
+      .container(x, y, [topLeft, topRight, bottomLeft, bottomRight])
       .setScale(scale)
       .setDepth(depth);
-    const parts = [top, middle, bottom];
+    const parts = [topLeft, topRight, bottomLeft, bottomRight];
 
     visual.setData('frameIndex', 0);
 

@@ -8,6 +8,8 @@ export interface UserSession {
 }
 
 const SESSION_KEY = 'phishy-session';
+const API_ROOT =
+  process.env.REACT_APP_API_BASE_URL || `${window.location.origin}/api`;
 
 export class SessionManager {
   private static instance: SessionManager;
@@ -26,7 +28,7 @@ export class SessionManager {
   }
 
   async login(username: string, password: string): Promise<UserSession> {
-    const response = await fetch('http://localhost:8000/users/login', {
+    const response = await fetch(`${API_ROOT}/users/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),

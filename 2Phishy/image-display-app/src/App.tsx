@@ -4,11 +4,12 @@ import {
   Outlet,
   useLocation
 } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TimezoneProvider } from "./contexts/TimezoneContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { MobileMenuProvider, useMobileMenu } from "./contexts/MobileMenuContext";
+import { BrandingProvider } from "./contexts/BrandingContext";
 import RouteGuard from "./components/RouteGuard";
 import Footer from "./components/footer/Footer";
 import Menu from "./components/menu/Menu";
@@ -39,14 +40,16 @@ const LayoutContent: React.FC = () => {
   const { user } = useAuth();
   const { showMobileMenu, toggleMobileMenu } = useMobileMenu();
   const location = useLocation();
+  const previousPathRef = useRef(location.pathname);
   const isStudent = user?.role === 'student';
 
   // Close mobile menu when route changes
   useEffect(() => {
-    if (showMobileMenu) {
+    if (previousPathRef.current !== location.pathname && showMobileMenu) {
       toggleMobileMenu();
     }
-  }, [location.pathname]);
+    previousPathRef.current = location.pathname;
+  }, [location.pathname, showMobileMenu, toggleMobileMenu]);
 
   // Close mobile menu when menu item is clicked
   const handleMenuClick = () => {
@@ -159,9 +162,11 @@ const App: React.FC = () => {
     <ThemeProvider>
       <AuthProvider>
         <TimezoneProvider>
-          <MobileMenuProvider>
-            <RouterProvider router={router} />
-          </MobileMenuProvider>
+          <BrandingProvider>
+            <MobileMenuProvider>
+              <RouterProvider router={router} />
+            </MobileMenuProvider>
+          </BrandingProvider>
         </TimezoneProvider>
       </AuthProvider>
     </ThemeProvider>

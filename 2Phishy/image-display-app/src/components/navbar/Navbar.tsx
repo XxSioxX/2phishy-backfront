@@ -7,6 +7,7 @@ import { useMobileMenu } from "../../contexts/MobileMenuContext";
 import { ReportWithResolved } from "../../types";
 import { generateAvatarUrl } from '../../utils/avatarUtils';
 import { formatDatePH, parseBackendDate } from '../../utils/dateUtils';
+import { useBranding } from "../../contexts/BrandingContext";
 
 type NotificationKind = 'report' | 'announcement';
 type NotificationTone = 'danger' | 'warning' | 'info' | 'success';
@@ -32,13 +33,20 @@ const Navbar = () => {
     }>({ reportItems: [], announcementItems: [], items: [] });
     const { user, isAuthenticated } = useAuth();
     const { toggleMobileMenu } = useMobileMenu();
+    const { branding } = useBranding();
     const navigate = useNavigate();
     const notificationRef = useRef<HTMLDivElement | null>(null);
+    const notificationFetchInFlightRef = useRef(false);
+    const currentUserId = user?.userid || user?.id?.toString() || '';
+    const currentUsername = user?.username || '';
+    const currentUserRole = user?.role || 'guest';
+    const avatarUrl = isAuthenticated && user?.username
+        ? (user.avatar_url || generateAvatarUrl(user.username, 36))
+        : "/user.svg";
 
     const getNotificationStorageKey = () => {
-        const userIdentifier = user?.userid || user?.id?.toString() || user?.username || 'guest';
-        const userRole = user?.role || 'guest';
-        return `viewedNotifications:${userIdentifier}:${userRole}`;
+        const userIdentifier = currentUserId || currentUsername || 'guest';
+        return `viewedNotifications:${userIdentifier}:${currentUserRole}`;
     };
 
     const readViewedNotifications = () => {
@@ -68,7 +76,7 @@ const Navbar = () => {
     ): NotificationItem => {
         const timestamp = getNotificationTimestamp(report);
         const baseId = String(report.id || report._id || report.report_id || 'report');
-        const readKey = `report_${baseId}_${report.resolved ? 'resolved' : 'pending'}_${timestamp || 'no-time'}`;
+        const readKey = `report_${baseId}`;
         const authorName = report.username || report.studentId || report.user_id || 'Student';
         const cleanMessage = report.message || 'Report update available';
         const shortMessage = cleanMessage.length > 72 ? `${cleanMessage.slice(0, 72)}...` : cleanMessage;
@@ -79,7 +87,7 @@ const Navbar = () => {
                 kind: 'report',
                 title: report.resolved ? 'Resolved report' : 'New report received',
                 message: shortMessage,
-                meta: `${authorName} • ${report.status || 'No priority'}`,
+                meta: `${authorName} - ${report.status || 'No priority'}`,
                 timestamp,
                 tone: report.resolved ? 'success' : 'danger',
                 readKey,
@@ -101,7 +109,7 @@ const Navbar = () => {
     const createAnnouncementItem = (announcement: Record<string, any>, index: number): NotificationItem => {
         const announcementId = String(announcement._id || announcement.id || announcement.slug || index);
         const timestamp = getNotificationTimestamp(announcement);
-        const readKey = `announcement_${announcementId}_${timestamp || 'no-time'}`;
+        const readKey = `announcement_${announcementId}`;
         const title = announcement.title || announcement.subject || 'New announcement';
         const message = announcement.content || announcement.message || 'A new announcement is available.';
         const shortMessage = String(message).length > 84 ? `${String(message).slice(0, 84)}...` : String(message);
@@ -128,9 +136,11 @@ const Navbar = () => {
     };
 
     // Calculate notification count from backend (with localStorage fallback)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         const calculateNotifications = async () => {
+            if (notificationFetchInFlightRef.current) return;
+            notificationFetchInFlightRef.current = true;
+
             try {
                 let newNotificationsCount = 0;
                 let reportItems: NotificationItem[] = [];
@@ -164,11 +174,9 @@ const Navbar = () => {
                     }
                 }
 
-                const currentUserId = user?.userid || user?.id?.toString() || '';
-                const currentUsername = user?.username || '';
                 const viewedNotifications = readViewedNotifications();
 
-                if (user && (user.role === 'admin' || user.role === 'super-admin')) {
+                if (currentUserRole === 'admin' || currentUserRole === 'super-admin') {
                     reportItems = reportsWithStatus
                         .filter((r: ReportWithResolved) => !r.resolved)
                         .sort((a: ReportWithResolved, b: ReportWithResolved) => {
@@ -177,7 +185,7 @@ const Navbar = () => {
                             return bTime - aTime;
                         })
                         .map((report: ReportWithResolved) => createReportItem(report as ReportWithResolved & Record<string, any>, 'admin'));
-                } else if (user && user.role === 'student') {
+                } else if (currentUserRole === 'student') {
                     reportItems = reportsWithStatus
                         .filter((report: ReportWithResolved & Record<string, any>) => {
                             const reportUserId = report.studentId || report.user_id || report.userId;
@@ -215,8 +223,29 @@ const Navbar = () => {
                     createAnnouncementItem(announcement, index)
                 );
 
-                const items = [...reportItems, ...announcementItems];
-                newNotificationsCount = items.filter((item) => !viewedNotifications[item.readKey]).length;
+                const items = [...reportItems, ...announcementItems].sort((a, b) => {
+                    const aTime = new Date(a.timestamp || 0).getTime();
+                    const bTime = new Date(b.timestamp || 0).getTime();
+                    return bTime - aTime;
+                });
+                const activeReadKeys = new Set(items.map(item => item.readKey));
+                const prunedViewedNotifications = Object.fromEntries(
+                    Object.entries(viewedNotifications).filter(([key]) =>
+                        activeReadKeys.has(key)
+                    )
+                );
+
+                if (
+                    Object.keys(prunedViewedNotifications).length !==
+                    Object.keys(viewedNotifications).length
+                ) {
+                    localStorage.setItem(
+                        getNotificationStorageKey(),
+                        JSON.stringify(prunedViewedNotifications)
+                    );
+                }
+
+                newNotificationsCount = items.filter((item) => !prunedViewedNotifications[item.readKey]).length;
 
                 setNotificationCount(newNotificationsCount);
                 setNotificationDetails({
@@ -226,22 +255,24 @@ const Navbar = () => {
                 });
             } catch (e) {
                 console.error('Failed to calculate notifications:', e);
+            } finally {
+                notificationFetchInFlightRef.current = false;
             }
         };
 
-        if (isAuthenticated && user) {
+        if (isAuthenticated && currentUserId) {
             calculateNotifications();
         }
 
         const handleStorageChange = () => {
-            if (isAuthenticated && user) {
+            if (isAuthenticated && currentUserId) {
                 calculateNotifications();
             }
         };
 
         window.addEventListener('storage', handleStorageChange);
         const refreshInterval = window.setInterval(() => {
-            if (isAuthenticated && user) {
+            if (isAuthenticated && currentUserId) {
                 calculateNotifications();
             }
         }, 30000);
@@ -250,7 +281,8 @@ const Navbar = () => {
             window.removeEventListener('storage', handleStorageChange);
             window.clearInterval(refreshInterval);
         };
-    }, [isAuthenticated, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUserId, currentUsername, currentUserRole, isAuthenticated]);
 
     useEffect(() => {
         const handleOutsideClick = (event: MouseEvent) => {
@@ -278,28 +310,32 @@ const Navbar = () => {
     };
 
     const handleNotificationClick = () => {
+        setShowTooltip((prev) => !prev);
+    };
+
+    const handleMarkAllNotificationsRead = () => {
         const storageKey = getNotificationStorageKey();
         const viewedNotifications = readViewedNotifications();
 
-        // Mark all notifications as viewed
         notificationDetails.items.forEach((item: NotificationItem) => {
             viewedNotifications[item.readKey] = true;
         });
-        
+
         localStorage.setItem(storageKey, JSON.stringify(viewedNotifications));
-        
-        // Update badge count
         setNotificationCount(0);
-        setShowTooltip((prev) => !prev);
     };
 
     const handleNotificationItemClick = (item: NotificationItem) => {
         const storageKey = getNotificationStorageKey();
         const viewedNotifications = readViewedNotifications();
+        const wasUnread = !viewedNotifications[item.readKey];
+
         viewedNotifications[item.readKey] = true;
         localStorage.setItem(storageKey, JSON.stringify(viewedNotifications));
 
-        setNotificationCount((prev) => Math.max(0, prev - 1));
+        if (wasUnread) {
+            setNotificationCount((prev) => Math.max(0, prev - 1));
+        }
         setShowTooltip(false);
 
         if (item.kind === 'report') {
@@ -323,16 +359,20 @@ const Navbar = () => {
                     aria-label="Toggle menu"
                     title="Toggle menu"
                 >
-                    ☰
+                    <span className="menu-bars" aria-hidden="true">
+                        <span />
+                        <span />
+                        <span />
+                    </span>
                 </button>
                 <div className="logo">
-                    <img src="/logo1.png" alt="" />
-                    <span>2Phishy</span>
+                    <img src={branding.logo_url} alt="" />
+                    <span>{branding.system_name}</span>
                 </div>
                 <div className="user-mobile">
                     <span className={`avatar-ring ${isCurrentUserOnline() ? 'online' : 'offline'}`}>
                         <img 
-                            src={isAuthenticated && user?.username ? generateAvatarUrl(user.username, 36) : "/user.svg"} 
+                            src={avatarUrl}
                             alt="User Avatar" 
                             className="user-avatar-mobile"
                         />
@@ -341,18 +381,18 @@ const Navbar = () => {
                 </div>
             </div>
             <div className="icons">
-                <img 
-                    src="/expand.svg" 
-                    className="icon" 
-                    alt="Toggle fullscreen"
+                <button
+                    type="button"
+                    className="nav-icon-button"
                     onClick={toggleFullscreen}
-                    style={{ cursor: 'pointer' }}
+                    aria-label="Toggle fullscreen"
                     title="Toggle Fullscreen (F11)"
-                />
+                >
+                    <img src="/expand.svg" className="icon" alt="" />
+                </button>
                 <div
                     ref={notificationRef}
                     className="notification"
-                    style={{ position: "relative" }}
                 >
                     <button
                         type="button"
@@ -363,7 +403,7 @@ const Navbar = () => {
                     >
                         <img src="/notifications.svg" className="icon" alt="Notifications" />
                         {notificationCount > 0 && (
-                            <span>{notificationCount}</span>
+                            <span className="notification-count">{notificationCount}</span>
                         )}
                     </button>
                     {showTooltip && (
@@ -436,6 +476,15 @@ const Navbar = () => {
                             {notificationDetails.items.length > 0 && (
                                 <div className="panel-footer">
                                     <span>Auto-refreshes every 30 seconds.</span>
+                                    {notificationCount > 0 && (
+                                        <button
+                                            type="button"
+                                            className="mark-read-button"
+                                            onClick={handleMarkAllNotificationsRead}
+                                        >
+                                            Mark all read
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -444,7 +493,7 @@ const Navbar = () => {
                 <div className="user">
                     <span className={`avatar-ring ${isCurrentUserOnline() ? 'online' : 'offline'}`}>
                         <img 
-                            src={isAuthenticated && user?.username ? generateAvatarUrl(user.username, 36) : "/user.svg"} 
+                            src={avatarUrl}
                             alt="User Avatar" 
                             className="user-avatar"
                         />
@@ -457,10 +506,11 @@ const Navbar = () => {
                 {isAuthenticated ? (
                     <Link 
                         to={user?.role === 'student' ? "/student-settings" : "/settings"} 
-                        className="icon settings-link" 
+                        className="nav-icon-button settings-link" 
                         title="Settings"
+                        aria-label="Settings"
                     >
-                        <img src="/settings.svg" alt="Settings" />
+                        <img src="/settings.svg" alt="" />
                     </Link>
                 ) : (
                     <Link to="/login" className="login-link">

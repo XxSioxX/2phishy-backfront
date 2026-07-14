@@ -1,4 +1,4 @@
-import { ObjectPoint } from "global";
+import type { ObjectPoint } from "../global";
 
 export const gameObjectsToObjectPoints = (gameObjects: unknown[]): ObjectPoint[] => {
   return gameObjects.map((gameObject) => gameObject as ObjectPoint);

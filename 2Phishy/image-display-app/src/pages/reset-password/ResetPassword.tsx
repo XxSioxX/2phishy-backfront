@@ -1,6 +1,7 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { api } from "../../services/api";
+import { useBranding } from "../../contexts/BrandingContext";
 import "./reset-password.scss";
 
 interface FormErrors {
@@ -12,6 +13,7 @@ interface FormErrors {
 const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { branding } = useBranding();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -63,53 +65,57 @@ const ResetPassword: React.FC = () => {
 
   return (
     <div className="login">
-      <div className="login-container">
-        <img src="/logo1.png" alt="Logo" />
-        <h1>Reset Password</h1>
-        <p className="subtitle">Enter your new password</p>
+      <div className="login-shell">
+        <div className="login-container">
+          <img className="login-logo" src={branding.logo_url} alt="Logo" />
+          <h1>Reset Password</h1>
+          <p className="subtitle">Enter your new password</p>
 
-        {errors.general && (
-          <div className="error-message general">{errors.general}</div>
-        )}
+          {errors.general && (
+            <div className="error-message general">{errors.general}</div>
+          )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>New Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>New Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your new password"
+                disabled={isLoading}
+              />
+              {errors.password && (
+                <div className="error-message">{errors.password}</div>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label>Confirm Password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your new password"
+                disabled={isLoading}
+              />
+              {errors.confirmPassword && (
+                <div className="error-message">{errors.confirmPassword}</div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="login-button"
               disabled={isLoading}
-            />
-            {errors.password && (
-              <div className="error-message">{errors.password}</div>
-            )}
+            >
+              {isLoading ? "Updating..." : "Update Password"}
+            </button>
+          </form>
+
+          <div className="register-link">
+            <Link to="/login">Back to login</Link>
           </div>
-
-          <div className="form-group">
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={isLoading}
-            />
-            {errors.confirmPassword && (
-              <div className="error-message">{errors.confirmPassword}</div>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            className="login-button"
-            disabled={isLoading}
-          >
-            {isLoading ? "Updating..." : "Update Password"}
-          </button>
-        </form>
-
-        <div className="register-link">
-          <Link to="/login">Back to login</Link>
         </div>
       </div>
     </div>

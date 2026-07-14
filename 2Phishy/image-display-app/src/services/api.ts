@@ -1,14 +1,15 @@
-import { User, ChartBoxData } from '../types';
+import { ChartBoxData, SystemContentRecord, SystemContentType, SystemSettings, User } from '../types';
 
-let API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL ||
-  `${window.location.origin}/api`;
-console.log("API BASE URL:", API_BASE_URL);
+const resolveApiBaseUrl = (): string => {
+    const candidate =
+        process.env.REACT_APP_API_BASE_URL ||
+        `${window.location.origin}/api`;
+
+    const isBrowser = typeof window !== 'undefined';
 
     if (isBrowser) {
         const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
 
-        // In deployed environments, always use same-origin /api and rely on reverse proxy routing.
         if (!isLocalHost) {
             return '/api';
         }
@@ -28,7 +29,6 @@ console.log("API BASE URL:", API_BASE_URL);
         }
     }
 
-    // Keep URL assembly consistent with endpoint templates below.
     if (candidate.includes('localhost') && candidate.startsWith('https')) {
         return candidate.replace('https://', 'http://').replace(/\/+$/, '');
     }
@@ -69,6 +69,63 @@ export const logout = (): void => {
 };
 
 export const api = {
+    async getSystemSettings(): Promise<SystemSettings> {
+        const response = await fetch(`${API_BASE_URL}/system/settings`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch system settings');
+        }
+        return response.json();
+    },
+
+    async updateSystemSettings(settings: Partial<SystemSettings>): Promise<SystemSettings> {
+        const response = await fetch(`${API_BASE_URL}/system/settings`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(settings),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Failed to update system settings');
+        }
+        return response.json();
+    },
+
+    async getSystemContent(contentType: SystemContentType): Promise<SystemContentRecord> {
+        const response = await fetch(`${API_BASE_URL}/system/content/${contentType}`, {
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch system content');
+        }
+        return response.json();
+    },
+
+    async saveSystemContentDraft(contentType: SystemContentType, data: any): Promise<SystemContentRecord> {
+        const response = await fetch(`${API_BASE_URL}/system/content/${contentType}/draft`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ data }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Failed to save content draft');
+        }
+        return response.json();
+    },
+
+    async publishSystemContent(contentType: SystemContentType, data?: any): Promise<SystemContentRecord> {
+        const response = await fetch(`${API_BASE_URL}/system/content/${contentType}/publish`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data === undefined ? {} : { data }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Failed to publish content');
+        }
+        return response.json();
+    },
+
     // User related endpoints
     async login(username: string, password: string): Promise<{ access_token: string; user: User }> {
         try {
@@ -255,6 +312,18 @@ export const api = {
         }
         const data = await response.json();
         return data.data || [];
+    },
+
+    async getLevelSkillPerformance(): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/game/admin/level-skill-performance`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch level skill performance');
+        }
+        const data = await response.json();
+        return data.data || null;
     },
 
     
@@ -614,10 +683,22 @@ export const api = {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to update presence');
+            const errorText = await response.text().catch(() => '');
+            throw new Error(errorText || 'Failed to update presence');
         }
 
             return response.json();
+    },
+
+    async getOnlineStatus(): Promise<Record<string, boolean>> {
+        const response = await fetch(`${API_BASE_URL}/presence/online-status`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch online status');
+        }
+        return response.json();
     },
 
     // Admin endpoints
@@ -671,13 +752,28 @@ export const api = {
     },
 
     async getUserGameData(userId: string, collectionName: string): Promise<any> {
-        const response = await fetch(`${API_BASE_URL}/game/data?userid=${userId}&collectionName=${collectionName}`, {
-            headers: getAuthHeaders()
+        const response = await fetch(`${API_BASE_URL}/game/data`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ userid: userId, collectionName })
         });
         if (!response.ok) {
             throw new Error('Failed to fetch user game data');
         }
         return response.json();
+    },
+
+    async getUserCollectedGameData(userId: string): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/game/data`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ userid: userId })
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch user collected game data');
+        }
+        const data = await response.json();
+        return data.data || data;
     },
 
     async generateQuestionList(userId: string, topic: string, collectionName: string): Promise<any> {
@@ -721,13 +817,18 @@ export const api = {
     },
 
     async createPost(postData: any): Promise<any> {
+        const { title, topic, content, status } = postData;
         const response = await fetch(`${API_BASE_URL}/posts/`, {
             method: 'POST',
             headers: getAuthHeaders(),
-            body: JSON.stringify(postData)
+            body: JSON.stringify({ title, topic, content, status })
         });
         if (!response.ok) {
-            throw new Error('Failed to create post');
+            const errorData = await response.json().catch(() => ({}));
+            const detail = Array.isArray(errorData.detail)
+                ? errorData.detail.map((item: any) => item.msg || JSON.stringify(item)).join(', ')
+                : errorData.detail;
+            throw new Error(detail || `Failed to create post (${response.status})`);
         }
         return response.json();
     },
@@ -877,6 +978,16 @@ export const api = {
         }
         const data = await response.json();
         return data.data || [];
+    },
+
+    async getAdminDataExport(): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}/admin/data-export`, {
+            headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch admin export data');
+        }
+        return response.json();
     },
 
     forgotPassword: async (email: string) => {

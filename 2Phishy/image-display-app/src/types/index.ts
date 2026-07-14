@@ -9,6 +9,38 @@ export interface User {
   last_seen?: string | null;
   account_status?: "active" | "inactive" | "suspended";
   role?: "student" | "admin" | "super-admin";
+  privacy_policy_accepted?: boolean;
+  privacy_policy_accepted_at?: string | null;
+  thesis_consent_accepted?: boolean;
+  thesis_consent_accepted_at?: string | null;
+  consent_version?: string | null;
+  avatar_url?: string | null;
+}
+
+export interface SystemSettings {
+  system_name: string;
+  institution_name: string;
+  logo_url: string;
+  login_subtitle: string;
+  register_subtitle: string;
+  privacy_summary: string;
+  consent_text: string;
+  updated_at?: string | null;
+  updated_by?: string | null;
+}
+
+export type SystemContentType = "knowledge_base" | "question_base" | "initial_assessment";
+
+export interface SystemContentRecord {
+  content_type: SystemContentType;
+  label: string;
+  data: any;
+  source: "default" | "draft" | "published" | string;
+  draft_version: number;
+  published_version: number;
+  has_draft: boolean;
+  updated_at?: string | null;
+  updated_by?: string | null;
 }
 
 export interface Report {

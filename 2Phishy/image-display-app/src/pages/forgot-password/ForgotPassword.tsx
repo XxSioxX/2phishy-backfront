@@ -1,6 +1,7 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../services/api";
+import { useBranding } from "../../contexts/BrandingContext";
 import "./forgot-password.scss";
 
 interface FormErrors {
@@ -13,6 +14,7 @@ const ForgotPassword: React.FC = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const { branding } = useBranding();
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -50,48 +52,50 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <div className="login">
-      <div className="login-container">
-        <img src="/logo1.png" alt="Logo" />
-        <h1>Forgot Password</h1>
-        <p className="subtitle">
-          Enter your email to receive a reset link
-        </p>
+      <div className="login-shell">
+        <div className="login-container">
+          <img className="login-logo" src={branding.logo_url} alt="Logo" />
+          <h1>Forgot Password</h1>
+          <p className="subtitle">
+            Enter your email to receive a reset link
+          </p>
 
-        {successMessage && (
-          <div className="success-message">{successMessage}</div>
-        )}
+          {successMessage && (
+            <div className="success-message">{successMessage}</div>
+          )}
 
-        {errors.general && (
-          <div className="error-message general">{errors.general}</div>
-        )}
+          {errors.general && (
+            <div className="error-message general">{errors.general}</div>
+          )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              className={errors.email ? "error" : ""}
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className={errors.email ? "error" : ""}
+                disabled={isLoading}
+              />
+              {errors.email && (
+                <div className="error-message">{errors.email}</div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="login-button"
               disabled={isLoading}
-            />
-            {errors.email && (
-              <div className="error-message">{errors.email}</div>
-            )}
+            >
+              {isLoading ? "Sending..." : "Send Reset Link"}
+            </button>
+          </form>
+
+          <div className="register-link">
+            <Link to="/login">Back to login</Link>
           </div>
-
-          <button
-            type="submit"
-            className="login-button"
-            disabled={isLoading}
-          >
-            {isLoading ? "Sending..." : "Send Reset Link"}
-          </button>
-        </form>
-
-        <div className="register-link">
-          <Link to="/login">Back to login</Link>
         </div>
       </div>
     </div>

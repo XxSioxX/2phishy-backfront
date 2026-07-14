@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
 import { formatDatePH } from "../../utils/dateUtils";
+import { getAvatarUrl } from "../../utils/avatarUtils";
 import "./QuizInsightsPage.scss";
 
 interface QuizInsight {
@@ -47,8 +48,9 @@ const QuizInsightsPage = () => {
   const [filterTopic, setFilterTopic] = useState("all");
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [displayLimit, setDisplayLimit] = useState<number | "all">(10);
 
-  const fetchQuizInsights = async () => {
+  const fetchQuizInsights = useCallback(async () => {
     if (!user || (user.role !== "admin" && user.role !== "super-admin")) return;
     setLoading(true);
     setError(null);
@@ -60,13 +62,13 @@ const QuizInsightsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (isAuthenticated && user && (user.role === "admin" || user.role === "super-admin")) {
       fetchQuizInsights();
     }
-  }, [isAuthenticated, user]);
+  }, [fetchQuizInsights, isAuthenticated, user]);
 
   const topicOptions = useMemo(() => {
     const set = new Set(quizInsights.map((r) => r.topic));
@@ -115,6 +117,11 @@ const QuizInsightsPage = () => {
       uniqueTopics,
     };
   }, [rows]);
+
+  const displayedRows = useMemo(() => {
+    if (displayLimit === "all") return rows;
+    return rows.slice(0, displayLimit);
+  }, [rows, displayLimit]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -205,6 +212,17 @@ const QuizInsightsPage = () => {
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
+
+        <select
+          className="qi-limit-filter"
+          value={displayLimit}
+          onChange={(e) => setDisplayLimit(e.target.value === "all" ? "all" : Number(e.target.value))}
+        >
+          <option value={5}>Show 5</option>
+          <option value={10}>Show 10</option>
+          <option value={20}>Show 20</option>
+          <option value="all">Show All</option>
+        </select>
       </div>
       <div className="qi-table-card">
         {rows.length === 0 ? (
@@ -215,7 +233,10 @@ const QuizInsightsPage = () => {
         ) : (
           <>
             <div className="qi-table-meta">
-              Showing <strong>{rows.length}</strong> of <strong>{quizInsights.length}</strong> records
+              Showing <strong>{displayedRows.length}</strong> of <strong>{rows.length}</strong> filtered records
+              {rows.length !== quizInsights.length && (
+                <> from <strong>{quizInsights.length}</strong> total</>
+              )}
             </div>
             <div className="qi-table-scroll">
               <table className="qi-table">
@@ -237,13 +258,13 @@ const QuizInsightsPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row, i) => {
+                  {displayedRows.map((row, i) => {
                     const cls = scoreClass(row.score);
                     const icon = TOPIC_ICONS[row.topic] ?? "📊";
                     return (
                       <tr key={`${row.username}-${row.topic}-${i}`}>
                         <td className="td-user">
-                          <img src={row.avatar_url} alt={row.username} className="user-avatar" />
+                          <img src={getAvatarUrl(row.username, row.avatar_url, 40)} alt={row.username} className="user-avatar" />
                           <span>{row.username}</span>
                         </td>
                         <td className="td-topic">
@@ -284,4 +305,3 @@ const QuizInsightsPage = () => {
 };
 
 export default QuizInsightsPage;
-

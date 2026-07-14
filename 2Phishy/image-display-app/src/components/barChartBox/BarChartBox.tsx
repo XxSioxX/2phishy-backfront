@@ -22,7 +22,20 @@ const BarChartBox = (props: Props) => {
             <div className="header">
                 <h1>{props.title}</h1>
                 {props.onViewAll && (
-                    <a href="#" onClick={handleViewAll} style={{color: props.color, fontSize: '14px'}}>View all</a>
+                    <button
+                        type="button"
+                        onClick={handleViewAll}
+                        style={{
+                            color: props.color,
+                            fontSize: '14px',
+                            background: 'transparent',
+                            border: 0,
+                            padding: 0,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        View all
+                    </button>
                 )}
             </div>
             <div className="chart">

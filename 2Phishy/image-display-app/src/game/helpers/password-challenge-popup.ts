@@ -168,7 +168,7 @@ export class PasswordChallengePopup {
       AudioManager.playSfx(this.scene, SFX.PASSWORD_SUBMIT);
 
       const result = config.evaluate(this.value);
-      const override = config.onAttempt?.(result, this.value);
+      const override = config.onAttempt?.(result, this.value) as PasswordEvaluation | undefined;
       const effectiveResult = override ?? result;
       this.feedbackText?.setText(effectiveResult.message);
       this.feedbackText?.setColor(effectiveResult.passed ? '#67ef8d' : '#ff7676');

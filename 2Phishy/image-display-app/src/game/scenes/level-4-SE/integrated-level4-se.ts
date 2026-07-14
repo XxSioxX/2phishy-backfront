@@ -54,6 +54,11 @@ export class SELevel extends BaseIntegratedLevel {
     this.dialogueUI = new DialogueUI(this);
     this.createSuspicionMeter();
 
+    if (this.backendLevelCompleted || this.questions.length === 0) {
+      console.log('SE level already complete or has no remaining questions; skipping NPC respawn.');
+      return;
+    }
+
     // Spawn NPCs
     this.createNPCAnimations();
     this.initNPCLayer();

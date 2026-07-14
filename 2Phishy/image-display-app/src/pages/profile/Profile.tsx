@@ -3,11 +3,39 @@ import "./profile.scss";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
 import { formatDatePH } from "../../utils/dateUtils";
+import { generateAvatarUrl } from "../../utils/avatarUtils";
 import OverallScoreRing from "./components/OverallScoreRing";
 import TopicScoreCard from "./components/TopicScoreCard";
 
+interface InitialAssessmentTopic {
+  topic: string;
+  completed: boolean;
+  completedAt?: string | null;
+  questionMapCount: number;
+  subcatScores: Record<string, unknown>;
+  subcatPriority: unknown[];
+}
+
+const buildInitialAssessmentTopics = (initialAssessmentDoc: any): InitialAssessmentTopic[] => {
+  const assessments = initialAssessmentDoc?.assessments;
+  if (!assessments || typeof assessments !== "object") return [];
+
+  return Object.entries(assessments).map(([topic, assessment]: [string, any]) => {
+    const questionMap = Array.isArray(assessment?.question_map) ? assessment.question_map : [];
+    return {
+      topic,
+      completed: assessment?.assessment_completed === true,
+      completedAt: assessment?.assessment_completed_at || null,
+      questionMapCount: questionMap.length,
+      subcatScores: assessment?.subcat_scores || {},
+      subcatPriority: Array.isArray(assessment?.subcat_priority) ? assessment.subcat_priority : [],
+    };
+  }).sort((a, b) => a.topic.localeCompare(b.topic));
+};
+
 const Profile: React.FC = () => {
   const { user, login } = useAuth();
+  const userId = user?.userid;
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -16,8 +44,11 @@ const Profile: React.FC = () => {
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar_url || "");
   const [scoreProfile, setScoreProfile] = useState<any>(null);
   const [loadingScores, setLoadingScores] = useState(true);
+  const [initialAssessments, setInitialAssessments] = useState<InitialAssessmentTopic[]>([]);
+  const [loadingInitialAssessments, setLoadingInitialAssessments] = useState(true);
   const [accountOpen, setAccountOpen] = useState<boolean>(() => {
     const v = localStorage.getItem('profile_accountOpen');
     return v !== null ? v === 'true' : true;
@@ -30,30 +61,51 @@ const Profile: React.FC = () => {
     const v = localStorage.getItem('profile_scoreOpen');
     return v !== null ? v === 'true' : true;
   });
+  const [initialAssessmentOpen, setInitialAssessmentOpen] = useState<boolean>(() => {
+    const v = localStorage.getItem('profile_initialAssessmentOpen');
+    return v !== null ? v === 'true' : true;
+  });
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchScoreProfile = async () => {
-      if (!user || !user.userid) return;
+      if (!userId) return;
 
       try {
         setLoadingScores(true);
-        const profile = await api.getFullScoreProfile(user.userid);
+        setLoadingInitialAssessments(true);
+        const profile = await api.getFullScoreProfile(userId);
+        const collectedData = await api.getUserCollectedGameData(userId).catch((error) => {
+          console.warn("Failed to fetch initial assessment data:", error);
+          return null;
+        });
+        if (cancelled) return;
         setScoreProfile(profile);
+        setInitialAssessments(buildInitialAssessmentTopics(collectedData?.initial_assessments));
       } catch (error) {
+        if (cancelled) return;
         console.error("Failed to fetch score profile:", error);
       } finally {
-        setLoadingScores(false);
+        if (!cancelled) {
+          setLoadingScores(false);
+          setLoadingInitialAssessments(false);
+        }
       }
     };
 
     fetchScoreProfile();
-  }, [user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       if (mobile) {
-        // Auto-collapse on mobile — only if no saved preference exists
+        // Auto-collapse on mobile if no saved preference exists.
         if (localStorage.getItem('profile_personalOpen') === null) setPersonalOpen(false);
         if (localStorage.getItem('profile_scoreOpen') === null) setScoreOpen(false);
       }
@@ -64,6 +116,10 @@ const Profile: React.FC = () => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  useEffect(() => {
+    setAvatarPreview(user?.avatar_url || "");
+  }, [user?.avatar_url]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -141,9 +197,55 @@ const Profile: React.FC = () => {
     setIsEditing(false);
   };
 
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrors({ general: "Choose an image file for your avatar." });
+      return;
+    }
+
+    if (file.size > 500 * 1024) {
+      setErrors({ general: "Avatar image is too large. Use an image under 500 KB." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const avatarUrl = String(reader.result || "");
+      const token = localStorage.getItem("token");
+      setIsLoading(true);
+      setAvatarPreview(avatarUrl);
+      try {
+        const savedUser = await api.updateCurrentUserProfile({ avatar_url: avatarUrl });
+        if (token) {
+          login(savedUser, token);
+        } else {
+          localStorage.setItem("user", JSON.stringify(savedUser));
+        }
+        setSuccessMessage("Avatar updated.");
+        setErrors({});
+      } catch (error: any) {
+        setAvatarPreview(user.avatar_url || "");
+        setErrors({
+          general: error.message || "Failed to update avatar. Please try again."
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const toggleAccount = () => { const v = !accountOpen; setAccountOpen(v); localStorage.setItem('profile_accountOpen', String(v)); };
   const togglePersonal = () => { const v = !personalOpen; setPersonalOpen(v); localStorage.setItem('profile_personalOpen', String(v)); };
   const toggleScore = () => { const v = !scoreOpen; setScoreOpen(v); localStorage.setItem('profile_scoreOpen', String(v)); };
+  const toggleInitialAssessment = () => {
+    const v = !initialAssessmentOpen;
+    setInitialAssessmentOpen(v);
+    localStorage.setItem('profile_initialAssessmentOpen', String(v));
+  };
 
   const parseScore = (value: unknown): number => {
     const parsedValue = Number(value);
@@ -165,7 +267,19 @@ const Profile: React.FC = () => {
   return (
     <div className="profile">
       <div className="profile-container">
-        <h1>Profile</h1>
+        <div className="profile-heading">
+          <h1>Profile</h1>
+          <div className="avatar-editor">
+            <img
+              src={avatarPreview || generateAvatarUrl(user.username, 72)}
+              alt="User avatar"
+            />
+            <label>
+              Change Avatar
+              <input type="file" accept="image/*" onChange={handleAvatarChange} />
+            </label>
+          </div>
+        </div>
         
         {successMessage && (
           <div className="success-message">
@@ -184,7 +298,7 @@ const Profile: React.FC = () => {
             <div className="section-header">
               <h2>Account Information</h2>
               <button className="toggle-button" onClick={toggleAccount} aria-expanded={accountOpen}>
-                <span className={`toggle-arrow ${accountOpen ? 'open' : ''}`} aria-hidden="true">▶</span>
+                <span className={`toggle-arrow ${accountOpen ? 'open' : ''}`} aria-hidden="true">&gt;</span>
               </button>
             </div>
             {accountOpen && (
@@ -231,7 +345,7 @@ const Profile: React.FC = () => {
             <div className="section-header">
               <h2>Personal Information</h2>
               <button className="toggle-button" onClick={togglePersonal} aria-expanded={personalOpen}>
-                <span className={`toggle-arrow ${personalOpen ? 'open' : ''}`} aria-hidden="true">▶</span>
+                <span className={`toggle-arrow ${personalOpen ? 'open' : ''}`} aria-hidden="true">&gt;</span>
               </button>
             </div>
             {personalOpen && (
@@ -335,7 +449,7 @@ const Profile: React.FC = () => {
             <div className="section-header">
               <h2>Full Score Profile</h2>
               <button className="toggle-button" onClick={toggleScore} aria-expanded={scoreOpen}>
-                <span className={`toggle-arrow ${scoreOpen ? 'open' : ''}`} aria-hidden="true">▶</span>
+                <span className={`toggle-arrow ${scoreOpen ? 'open' : ''}`} aria-hidden="true">&gt;</span>
               </button>
             </div>
             {scoreOpen && (
@@ -380,10 +494,96 @@ const Profile: React.FC = () => {
             </div>
             )}
           </div>
+
+          <div className={`profile-section ${initialAssessmentOpen ? 'open' : 'collapsed'}`}>
+            <div className="section-header">
+              <h2>Initial Assessment</h2>
+              <button className="toggle-button" onClick={toggleInitialAssessment} aria-expanded={initialAssessmentOpen}>
+                <span className={`toggle-arrow ${initialAssessmentOpen ? 'open' : ''}`} aria-hidden="true">&gt;</span>
+              </button>
+            </div>
+            {initialAssessmentOpen && (
+              <div className="section-content">
+                {loadingInitialAssessments ? (
+                  <div className="loading-message">Loading initial assessment...</div>
+                ) : initialAssessments.length > 0 ? (
+                  <>
+                    <div className="initial-assessment-list compact-assessment-list">
+                      {initialAssessments.slice(0, 3).map((assessment) => (
+                        <div className="initial-assessment-card" key={assessment.topic}>
+                          <div className="initial-assessment-header">
+                            <h3>{assessment.topic}</h3>
+                            <span className={`assessment-status ${assessment.completed ? "complete" : "pending"}`}>
+                              {assessment.completed ? "Completed" : "Pending"}
+                            </span>
+                          </div>
+                          <div className="assessment-meta">
+                            <span>Questions: {assessment.questionMapCount}</span>
+                            {assessment.completedAt && <span>Completed: {formatDatePH(assessment.completedAt, true)}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="view-assessments-button"
+                      onClick={() => setShowAssessmentModal(true)}
+                    >
+                      View All Assessments
+                    </button>
+                  </>
+                ) : (
+                  <div className="no-scores-message">No initial assessment data available.</div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+      {showAssessmentModal && (
+        <div className="profile-modal-overlay" onClick={() => setShowAssessmentModal(false)}>
+          <div className="profile-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="profile-modal-header">
+              <div>
+                <h2>All Assessments</h2>
+                <p>{initialAssessments.length} topics</p>
+              </div>
+              <button type="button" onClick={() => setShowAssessmentModal(false)}>
+                x
+              </button>
+            </div>
+            <div className="initial-assessment-list modal-assessment-list">
+              {initialAssessments.map((assessment) => (
+                <div className="initial-assessment-card" key={assessment.topic}>
+                  <div className="initial-assessment-header">
+                    <h3>{assessment.topic}</h3>
+                    <span className={`assessment-status ${assessment.completed ? "complete" : "pending"}`}>
+                      {assessment.completed ? "Completed" : "Pending"}
+                    </span>
+                  </div>
+                  <div className="assessment-meta">
+                    <span>Questions: {assessment.questionMapCount}</span>
+                    {assessment.completedAt && <span>Completed: {formatDatePH(assessment.completedAt, true)}</span>}
+                  </div>
+                  {Object.keys(assessment.subcatScores).length > 0 && (
+                    <div className="assessment-score-grid">
+                      {Object.entries(assessment.subcatScores).map(([label, value]) => (
+                        <div className="assessment-score-pill" key={label}>
+                          <span>{label}</span>
+                          <strong>{String(value)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Profile;
+

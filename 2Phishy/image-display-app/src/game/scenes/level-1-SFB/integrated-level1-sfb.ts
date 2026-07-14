@@ -1,7 +1,7 @@
 import { BaseIntegratedLevel, LevelInteractable } from '../core/BaseIntegratedLevel';
 import { LEVEL_CONFIGS } from '../core/LevelConfigurations';
 import {Tilemaps} from "phaser";
-import {gameAPI} from "../../helpers/game-api.ts";
+import {gameAPI} from "../../helpers/game-api";
 import { AudioManager, SFX } from "../../audio";
 
 type TrapChestState = {
@@ -475,7 +475,8 @@ export class SFBLevel extends BaseIntegratedLevel {
       }
 
       pointPair.forEach((sprite: Phaser.GameObjects.Sprite) => {
-         sprite.disableBody(true, true);
+         this.physics.world.disable(sprite);
+         sprite.setActive(false).setVisible(false);
       });
 
       this.inAssessment = false;
@@ -512,7 +513,7 @@ export class SFBLevel extends BaseIntegratedLevel {
 
       const zone = this.getObjectNumberProperty(obj, 'zone_number');
       if (!zone) return;
-      const door = this.spawnDoor(obj, true);
+      const door = this.spawnDoor(obj);
 
       door.forEach(sprite => {
         sprite.setAlpha(1);
@@ -526,7 +527,7 @@ export class SFBLevel extends BaseIntegratedLevel {
 
       const zone = this.getObjectNumberProperty(obj, 'zone_number');
       if (!zone) return;
-      const door = this.spawnDoor(obj, false);
+      const door = this.spawnDoor(obj);
 
       door.forEach(sprite => {
         sprite.setAlpha(1);
@@ -554,7 +555,7 @@ export class SFBLevel extends BaseIntegratedLevel {
 
       this.physics.world.disable(sprite);
 
-      const frame = sprite.frame.name;
+      const frame = Number(sprite.frame.name);
 
       // TOP HALF
       if (frame === 450) {
@@ -770,7 +771,7 @@ export class SFBLevel extends BaseIntegratedLevel {
 
       door.forEach(sprite => {
 
-          const frame = sprite.frame.name;
+          const frame = Number(sprite.frame.name);
 
           // OPEN TOP
           if (frame === 453) {
@@ -797,9 +798,7 @@ export class SFBLevel extends BaseIntegratedLevel {
           // re-enable collisions
           this.physics.world.enable(sprite);
 
-          if (sprite.body) {
-              sprite.body.enable = true;
-          }
+          this.physics.world.enable(sprite);
 
       });
 

@@ -5,7 +5,8 @@ import {PSLevel} from "../level-2-PS";
 import {MLevel} from "../level-3-M";
 import {SELevel} from "../level-4-SE";
 import {IRLevel} from "../level-5-IR";
-import {PrologueScene} from "../dialogues/prologue.ts";
+import {PrologueScene} from "../dialogues/prologue";
+import { CreditsScene } from "../dialogues/credits";
 import { AdminDevToolsScene } from "../admin-devtools";
 import { loadAudioAssets } from "../../audio";
 
@@ -54,6 +55,7 @@ export class LoadingScene extends Scene {
   create(): void {
     console.log('Loading scene was created');
     this.scene.add("prologue-scene", PrologueScene);
+    this.scene.add('credits-scene', CreditsScene);
     this.scene.add('main-menu-scene', MainMenuScene);
     this.scene.add('sfb-level-scene', SFBLevel);
     this.scene.add('ps-level-scene', PSLevel);

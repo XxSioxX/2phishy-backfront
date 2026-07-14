@@ -266,6 +266,81 @@
         // Unified button styles applied globally
       }
 
+      .initial-assessment-list {
+        display: grid;
+        gap: 0.85rem;
+
+        .initial-assessment-card {
+          padding: 0.9rem;
+          background-color: $dark-bg;
+          border: 1px solid $dark-color;
+          border-radius: 8px;
+
+          .initial-assessment-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.65rem;
+
+            h3 {
+              margin: 0;
+              color: $main-color;
+              font-size: 0.95rem;
+              font-weight: 600;
+            }
+
+            .assessment-status {
+              padding: 0.2rem 0.5rem;
+              border-radius: 999px;
+              font-size: 0.72rem;
+              font-weight: 700;
+              text-transform: uppercase;
+
+              &.complete {
+                color: #2ecc71;
+                background: rgba(46, 204, 113, 0.14);
+              }
+
+              &.pending {
+                color: #f39c12;
+                background: rgba(243, 156, 18, 0.14);
+              }
+            }
+          }
+
+          .assessment-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+            color: $soft-color;
+            font-size: 0.8rem;
+            margin-bottom: 0.65rem;
+          }
+
+          .assessment-score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.5rem;
+          }
+
+          .assessment-score-pill {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.45rem 0.55rem;
+            border-radius: 6px;
+            background: $soft-bg;
+            color: $soft-color;
+            font-size: 0.78rem;
+
+            strong {
+              color: $main-color;
+            }
+          }
+        }
+      }
+
       .score-details {
         display: flex;
         flex-direction: column;
@@ -577,6 +652,353 @@
               border-color: $dark-color;
               color: $main-color;
             }
+          }
+        }
+      }
+    }
+  }
+}
+
+.profile {
+  align-items: flex-start;
+  min-height: 79.1vh;
+  padding: 28px;
+  background: $main-bg;
+  border-radius: 12px;
+
+  .profile-container {
+    max-width: 1180px;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+
+    .profile-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid $soft-bg;
+
+      h1 {
+        text-align: left;
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 600;
+        color: $main-color;
+      }
+    }
+
+    .avatar-editor {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+
+      img {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(96, 165, 250, 0.45);
+        background: $dark-bg;
+      }
+
+      label {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 12px;
+        border-radius: 6px;
+        background: $soft-bg;
+        border: 1px solid $dark-color;
+        color: $main-color;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+
+        &:hover,
+        &:focus-within {
+          background: $dark-bg;
+          border-color: $soft-bg;
+          color: #ffffff;
+        }
+      }
+
+      input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+    }
+
+    .profile-sections {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .profile-section {
+      min-width: 0;
+      flex: none;
+      margin-bottom: 0;
+      background: $dark-bg;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+      padding: 18px;
+
+      .section-header {
+        min-height: 34px;
+        margin-bottom: 14px;
+
+        h2 {
+          color: $main-color;
+          font-size: 15px;
+          font-weight: 800;
+        }
+
+        .toggle-button {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.04);
+          color: $main-color;
+
+          .toggle-arrow {
+            font-size: 13px;
+          }
+        }
+      }
+
+      .section-content {
+        min-width: 0;
+      }
+
+      .user-details .detail-item {
+        min-height: 40px;
+        gap: 14px;
+
+        label {
+          color: $soft-color;
+          font-size: 13px;
+        }
+
+        span {
+          color: $main-color;
+          overflow-wrap: anywhere;
+        }
+      }
+
+      .initial-assessment-list {
+        grid-template-columns: 1fr;
+      }
+
+      .compact-assessment-list {
+        max-height: 310px;
+        overflow: hidden;
+      }
+
+      .view-assessments-button {
+        width: 100%;
+        min-height: 40px;
+        margin-top: 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.05);
+        color: $main-color;
+        font-weight: 800;
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+          border-color: rgba(96, 165, 250, 0.45);
+          outline: none;
+        }
+      }
+    }
+  }
+
+  .profile-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0, 0, 0, 0.64);
+    backdrop-filter: blur(7px);
+  }
+
+  .profile-modal {
+    width: min(100%, 820px);
+    max-height: min(86vh, 720px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: $dark-bg;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.36);
+    padding: 18px;
+  }
+
+  .profile-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+
+    h2 {
+      color: $main-color;
+      margin: 0;
+      font-size: 18px;
+    }
+
+    p {
+      margin: 4px 0 0;
+      color: $soft-color;
+      font-size: 12px;
+    }
+
+    button {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      color: $main-color;
+      cursor: pointer;
+    }
+  }
+
+  .modal-assessment-list {
+    overflow: auto;
+    padding-right: 4px;
+  }
+}
+
+[data-theme="light"] {
+  .profile {
+    background: linear-gradient(135deg, #eaf6ff 0%, #f8fbff 52%, #edfdf5 100%);
+
+    .profile-container .profile-heading {
+      border-bottom-color: #b7d7ec;
+    }
+
+    .profile-container .profile-heading h1 {
+      color: #172033;
+    }
+
+    .avatar-editor label {
+      background: #e5f3ff;
+      border-color: #b9d4ec;
+      color: #172033;
+
+      &:hover,
+      &:focus-within {
+        background: #ffffff;
+        border-color: #172033;
+        color: #172033;
+      }
+    }
+
+    .profile-section,
+    .profile-modal {
+      background: #ffffff;
+      border-color: #c6ddec;
+      box-shadow: 0 12px 28px rgba(28, 73, 112, 0.1);
+    }
+
+    .profile-section .section-header .toggle-button,
+    .profile-modal-header button,
+    .view-assessments-button {
+      background: #f4f9ff;
+      border-color: #c6ddec;
+      color: #172033;
+    }
+
+    .profile-section .section-header .toggle-button:hover,
+    .profile-modal-header button:hover,
+    .view-assessments-button:hover {
+      background: #e5f3ff;
+      border-color: #38bdf8;
+    }
+
+    .user-details .detail-item,
+    .metric-card,
+    .initial-assessment-card,
+    .assessment-score-pill {
+      background: #f8fbff;
+      border-color: #c6ddec;
+    }
+
+    .profile-form input {
+      background: #ffffff;
+      border-color: #c6ddec;
+      color: #172033;
+    }
+
+    .read-only-notice,
+    .loading-message,
+    .no-scores-message,
+    .assessment-meta,
+    .profile-modal-header p {
+      color: #5a6b7f;
+    }
+
+    .profile-modal-overlay {
+      background: rgba(15, 23, 42, 0.42);
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .profile {
+    padding: 16px;
+
+    .profile-container {
+      .profile-sections {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .profile {
+    padding: 12px;
+
+      .profile-container {
+        padding: 0;
+        border: none;
+
+      .profile-heading {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .profile-section {
+        padding: 14px;
+
+        .section-header {
+          h2 {
+            font-size: 14px;
+          }
+
+          .toggle-button {
+            width: 36px;
+            height: 36px;
           }
         }
       }

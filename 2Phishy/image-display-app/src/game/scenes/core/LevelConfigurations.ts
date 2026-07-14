@@ -114,6 +114,7 @@ export const LEVEL_CONFIGS = {
       description:
         'Learn how attackers manipulate human behavior to bypass security.\n' +
         'Stay alert, collect knowledge, and challenge the Wards.',
+      dialogueId: 'level4_spawn_intro',
     },
 
     next: {

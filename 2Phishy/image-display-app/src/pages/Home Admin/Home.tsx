@@ -1,55 +1,82 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import BarChartBox from "../../components/barChartBox/BarChartBox"
 import ChartBox from "../../components/chartBox/ChartBox"
 import TopBox from "../../components/topBox/TopBox"
 import PieChartBox from "../../components/pieChartBox/PieChartBox"
 import WeeklyUserModal from "../../components/weeklyUserModal/WeeklyUserModal"
 import TopicPerformanceModal from "../../components/topicPerformanceModal/TopicPerformanceModal"
-import { chartBoxQuizRate } from "../../data"
+import LevelSkillBox from "../../components/levelSkillBox/LevelSkillBox"
 import "./home.scss"
 import { api } from "../../services/api"
 import { useAuth } from "../../contexts/AuthContext"
 import { initializeWeeklyStats, cacheWeeklyStats, WeeklyUserStats } from "../../utils/weeklyUserStats"
 
+const emptyUserPerformanceCategories = [
+    { name: "Excellent (80-100%)", value: 0, color: "#4CAF50" },
+    { name: "Good (60-79%)", value: 0, color: "#FFB74D" },
+    { name: "Needs Improvement", value: 0, color: "#E57373" },
+];
+
 const Home = () => {
     const { user, isAuthenticated } = useAuth();
+    const userRole = user?.role;
     const [userStats, setUserStats] = useState<any>(null);
     const [activeParticipantsData, setActiveParticipantsData] = useState<any>(null);
     const [newUsersData, setNewUsersData] = useState<any>(null);
     const [topicPerformanceData, setTopicPerformanceData] = useState<any[]>([]);
     const [userPerformanceCategoriesData, setUserPerformanceCategoriesData] = useState<any[]>([]);
+    const [levelSkillPerformanceData, setLevelSkillPerformanceData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showWeeklyModal, setShowWeeklyModal] = useState(false);
     const [showTopicModal, setShowTopicModal] = useState(false);
     const [weeklyStats, setWeeklyStats] = useState<WeeklyUserStats | null>(null);
+    const dashboardFetchInFlightRef = useRef(false);
 
     useEffect(() => {
+        let cancelled = false;
+
         const fetchDashboardData = async () => {
-            if (!isAuthenticated || !user || (user.role !== 'admin' && user.role !== 'super-admin')) {
+            if (!isAuthenticated || (userRole !== 'admin' && userRole !== 'super-admin')) {
                 setLoading(false);
                 return;
             }
+
+            if (dashboardFetchInFlightRef.current) return;
+            dashboardFetchInFlightRef.current = true;
 
             try {
                 setLoading(true);
                 setError(null);
 
                 // Fetch all dashboard data in parallel
-                const [userStatsData, activeParticipantsData, newUsersData, users, topicPerformance, userPerformanceCategories] = await Promise.all([
+                const [userStatsData, activeParticipantsData, newUsersData, users, topicPerformance, userPerformanceCategories, levelSkillPerformance] = await Promise.all([
                     api.getUserStats(),
                     api.getActiveParticipantsOverTime('week'), // Default to weekly view for active participants
                     api.getNewUsersOverTime('week'), // Default to weekly view for new users
                     api.getUsers(), // Get all users for weekly stats
-                    api.getTopicPerformance(), // Get topic performance data
-                    api.getUserPerformanceCategories() // Get overall student performance categories
+                    api.getTopicPerformance().catch((err) => {
+                        console.warn('Failed to fetch topic performance data:', err);
+                        return [];
+                    }), // Get topic performance data
+                    api.getUserPerformanceCategories().catch((err) => {
+                        console.warn('Failed to fetch user performance categories:', err);
+                        return emptyUserPerformanceCategories;
+                    }), // Get overall student performance categories
+                    api.getLevelSkillPerformance().catch((err) => {
+                        console.warn('Failed to fetch level skill performance:', err);
+                        return null;
+                    })
                 ]);
+
+                if (cancelled) return;
 
                 setUserStats(userStatsData);
                 setActiveParticipantsData(activeParticipantsData);
                 setNewUsersData(newUsersData);
                 setTopicPerformanceData(topicPerformance);
                 setUserPerformanceCategoriesData(userPerformanceCategories);
+                setLevelSkillPerformanceData(levelSkillPerformance);
 
                 // Initialize weekly stats from users data
                 const stats = initializeWeeklyStats(users);
@@ -57,15 +84,22 @@ const Home = () => {
                 cacheWeeklyStats(stats);
 
             } catch (err) {
+                if (cancelled) return;
                 console.error('Failed to fetch dashboard data:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
             } finally {
-                setLoading(false);
+                dashboardFetchInFlightRef.current = false;
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         };
 
         fetchDashboardData();
-    }, [isAuthenticated, user]);
+        return () => {
+            cancelled = true;
+        };
+    }, [isAuthenticated, userRole]);
 
     // Create dynamic chart data based on real data
     const chartBoxUser = {
@@ -129,11 +163,7 @@ const Home = () => {
     const pieChartBoxUserPerformance = {
         title: "User Performance Categories",
         icon: "/person4.svg",
-        data: userPerformanceCategoriesData.length > 0 ? userPerformanceCategoriesData : [
-            { name: "Excellent (80-100%)", value: 40, color: "#4CAF50" },
-            { name: "Good (60-79%)", value: 35, color: "#FFB74D" },
-            { name: "Needs Improvement", value: 25, color: "#E57373" },
-        ],
+        data: userPerformanceCategoriesData.length > 0 ? userPerformanceCategoriesData : emptyUserPerformanceCategories,
     };
 
     if (loading) {
@@ -170,7 +200,7 @@ const Home = () => {
         );
     }
 
-    if (!isAuthenticated || !user || (user.role !== 'admin' && user.role !== 'super-admin')) {
+    if (!isAuthenticated || !user || (userRole !== 'admin' && userRole !== 'super-admin')) {
         return (
             <div className="home">
                 <div style={{ 
@@ -208,7 +238,7 @@ const Home = () => {
                     onViewAll={() => setShowWeeklyModal(true)}
                 />
             </div>
-            <div className="box box3"><ChartBox icon={""} {...chartBoxQuizRate}/></div>
+            <div className="box box3"><LevelSkillBox data={levelSkillPerformanceData}/></div>
             <div className="box box4"><PieChartBox {...pieChartBoxUserPerformance}/></div>
             <div className="box box5"><ChartBox {...chartBoxActiveParticipants}/></div>
             <div className="box box6"><BarChartBox {...barChartBoxUserTopics} onViewAll={() => setShowTopicModal(true)}/></div>

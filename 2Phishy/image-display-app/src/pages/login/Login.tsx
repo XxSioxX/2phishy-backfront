@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { api } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
+import { useBranding } from "../../contexts/BrandingContext";
 import "./login.scss";
 
 
@@ -20,6 +21,7 @@ interface FormErrors {
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { branding } = useBranding();
   const [formData, setFormData] = useState<LoginFormData>({
     username: "",
     password: "",
@@ -111,65 +113,67 @@ const Login: React.FC = () => {
 
   return (
     <div className="login">
-      <div className="login-container">
-        <img src="/logo1.png" alt="Logo" />
-        <h1>2Phishy Login</h1>
-        <p className="subtitle">Please enter your credentials to log in</p>
+      <div className="login-shell">
+        <div className="login-container">
+          <img className="login-logo" src={branding.logo_url} alt="Logo" />
+          <h1>{branding.system_name} Login</h1>
+          <p className="subtitle">{branding.login_subtitle}</p>
         
-        {errors.general && (
-          <div className="error-message general">{errors.general}</div>
-        )}
+          {errors.general && (
+            <div className="error-message general">{errors.general}</div>
+          )}
         
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="Enter your username"
-              className={errors.username ? "error" : ""}
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="Enter your username"
+                className={errors.username ? "error" : ""}
+                disabled={isLoading}
+              />
+              {errors.username && (
+                <div className="error-message">{errors.username}</div>
+              )}
+            </div>
+          
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                className={errors.password ? "error" : ""}
+                disabled={isLoading}
+              />
+              {errors.password && (
+                <div className="error-message">{errors.password}</div>
+              )}
+            </div>
+          
+            <div className="forgot-password">
+              <Link to="/forgot-password">Forgot password?</Link>
+            </div>
+          
+            <button 
+              type="submit" 
+              className="login-button"
               disabled={isLoading}
-            />
-            {errors.username && (
-              <div className="error-message">{errors.username}</div>
-            )}
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              className={errors.password ? "error" : ""}
-              disabled={isLoading}
-            />
-            {errors.password && (
-              <div className="error-message">{errors.password}</div>
-            )}
-          </div>
-          
-          <div className="forgot-password">
-            <Link to="/forgot-password">Forgot password?</Link>
-          </div>
-          
-          <button 
-            type="submit" 
-            className="login-button"
-            disabled={isLoading}
-          >
-            {isLoading ? "Logging in..." : "Log In"}
-          </button>
-        </form>
+            >
+              {isLoading ? "Logging in..." : "Log In"}
+            </button>
+          </form>
         
-        <div className="register-link">
-          Don't have an account? <a href="/register">Sign up</a>
+          <div className="register-link">
+            Don't have an account? <a href="/register">Sign up</a>
+          </div>
         </div>
       </div>
     </div>
