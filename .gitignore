@@ -35,3 +35,5 @@ logs/
 .env.development
 .env.production
 .tsbuildinfodeploy-prod.sh
+
+no-add-files/
