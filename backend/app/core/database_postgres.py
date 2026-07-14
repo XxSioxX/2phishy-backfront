@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
@@ -34,10 +34,26 @@ def init_db():
         from app.modules.auth.models.models import PasswordResetToken
         
         Base.metadata.create_all(bind=engine)
+        _ensure_user_consent_columns()
         logger.info("Database tables created successfully")
     except Exception as e:
         logger.error(f"Error creating database tables: {e}")
         raise
+
+def _ensure_user_consent_columns():
+    """Keep existing deployments compatible with consent fields added after table creation."""
+    statements = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_policy_accepted BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_policy_accepted_at TIMESTAMP NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS thesis_consent_accepted BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS thesis_consent_accepted_at TIMESTAMP NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_version VARCHAR NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR NULL",
+    ]
+
+    with engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))
 
 def get_db():
     db = SessionLocal()
