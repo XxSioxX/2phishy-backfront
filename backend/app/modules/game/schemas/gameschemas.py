@@ -3,7 +3,7 @@ from io import StringIO
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
-from typing import Optional
+from typing import Any, Literal, Optional
 
 from app.modules.game.models.game import AssessmentSubmission
 from app.modules.learning_path.models.learn_path import Topics
@@ -35,6 +35,16 @@ class GetUser(BaseModel):
 class TopicCompletionRequest(BaseModel):
     userid: str
     topic: str
+
+
+class GameplayMetricRequest(BaseModel):
+    userid: str
+    topic: str
+    metric: str
+    amount: float = 1
+    mode: Literal["inc", "set", "max"] = "inc"
+    metadata: Optional[dict[str, Any]] = None
+
 
 class GetUserTopic(GetUser):
     topic: Optional[Topics] = None

@@ -12,13 +12,16 @@ import random
 import os
 
 from app.modules.game.schemas.gameschemas import SingleResponseItem
-from app.core.cache_redis import redis_client as redis
+from app.modules.system.services.services import get_published_content_or_default
 
 
 logger = get_logger()
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 ASSETS_DIR = BASE_DIR / "backend-assets"
+DEFAULT_MIN_TOTAL_QUESTIONS = 6
+DEFAULT_SFB_MIN_TOTAL_QUESTIONS = 9
+SFB_ZONE_CAPACITIES = {1: 2, 2: 4, 3: 6}
 
 
 def map_subtopic_to_enum(subtopic_str: str) -> Subtopic:
@@ -29,12 +32,39 @@ def map_subtopic_to_enum(subtopic_str: str) -> Subtopic:
         raise ValueError(f"Invalid subtopic: {subtopic_str}")
 
 
+def parse_int_env(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        logger.warning(
+            f"Invalid integer value for {name}; using default {default}."
+        )
+        return default
+
+
+def get_min_total_questions(topic: Topics) -> int:
+    if topic == Topics.SFB_T:
+        configured = parse_int_env(
+            "SFB_MIN_TOTAL_QUESTIONS",
+            DEFAULT_SFB_MIN_TOTAL_QUESTIONS
+        )
+        return max(6, min(configured, sum(SFB_ZONE_CAPACITIES.values())))
+
+    configured = parse_int_env(
+        "MIN_TOTAL_QUESTIONS",
+        DEFAULT_MIN_TOTAL_QUESTIONS
+    )
+    return max(6, min(configured, 15))
+
+
 async def evaluate_assessment(response, evaluator: LearningEvaluator):
-    json_path = ASSETS_DIR / "initial_assessment.json"
+    logger.info("Evaluating assessment from published initial assessment content")
 
-    logger.info(f"Evaluating assessment from file path: {json_path}")
-
-    question_map = await evaluator.build_question_map(json_path)
+    initial_assessment_topics = await get_published_content_or_default("initial_assessment")
+    question_map = {}
+    for topic in initial_assessment_topics:
+        for question in topic.get("initial_assessment", []):
+            question_map[question["question_id"]] = question
     logger.info(f"Loaded question map with {len(question_map)} questions")
 
     question_ids = [
@@ -250,22 +280,6 @@ async def ensure_initial_assessment_doc(
     await collection.insert_one(doc)
     return doc
 
-async def get_static_asset(redis, key: str, file_path: Path):
-    try:
-        data = await redis.get(key)
-        if data:
-            return json.loads(data)
-
-        with open(file_path, "r") as f:
-            parsed = json.load(f)
-
-        await redis.set(key, json.dumps(parsed), ex=3600)
-        return parsed
-
-    except Exception:
-        with open(file_path, "r") as f:
-            return json.load(f)
-
 async def db_findby_id(
         db: AsyncIOMotorDatabase,
         user_id: UUID,
@@ -282,25 +296,10 @@ async def db_findby_id(
 
 async def load_question_base(topic_value: str):
     try:
-        data = await redis.get("static:question_base")
-
-        if data:
-            all_topics_data = json.loads(data)
-        else:
-            logger.warning("Redis cache miss for question base. Reloading from file.")
-
-            with open(ASSETS_DIR / "question_base.json", "r") as f:
-                all_topics_data = json.load(f)
-
-            # repopulate redis
-            await redis.set(
-                "static:question_base",
-                json.dumps(all_topics_data),
-                ex=3600
-            )
+        all_topics_data = await get_published_content_or_default("question_base")
 
     except Exception as e:
-        logger.error(f"Redis failure, falling back to file: {e}")
+        logger.error(f"Question base load failed, falling back to file: {e}")
 
         with open(ASSETS_DIR / "question_base.json", "r") as f:
             all_topics_data = json.load(f)
@@ -326,24 +325,10 @@ async def fetch_knowledge_list(
 ) -> list[dict]:
 
     try:
-        data = await redis.get("static:knowledge_base")
-
-        if data:
-            all_knowledge_data = json.loads(data)
-        else:
-            logger.warning("Redis cache miss for knowledge base. Reloading.")
-
-            with open(ASSETS_DIR / "knowledge_base.json", "r") as f:
-                all_knowledge_data = json.load(f)
-
-            await redis.set(
-                "static:knowledge_base",
-                json.dumps(all_knowledge_data),
-                ex=3600
-            )
+        all_knowledge_data = await get_published_content_or_default("knowledge_base")
 
     except Exception as e:
-        logger.error(f"Redis failure, fallback to file: {e}")
+        logger.error(f"Knowledge base load failed, fallback to file: {e}")
 
         with open(ASSETS_DIR / "knowledge_base.json", "r") as f:
             all_knowledge_data = json.load(f)
@@ -415,6 +400,8 @@ async def generate_question_list(
         logger.warning(f"No assessment data for topic '{topic.value}' for user '{user_id}'")
         return []
 
+    min_total_questions = get_min_total_questions(topic)
+
     if "question_map" in topic_assessment and topic_assessment["question_map"]:
         existing_question_map = topic_assessment["question_map"]
         valid_question_ids = {
@@ -429,13 +416,20 @@ async def generate_question_list(
         ]
 
         if not invalid_questions:
-            logger.info(f"Question map already exists for topic '{topic.value}' - skipping generation.")
-            return existing_question_map
+            if len(existing_question_map) >= min_total_questions:
+                logger.info(f"Question map already exists for topic '{topic.value}' - skipping generation.")
+                return existing_question_map
 
-        logger.warning(
-            f"Discarding stale question map for topic '{topic.value}'. "
-            f"Invalid question ids: {[question.get('question_id') for question in invalid_questions]}"
-        )
+            logger.info(
+                f"Regenerating short question map for topic '{topic.value}'. "
+                f"Found {len(existing_question_map)}, need at least {min_total_questions}."
+            )
+
+        else:
+            logger.warning(
+                f"Discarding stale question map for topic '{topic.value}'. "
+                f"Invalid question ids: {[question.get('question_id') for question in invalid_questions]}"
+            )
 
     priority_info = topic_assessment.get("subcat_priority", [])
     if len(priority_info) < 2 or not isinstance(priority_info[1], dict):
@@ -480,11 +474,8 @@ async def generate_question_list(
 
 
 
-    MIN_TOTAL_QUESTIONS = int(os.getenv("MIN_TOTAL_QUESTIONS", 6))
-    MIN_TOTAL_QUESTIONS = max(6, min(MIN_TOTAL_QUESTIONS, 15))
-
     # If below minimum, fill more from priority order
-    if len(question_map) < MIN_TOTAL_QUESTIONS:
+    if len(question_map) < min_total_questions:
 
         logger.info("Applying global minimum enforcement")
 
@@ -515,13 +506,13 @@ async def generate_question_list(
                 ]
 
                 for q in remaining_questions:
-                    if len(question_map) >= MIN_TOTAL_QUESTIONS:
+                    if len(question_map) >= min_total_questions:
                         break
 
                     question_map.append(q)
                     selected_ids.add(q["question_id"])
 
-            if len(question_map) >= MIN_TOTAL_QUESTIONS:
+            if len(question_map) >= min_total_questions:
                 break
 
     random.shuffle(question_map)
@@ -535,20 +526,39 @@ async def build_sfb_progression(question_map: list[dict]):
 
     question_count = len(question_map)
 
-    if question_count >= 3:
-        zone_sequence = [1, 2, 3]
+    zone_sequence: list[int] = []
 
-        for zone, max_count in ((1, 2), (2, 4)):
-            while (
-                len(zone_sequence) < question_count
-                and zone_sequence.count(zone) < max_count
-            ):
-                zone_sequence.append(zone)
-
-        while len(zone_sequence) < question_count:
-            zone_sequence.append(3)
-    else:
+    if question_count < 3:
         zone_sequence = [1 for _ in range(question_count)]
+    else:
+        target_counts = {1: 1, 2: 1, 3: 1}
+        remaining = question_count - 3
+
+        for zone in (1, 2):
+            if remaining <= 0:
+                break
+
+            target_counts[zone] += 1
+            remaining -= 1
+
+        while remaining > 0 and target_counts[3] < SFB_ZONE_CAPACITIES[3]:
+            target_counts[3] += 1
+            remaining -= 1
+
+        while remaining > 0 and target_counts[2] < SFB_ZONE_CAPACITIES[2]:
+            target_counts[2] += 1
+            remaining -= 1
+
+        while remaining > 0 and target_counts[1] < SFB_ZONE_CAPACITIES[1]:
+            target_counts[1] += 1
+            remaining -= 1
+
+        for zone in (1, 2, 3):
+            zone_sequence.extend([zone] * target_counts[zone])
+
+        while remaining > 0:
+            zone_sequence.append(3)
+            remaining -= 1
 
     updated_questions = []
     for index, question in enumerate(question_map):
@@ -644,10 +654,10 @@ async def save_assessment_question_result(
     try:
         logger.info("Updating document - adding question map")
         update_document = await collection.update_one(
-            {"user_id": str(user_id)},  # ✅ convert UUID to str
+            {"user_id": str(user_id)},  # Convert UUID to str.
             {
                 "$set": {
-                    f"assessments.{topic.value}.question_map": question_map  # ✅ fix syntax
+                    f"assessments.{topic.value}.question_map": question_map
                 }
             }
         )
@@ -771,7 +781,7 @@ async def save_popup_question_result(
     if cross_check_result != q_is_correct:
         raise Exception("inconsistent answers between Frontend and Backend")
 
-    # ✅ Ensure topic container exists
+    # Ensure topic container exists.
     if topic_key not in progression_doc.get("progress", {}):
         await db[collection_name].update_one(
             {"user_id": str(user_id)},
@@ -1102,7 +1112,7 @@ async def compute_overall_score(db, user_id, topic_question_maps):
         if not topic_progress:
             continue
 
-        # 🔥 O(1) lookup instead of nested loop
+        # O(1) lookup instead of nested loop.
         question_lookup = {
             q["question_id"]: q for q in question_map
         }

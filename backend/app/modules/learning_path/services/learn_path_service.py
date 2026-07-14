@@ -6,7 +6,8 @@ import json
 from uuid import UUID
 from pathlib import Path
 from app.utils.logger import get_logger
-from app.core.cache_redis import redis_client as redis
+from app.core.cache_redis import get_or_load_json_cached
+from app.modules.system.services.services import get_published_content_or_default
 
 
 logger = get_logger()
@@ -84,20 +85,16 @@ def evaluate_answer(answer: QuestionRequest, question_map):
     return user_answer.strip().lower() == correct_answer.strip().lower()
 
 async def get_static_asset(key: str, file_path: Path):
+    if file_path.name == "initial_assessment.json":
+        try:
+            return await get_published_content_or_default("initial_assessment")
+        except Exception as e:
+            logger.error(f"Published initial assessment load failed, fallback to file: {e}")
+            with open(file_path, "r") as f:
+                return json.load(f)
+
     try:
-        data = await redis.get(key)
-
-        if data:
-            return json.loads(data)
-
-        logger.warning(f"Redis cache miss for {key}. Reloading from file.")
-
-        with open(file_path, "r") as f:
-            parsed = json.load(f)
-
-        await redis.set(key, json.dumps(parsed), ex=3600)
-
-        return parsed
+        return await get_or_load_json_cached(key, lambda: load_questions(file_path))
 
     except Exception as e:
         logger.error(f"Redis failure for {key}, fallback to file: {e}")

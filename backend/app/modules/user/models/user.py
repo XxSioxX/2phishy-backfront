@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Enum
+from sqlalchemy import Column, String, DateTime, Enum, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
@@ -25,5 +25,11 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
     last_seen = Column(DateTime, nullable=True)
+    avatar_url = Column(String, nullable=True)
     account_status = Column(Enum(AccountStatus), default=AccountStatus.ACTIVE)
     role = Column(Enum(UserRole), default=UserRole.STUDENT)
+    privacy_policy_accepted = Column(Boolean, nullable=False, default=False)
+    privacy_policy_accepted_at = Column(DateTime, nullable=True)
+    thesis_consent_accepted = Column(Boolean, nullable=False, default=False)
+    thesis_consent_accepted_at = Column(DateTime, nullable=True)
+    consent_version = Column(String, nullable=True)

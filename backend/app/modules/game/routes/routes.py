@@ -1,4 +1,5 @@
 from typing import Dict, Any, List
+from urllib.parse import quote
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, status, Response, HTTPException
@@ -12,6 +13,7 @@ from app.modules.game.schemas.gameschemas import (
     SingleResponseItem,
     TopicCompletionRequest,
     UpdateQuestionListRequest,
+    GameplayMetricRequest,
     SocEngineeringSubmit
 )
 from app.modules.game.services.services import (
@@ -36,6 +38,7 @@ from app.modules.game.services.services import (
     build_ir_progression,
     update_current_zone_service,
 )
+from app.modules.game.services import level_skill_scoring
 from app.modules.learning_path.services.learn_path_service import DefaultLearningEvaluator
 
 from app.utils.logger import get_logger
@@ -43,6 +46,8 @@ from app.core.database_mongo import get_mongo_db
 from app.core.database_postgres import get_db
 from app.core.standard_response import StandardResponse
 from sqlalchemy.orm import Session
+from app.modules.auth.services.auth_service import require_admin_role
+from app.modules.user.models.user import User
 
 from datetime import datetime
 
@@ -51,6 +56,458 @@ from app.modules.learning_path.models.learn_path import Topics
 router = APIRouter(prefix="/game", tags=["game"])
 logger = get_logger(__name__)
 evaluator = DefaultLearningEvaluator()
+
+
+def _iter_topic_answers(progress_data: Dict[str, Any]):
+    for topic_name, topic_data in progress_data.items():
+        if not isinstance(topic_data, dict):
+            continue
+
+        answers = topic_data.get("answers", [])
+        if not isinstance(answers, list):
+            continue
+
+        yield topic_name, [
+            answer for answer in answers
+            if isinstance(answer, dict)
+        ]
+
+
+def _latest_answer_timestamp(answers: List[Dict[str, Any]]):
+    latest = None
+    for answer in answers:
+        timestamp = answer.get("timestamp")
+        if timestamp is None:
+            continue
+        if latest is None or str(timestamp) > str(latest):
+            latest = timestamp
+    return latest
+
+
+def _avatar_url(username: str) -> str:
+    return (
+        "https://ui-avatars.com/api/"
+        f"?name={quote(username)}&background=4f46e5&color=ffffff&size=40&bold=true"
+    )
+
+
+def _user_avatar_url(user: User, size: int = 40) -> str:
+    stored_avatar = getattr(user, "avatar_url", None)
+    if stored_avatar:
+        return stored_avatar
+    return (
+        "https://ui-avatars.com/api/"
+        f"?name={quote(user.username)}&background=4f46e5&color=ffffff&size={size}&bold=true"
+    )
+
+
+LEVEL_SKILL_CONFIGS = [
+    {
+        "topic": Topics.SFB_T.value,
+        "label": "Safe Browsing",
+        "progress_target": 4,
+        "metrics_used": [
+            "question accuracy",
+            "zone progress",
+            "trap hits",
+            "zone failures",
+            "level completion",
+        ],
+        "info": (
+            "Safe Browsing weighs quiz accuracy, cleared zones, malicious-link "
+            "trap hits, failed zones, and completion."
+        ),
+    },
+    {
+        "topic": Topics.PS_T.value,
+        "label": "Password Security",
+        "progress_target": 5,
+        "metrics_used": [
+            "question accuracy",
+            "boss progress",
+            "password challenge success rate",
+            "MFA decisions",
+            "level completion",
+        ],
+        "info": (
+            "Password Security weighs quiz accuracy, guardian progress, fictional "
+            "password challenge attempts, MFA decisions, and completion."
+        ),
+    },
+    {
+        "topic": Topics.M_T.value,
+        "label": "Malware",
+        "progress_target": 1,
+        "metrics_used": [
+            "question accuracy",
+            "malware cleanup results",
+            "damage taken",
+            "system resets",
+            "level completion",
+        ],
+        "info": (
+            "Malware weighs quiz accuracy, cleanup success, damage taken from "
+            "threats, system resets, and completion."
+        ),
+    },
+    {
+        "topic": Topics.SE_T.value,
+        "label": "Social Engineering",
+        "progress_target": 1,
+        "metrics_used": [
+            "trust grade",
+            "dialogue success rate",
+            "question accuracy",
+            "level completion",
+        ],
+        "info": (
+            "Social Engineering weighs the existing trust grade, dialogue outcomes, "
+            "any quiz accuracy, and completion."
+        ),
+    },
+    {
+        "topic": Topics.IR_T.value,
+        "label": "Incident Response",
+        "progress_target": 5,
+        "metrics_used": [
+            "room completion",
+            "responder releases",
+            "incident report accuracy",
+            "witness decisions",
+            "final shutdown",
+        ],
+        "info": (
+            "Incident Response weighs completed response rooms, freed responders, "
+            "report and witness decisions, damage, final shutdown, and completion."
+        ),
+    },
+]
+LEVEL_SKILL_BY_TOPIC = {config["topic"]: config for config in LEVEL_SKILL_CONFIGS}
+
+
+def _clamp(value: float, minimum: float = 0, maximum: float = 100) -> float:
+    return max(minimum, min(maximum, value))
+
+
+def _percentage(part: float, total: float, fallback: float = 0) -> float:
+    if total <= 0:
+        return fallback
+    return _clamp((part / total) * 100)
+
+
+def _metric(topic_progress: Dict[str, Any], metric: str, fallback: float = 0) -> float:
+    metrics = (
+        topic_progress
+        .get("gameplay", {})
+        .get("metrics", {})
+    )
+    value = metrics.get(metric, fallback) if isinstance(metrics, dict) else fallback
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _topic_metrics(topic_progress: Dict[str, Any]) -> Dict[str, Any]:
+    metrics = (
+        topic_progress
+        .get("gameplay", {})
+        .get("metrics", {})
+    )
+    return metrics if isinstance(metrics, dict) else {}
+
+
+def _answer_counts(topic_progress: Dict[str, Any]) -> tuple[int, int]:
+    answers = topic_progress.get("answers", [])
+    if not isinstance(answers, list):
+        return 0, 0
+
+    correct = sum(
+        1 for answer in answers
+        if isinstance(answer, dict) and answer.get("is_correct") is True
+    )
+    total = sum(1 for answer in answers if isinstance(answer, dict))
+    return correct, total
+
+
+def _progress_score(topic_progress: Dict[str, Any], progress_target: int) -> float:
+    if topic_progress.get("level_completed") is True:
+        return 100
+
+    if progress_target <= 1:
+        return 0
+
+    current_zone = topic_progress.get("current_zone") or 1
+    unlocked_zone = topic_progress.get("unlocked_zone") or current_zone
+
+    try:
+        reached = max(float(current_zone), float(unlocked_zone))
+    except (TypeError, ValueError):
+        reached = 1
+
+    return _percentage(reached - 1, progress_target - 1)
+
+
+def _topic_started(topic_progress: Dict[str, Any]) -> bool:
+    if not isinstance(topic_progress, dict) or not topic_progress:
+        return False
+
+    if topic_progress.get("level_completed") is True:
+        return True
+
+    if topic_progress.get("answers"):
+        return True
+
+    if topic_progress.get("current_zone") or topic_progress.get("unlocked_zone"):
+        return True
+
+    if topic_progress.get("trust"):
+        return True
+
+    return bool(_topic_metrics(topic_progress))
+
+
+def _safe_round(value: float) -> int:
+    return int(round(_clamp(value)))
+
+
+def _build_skill_detail(
+    score: float,
+    correct_answers: int,
+    total_questions: int,
+    gameplay: Dict[str, Any],
+    notes: List[str],
+) -> Dict[str, Any]:
+    return {
+        "score": _safe_round(score),
+        "correct_answers": correct_answers,
+        "total_questions": total_questions,
+        "gameplay": gameplay,
+        "notes": notes,
+    }
+
+
+def _score_safe_browsing(topic_progress: Dict[str, Any]) -> tuple[float, Dict[str, Any]]:
+    correct, total = _answer_counts(topic_progress)
+    answer_score = _percentage(correct, total)
+    zone_score = _progress_score(topic_progress, 4)
+    trap_hits = _metric(topic_progress, "trap_hits")
+    zone_failures = _metric(topic_progress, "zone_failures")
+    wrong_answers = max(total - correct, _metric(topic_progress, "wrong_answers"))
+    gameplay_score = _clamp(100 - (trap_hits * 10) - (zone_failures * 8) - (wrong_answers * 4))
+    completion_score = 100 if topic_progress.get("level_completed") is True else 0
+    score = (
+        answer_score * 0.45
+        + zone_score * 0.25
+        + gameplay_score * 0.20
+        + completion_score * 0.10
+    )
+    detail = _build_skill_detail(
+        score,
+        correct,
+        total,
+        {
+            "zone_score": _safe_round(zone_score),
+            "trap_hits": trap_hits,
+            "zone_failures": zone_failures,
+            "wrong_answers": wrong_answers,
+        },
+        ["Lower trap hits and fewer failed zones raise this score."],
+    )
+    return score, detail
+
+
+def _score_password_security(topic_progress: Dict[str, Any]) -> tuple[float, Dict[str, Any]]:
+    correct, total = _answer_counts(topic_progress)
+    answer_score = _percentage(correct, total)
+    progress_score = _progress_score(topic_progress, 5)
+    attempts = _metric(topic_progress, "password_attempts")
+    successes = _metric(topic_progress, "password_successes")
+    failures = _metric(topic_progress, "password_failures")
+    mfa_correct = _metric(topic_progress, "mfa_correct")
+    mfa_wrong = _metric(topic_progress, "mfa_wrong")
+    challenge_score = _percentage(successes + mfa_correct, attempts + mfa_correct + mfa_wrong, 70)
+    penalty = min(35, failures * 5 + mfa_wrong * 10)
+    completion_score = 100 if topic_progress.get("level_completed") is True else 0
+    score = (
+        answer_score * 0.30
+        + progress_score * 0.25
+        + _clamp(challenge_score - penalty) * 0.30
+        + completion_score * 0.15
+    )
+    detail = _build_skill_detail(
+        score,
+        correct,
+        total,
+        {
+            "boss_progress_score": _safe_round(progress_score),
+            "password_attempts": attempts,
+            "password_successes": successes,
+            "password_failures": failures,
+            "mfa_correct": mfa_correct,
+            "mfa_wrong": mfa_wrong,
+        },
+        ["Fewer rejected passwords and correct MFA choices raise this score."],
+    )
+    return score, detail
+
+
+def _score_malware(topic_progress: Dict[str, Any]) -> tuple[float, Dict[str, Any]]:
+    correct, total = _answer_counts(topic_progress)
+    answer_score = _percentage(correct, total)
+    malware_cleaned = _metric(topic_progress, "malware_cleaned")
+    cleanup_failed = _metric(topic_progress, "malware_cleanup_failed")
+    damage_taken = _metric(topic_progress, "damage_taken")
+    system_resets = _metric(topic_progress, "system_resets")
+    cleanup_score = _percentage(malware_cleaned, malware_cleaned + cleanup_failed, answer_score)
+    survival_score = _clamp(100 - (damage_taken * 6) - (system_resets * 18))
+    completion_score = 100 if topic_progress.get("level_completed") is True else 0
+    score = (
+        answer_score * 0.40
+        + cleanup_score * 0.25
+        + survival_score * 0.20
+        + completion_score * 0.15
+    )
+    detail = _build_skill_detail(
+        score,
+        correct,
+        total,
+        {
+            "malware_cleaned": malware_cleaned,
+            "malware_cleanup_failed": cleanup_failed,
+            "damage_taken": damage_taken,
+            "system_resets": system_resets,
+        },
+        ["Correct cleanup and less damage raise this score."],
+    )
+    return score, detail
+
+
+def _score_social_engineering(topic_progress: Dict[str, Any]) -> tuple[float, Dict[str, Any]]:
+    correct, total = _answer_counts(topic_progress)
+    answer_score = _percentage(correct, total, 70)
+    trust_grade = (
+        topic_progress
+        .get("trust", {})
+        .get("grade")
+    )
+    try:
+        trust_score = _clamp(float(trust_grade))
+    except (TypeError, ValueError):
+        trust_score = 50
+
+    dialogue_successes = _metric(topic_progress, "dialogue_successes")
+    dialogue_failures = _metric(topic_progress, "dialogue_failures")
+    dialogue_score = _percentage(
+        dialogue_successes,
+        dialogue_successes + dialogue_failures,
+        trust_score,
+    )
+    completion_score = 100 if topic_progress.get("level_completed") is True else 0
+    score = (
+        trust_score * 0.60
+        + dialogue_score * 0.25
+        + answer_score * 0.10
+        + completion_score * 0.05
+    )
+    detail = _build_skill_detail(
+        score,
+        correct,
+        total,
+        {
+            "trust_grade": trust_grade,
+            "dialogue_successes": dialogue_successes,
+            "dialogue_failures": dialogue_failures,
+        },
+        ["Better dialogue outcomes and higher trust raise this score."],
+    )
+    return score, detail
+
+
+def _score_incident_response(topic_progress: Dict[str, Any]) -> tuple[float, Dict[str, Any]]:
+    correct, total = _answer_counts(topic_progress)
+    answer_score = _percentage(correct, total)
+    progress_score = _progress_score(topic_progress, 5)
+    rooms_completed = _metric(topic_progress, "rooms_completed")
+    responders_released = _metric(topic_progress, "responders_released")
+    report_correct = _metric(topic_progress, "report_answers_correct")
+    report_retries = _metric(topic_progress, "report_retries")
+    witness_correct = _metric(topic_progress, "witness_correct")
+    witness_wrong = _metric(topic_progress, "witness_wrong")
+    damage_taken = _metric(topic_progress, "incident_damage_taken")
+    final_shutdown = _metric(topic_progress, "final_shutdown")
+
+    room_score = max(progress_score, _percentage(rooms_completed + responders_released, 8))
+    decision_score = _percentage(
+        report_correct + witness_correct + final_shutdown,
+        report_correct + report_retries + witness_correct + witness_wrong + max(final_shutdown, 1),
+        answer_score,
+    )
+    survival_score = _clamp(100 - (damage_taken * 5))
+    completion_score = 100 if topic_progress.get("level_completed") is True else 0
+    score = (
+        room_score * 0.35
+        + decision_score * 0.25
+        + answer_score * 0.15
+        + survival_score * 0.10
+        + completion_score * 0.15
+    )
+    detail = _build_skill_detail(
+        score,
+        correct,
+        total,
+        {
+            "rooms_completed": rooms_completed,
+            "responders_released": responders_released,
+            "report_answers_correct": report_correct,
+            "report_retries": report_retries,
+            "witness_correct": witness_correct,
+            "witness_wrong": witness_wrong,
+            "incident_damage_taken": damage_taken,
+            "final_shutdown": final_shutdown,
+        },
+        ["Room progress, responder releases, and accepted reports raise this score."],
+    )
+    return score, detail
+
+
+def _calculate_level_skill(topic: str, topic_progress: Dict[str, Any]) -> tuple[float, Dict[str, Any]]:
+    if topic == Topics.SFB_T.value:
+        return _score_safe_browsing(topic_progress)
+    if topic == Topics.PS_T.value:
+        return _score_password_security(topic_progress)
+    if topic == Topics.M_T.value:
+        return _score_malware(topic_progress)
+    if topic == Topics.SE_T.value:
+        return _score_social_engineering(topic_progress)
+    if topic == Topics.IR_T.value:
+        return _score_incident_response(topic_progress)
+
+    correct, total = _answer_counts(topic_progress)
+    score = _percentage(correct, total)
+    return score, _build_skill_detail(score, correct, total, {}, [])
+
+
+def _skill_category(score: float | None, started: bool) -> str:
+    if not started:
+        return "not_started"
+    if score is not None and score >= 80:
+        return "strong"
+    if score is not None and score >= 60:
+        return "on_track"
+    return "needs_practice"
+
+
+def _safe_metric_name(metric: str) -> str:
+    sanitized = "".join(
+        char.lower() if char.isalnum() else "_"
+        for char in metric.strip()
+    )
+    sanitized = "_".join(part for part in sanitized.split("_") if part)
+    if not sanitized:
+        raise HTTPException(status_code=400, detail="Metric name is required")
+    return sanitized[:60]
+
 
 @router.post(
     "/initassess/",
@@ -265,6 +722,67 @@ async def update_current_zone(
         data=result
     )
 
+
+@router.post(
+    "/progress/gameplay",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK,
+    tags=["dashboard analytics"],
+    summary="Record a gameplay metric for a level",
+    description=(
+        "Stores a level-specific gameplay metric under "
+        "`progress.<topic>.gameplay.metrics`. The dashboard uses these metrics "
+        "with quiz answers, progress, and completion to calculate the Average "
+        "Level Skill Score."
+    ),
+)
+async def record_gameplay_metric(
+    request: GameplayMetricRequest,
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db)
+):
+    if request.topic not in level_skill_scoring.LEVEL_SKILL_BY_TOPIC:
+        raise HTTPException(status_code=400, detail="Unknown gameplay topic")
+
+    try:
+        metric = level_skill_scoring.safe_metric_name(request.metric)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    metric_path = f"progress.{request.topic}.gameplay.metrics.{metric}"
+    updated_at_path = f"progress.{request.topic}.gameplay.updated_at"
+    topic_updated_at_path = f"progress.{request.topic}.updated_at"
+    now = datetime.utcnow()
+
+    update_doc: Dict[str, Any] = {
+        "$set": {
+            updated_at_path: now,
+            topic_updated_at_path: now,
+        }
+    }
+
+    if request.mode == "inc":
+        update_doc["$inc"] = {metric_path: request.amount}
+    elif request.mode == "max":
+        update_doc["$max"] = {metric_path: request.amount}
+    else:
+        update_doc["$set"][metric_path] = request.amount
+
+    result = await db.progress.update_one(
+        {"user_id": request.userid},
+        update_doc,
+        upsert=True
+    )
+
+    return StandardResponse(
+        success=True,
+        message="Gameplay metric recorded",
+        data={
+            "updated": result.modified_count,
+            "metric": metric,
+            "mode": request.mode,
+        }
+    )
+
+
 @router.post(
     "/data",
     response_model=StandardResponse[Dict[str, Any]],
@@ -348,6 +866,16 @@ async def generate_knowledge_list(
         logger.info("Fetching question list")
 
         qmap = await generate_question_list(db, user_uuid, request.topic, request.collectionName)
+
+        try:
+            if request.topic == Topics.SFB_T:
+                qmap = await build_sfb_progression(qmap)
+            elif request.topic == Topics.PS_T:
+                qmap = await build_ps_progression(qmap)
+            elif request.topic == Topics.IR_T:
+                qmap = await build_ir_progression(qmap)
+        except Exception as e:
+            logger.error(f"Error building knowledge progression map: {e}")
 
         unanswered_qmap = await filter_unanswered_questions(
             db,
@@ -915,6 +1443,284 @@ async def get_topic_performance(
         return StandardResponse(
             success=False,
             message=f"Failed to fetch topic performance: {str(e)}",
+            data=[]
+        )
+
+
+@router.get(
+    "/score/users/performance-categories/",
+    response_model=StandardResponse[List[Dict[str, Any]]],
+    status_code=status.HTTP_200_OK
+)
+async def get_user_performance_categories(
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    response: Response = Response(),
+):
+    """Get overall student performance category counts for dashboard charts."""
+    logger.info("Fetching user performance categories...")
+
+    try:
+        progress_docs = await db["progress"].find({}).to_list(None)
+
+        categories = [
+            {"name": "Excellent (80-100%)", "value": 0, "color": "#4CAF50"},
+            {"name": "Good (60-79%)", "value": 0, "color": "#FFB74D"},
+            {"name": "Needs Improvement", "value": 0, "color": "#E57373"},
+        ]
+
+        for doc in progress_docs:
+            progress_data = doc.get("progress", {})
+            if not isinstance(progress_data, dict):
+                continue
+
+            total_questions = 0
+            correct_answers = 0
+
+            for _, answers in _iter_topic_answers(progress_data):
+                total_questions += len(answers)
+                correct_answers += sum(
+                    1 for answer in answers
+                    if answer.get("is_correct") is True
+                )
+
+            if total_questions == 0:
+                continue
+
+            score = (correct_answers / total_questions) * 100
+            if score >= 80:
+                categories[0]["value"] += 1
+            elif score >= 60:
+                categories[1]["value"] += 1
+            else:
+                categories[2]["value"] += 1
+
+        return StandardResponse(
+            success=True,
+            message="User performance categories retrieved",
+            data=categories
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching user performance categories: {e}", exc_info=True)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message=f"Failed to fetch user performance categories: {str(e)}",
+            data=[]
+        )
+
+
+@router.get(
+    "/admin/level-skill-performance",
+    response_model=StandardResponse[Dict[str, Any]],
+    status_code=status.HTTP_200_OK,
+    tags=["dashboard analytics"],
+    summary="Get gameplay-aware level skill performance",
+    description=(
+        "Returns the admin dashboard replacement for Quiz Completion Rate: "
+        "overall average score, per-level averages, category counts, users in "
+        "each category, and metric explanations for the hoverable info UI."
+    ),
+)
+async def get_level_skill_performance(
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    user_db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_role),
+    response: Response = Response(),
+):
+    """Get gameplay-aware per-level skill performance for the admin dashboard."""
+    logger.info(f"Admin {current_user.username} fetching level skill performance...")
+
+    try:
+        progress_docs = await db["progress"].find({}).to_list(None)
+        progress_by_user = {
+            str(doc.get("user_id")): doc
+            for doc in progress_docs
+            if doc.get("user_id") is not None
+        }
+
+        users = user_db.query(User).all()
+        students = [
+            user for user in users
+            if getattr(getattr(user, "role", None), "value", user.role) == "student"
+        ]
+
+        category_template = [
+            {"key": "strong", "label": "Strong", "range": "80-100%", "color": "#4CAF50"},
+            {"key": "on_track", "label": "On Track", "range": "60-79%", "color": "#FFB74D"},
+            {"key": "needs_practice", "label": "Needs Practice", "range": "0-59%", "color": "#E57373"},
+            {"key": "not_started", "label": "Not Started", "range": "No progress", "color": "#7C8AA5"},
+        ]
+
+        levels = []
+        level_averages = []
+        active_user_ids = set()
+
+        for config in level_skill_scoring.LEVEL_SKILL_CONFIGS:
+            topic = config["topic"]
+            categories = {
+                category["key"]: {**category, "count": 0, "users": []}
+                for category in category_template
+            }
+            scored_users = []
+
+            for user in students:
+                user_id = str(user.userid)
+                progress_doc = progress_by_user.get(user_id, {})
+                topic_progress = (
+                    progress_doc
+                    .get("progress", {})
+                    .get(topic, {})
+                )
+                started = level_skill_scoring.topic_started(topic_progress)
+                score = None
+                detail = {
+                    "score": None,
+                    "correct_answers": 0,
+                    "total_questions": 0,
+                    "gameplay": {},
+                    "notes": [],
+                }
+
+                if started:
+                    active_user_ids.add(user_id)
+                    raw_score, detail = level_skill_scoring.calculate_level_skill(topic, topic_progress)
+                    score = level_skill_scoring.safe_round(raw_score)
+                    scored_users.append(score)
+
+                category_key = level_skill_scoring.skill_category(score, started)
+                categories[category_key]["count"] += 1
+                categories[category_key]["users"].append({
+                    "userid": user_id,
+                    "username": user.username,
+                    "email": user.email,
+                    "avatar_url": _user_avatar_url(user),
+                    "score": score,
+                    "details": detail,
+                })
+
+            average_score = level_skill_scoring.safe_round(sum(scored_users) / len(scored_users)) if scored_users else 0
+            if scored_users:
+                level_averages.append(average_score)
+
+            levels.append({
+                "topic": topic,
+                "label": config["label"],
+                "average_score": average_score,
+                "users_count": len(scored_users),
+                "total_users": len(students),
+                "metrics_used": config["metrics_used"],
+                "info": config["info"],
+                "categories": list(categories.values()),
+            })
+
+        overall_average = level_skill_scoring.safe_round(sum(level_averages) / len(level_averages)) if level_averages else 0
+
+        return StandardResponse(
+            success=True,
+            message="Level skill performance retrieved",
+            data={
+                "average_score": overall_average,
+                "users_count": len(active_user_ids),
+                "level_attempts_count": sum(level["users_count"] for level in levels),
+                "total_users": len(students),
+                "levels": levels,
+                "metrics_used": [
+                    "question accuracy",
+                    "level-specific gameplay events",
+                    "zone/room progress",
+                    "level completion",
+                ],
+                "info": (
+                    "Average Level Skill Score combines quiz answers with each "
+                    "level's gameplay mechanics. Not-started users are shown in "
+                    "the expanded view but excluded from the average."
+                ),
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching level skill performance: {e}", exc_info=True)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message=f"Failed to fetch level skill performance: {str(e)}",
+            data={
+                "average_score": 0,
+                "users_count": 0,
+                "total_users": 0,
+                "levels": [],
+            }
+        )
+
+
+@router.get(
+    "/admin/quiz-insights",
+    response_model=StandardResponse[List[Dict[str, Any]]],
+    status_code=status.HTTP_200_OK
+)
+async def get_quiz_insights(
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    user_db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_role),
+    response: Response = Response(),
+):
+    """Get per-user, per-topic quiz insight rows for admins."""
+    logger.info(f"Admin {current_user.username} fetching quiz insights...")
+
+    try:
+        progress_docs = await db["progress"].find({}).to_list(None)
+        users = user_db.query(User).all()
+        user_by_id = {str(user.userid): user for user in users}
+
+        insights = []
+        for doc in progress_docs:
+            user_id = str(doc.get("user_id", ""))
+            user = user_by_id.get(user_id)
+            username = user.username if user else "Unknown User"
+            progress_data = doc.get("progress", {})
+
+            if not isinstance(progress_data, dict):
+                continue
+
+            for topic_name, answers in _iter_topic_answers(progress_data):
+                total_questions = len(answers)
+                if total_questions == 0:
+                    continue
+
+                correct_answers = sum(
+                    1 for answer in answers
+                    if answer.get("is_correct") is True
+                )
+                score = round((correct_answers / total_questions) * 100)
+
+                insights.append({
+                    "username": username,
+                    "topic": topic_name,
+                    "correct_answers": correct_answers,
+                    "total_questions": total_questions,
+                    "score": score,
+                    "date": _latest_answer_timestamp(answers),
+                    "avatar_url": _user_avatar_url(user) if user else _avatar_url(username),
+                })
+
+        insights.sort(
+            key=lambda row: str(row.get("date") or ""),
+            reverse=True
+        )
+
+        return StandardResponse(
+            success=True,
+            message="Quiz insights retrieved",
+            data=insights
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching quiz insights: {e}", exc_info=True)
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        return StandardResponse(
+            success=False,
+            message=f"Failed to fetch quiz insights: {str(e)}",
             data=[]
         )
 

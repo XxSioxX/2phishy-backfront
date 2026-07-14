@@ -1,11 +1,15 @@
 from datetime import timedelta, datetime
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+from fastapi import HTTPException
 
 from app.modules.user.models.user import User, UserRole, AccountStatus
 from app.modules.user.schemas.schemas import UserCreate, UserStatsResponse, UserUpdate, UserLogin
+from app.modules.auth.models.models import PasswordResetToken
+from app.modules.posts.models.post import Post
 from app.utils.logger import get_logger
 import bcrypt
 
@@ -13,18 +17,60 @@ from app.core.security import create_access_token
 
 logger = get_logger("user-services.py")
 
+def validate_password_strength(password: str) -> list[str]:
+    requirements = [
+        ("at least 12 characters", len(password) >= 12),
+        ("one uppercase letter", any(char.isupper() for char in password)),
+        ("one lowercase letter", any(char.islower() for char in password)),
+        ("one number", any(char.isdigit() for char in password)),
+        ("one special character", any(not char.isalnum() for char in password)),
+    ]
+
+    return [
+        label
+        for label, passed in requirements
+        if not passed
+    ]
+
 def create_user(db: Session, user_data: UserCreate):
     logger.info("Creating User")
+    username = user_data.username.strip()
+    email = user_data.email.lower().strip()
+
+    existing_username = db.query(User).filter(
+        func.lower(User.username) == username.lower()
+    ).first()
+    if existing_username:
+        raise HTTPException(status_code=409, detail="Username is already taken.")
+
+    existing_email = db.query(User).filter(User.email == email).first()
+    if existing_email:
+        raise HTTPException(status_code=409, detail="Email is already registered.")
+
     hashed_password = bcrypt.hashpw(user_data.password.encode(), bcrypt.gensalt()).decode()
+    consent_time = datetime.utcnow()
     new_user = User(
-        username=user_data.username,
-        email=user_data.email.lower(),
+        username=username,
+        email=email,
         password=hashed_password,
-        role=user_data.role
+        role=user_data.role,
+        privacy_policy_accepted=user_data.privacy_policy_accepted,
+        privacy_policy_accepted_at=consent_time if user_data.privacy_policy_accepted else None,
+        thesis_consent_accepted=user_data.thesis_consent_accepted,
+        thesis_consent_accepted_at=consent_time if user_data.thesis_consent_accepted else None,
+        consent_version=user_data.consent_version,
     )
     db.add(new_user)
     logger.info("User Created, committing..")
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        logger.warning("Registration failed due to duplicate username or email")
+        raise HTTPException(
+            status_code=409,
+            detail="Username or email is already registered."
+        )
     logger.info("User Created, refreshing...")
     db.refresh(new_user)
     logger.info(f"User created: {new_user.username} with role: {new_user.role.value}")
@@ -56,6 +102,12 @@ def delete_user(db: Session, user_id: str):
 
     user = db.query(User).filter(User.userid == user_id).first()
     if user:
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.userid
+        ).delete(synchronize_session=False)
+        db.query(Post).filter(
+            Post.created_by == user.userid
+        ).delete(synchronize_session=False)
         db.delete(user)
         db.commit()
         return True
@@ -100,7 +152,7 @@ def authenticate_user(db: Session, login_data: UserLogin):
 
 def create_user_token(user: User):
     """Create access token for user"""
-    access_token_expires = timedelta(minutes=30)
+    access_token_expires = timedelta(hours=12)
     access_token = create_access_token(
         data={"sub": str(user.userid)}, expires_delta=access_token_expires
     )
@@ -116,9 +168,8 @@ def update_user_role(db: Session, user_id: str, new_role: UserRole, admin_user: 
     if not user:
         return None
 
-    # Prevent non-super-admins from creating super-admins
-    if new_role == UserRole.SUPER_ADMIN and admin_user.role != UserRole.SUPER_ADMIN:
-        raise ValueError("Only super-admins can create other super-admins")
+    if admin_user.role != UserRole.SUPER_ADMIN:
+        raise ValueError("Only super-admins can change user roles")
 
     # Prevent users from changing their own role
     if user.userid == admin_user.userid:

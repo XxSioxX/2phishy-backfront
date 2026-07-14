@@ -6,7 +6,7 @@ from app.modules.user.models.user import User
 from app.modules.auth.services.auth_service import get_current_active_user
 from app.modules.user.schemas.schemas import UserCreate, UserResponse, LoginResponse, UserLogin, UserStatsResponse
 from app.modules.user.services.services import create_user, get_user, get_all_users, update_user, delete_user, \
-    authenticate_user, create_user_token, get_user_statistics, update_last_seen
+    authenticate_user, create_user_token, get_user_statistics, update_last_seen, validate_password_strength
 from app.utils.logger import get_logger
 
 
@@ -16,6 +16,17 @@ logger = get_logger("users-routes.py")
 @router.post("/register", response_model=UserResponse)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     logger.info("register new user")
+    if not user.privacy_policy_accepted or not user.thesis_consent_accepted:
+        raise HTTPException(
+            status_code=400,
+            detail="Privacy policy and thesis study consent are required to register."
+        )
+    password_errors = validate_password_strength(user.password)
+    if password_errors:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must include " + ", ".join(password_errors) + "."
+        )
     return create_user(db, user)
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -82,8 +93,8 @@ def update_my_profile(
     """Update current user's profile (non-sensitive fields only)"""
     logger.info(f"User {current_user.username} updating their profile")
 
-    # Only allow updating username and email, not role or account_status
-    allowed_fields = ['username', 'email']
+    # Only allow updating personal profile fields, not role or account_status
+    allowed_fields = ['username', 'email', 'avatar_url']
     filtered_data = {k: v for k, v in update_data.items() if k in allowed_fields}
 
     if not filtered_data:

@@ -1,6 +1,6 @@
 from app.core.cache_redis import redis_client as redis
 
-PRESENCE_TTL = 60  # seconds
+PRESENCE_TTL = 180  # seconds
 
 
 async def mark_user_online(user_id: str):

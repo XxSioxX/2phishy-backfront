@@ -12,6 +12,9 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     role: UserRole = UserRole.STUDENT  # default role
+    privacy_policy_accepted: bool = False
+    thesis_consent_accepted: bool = False
+    consent_version: str | None = None
 
 class UserLogin(BaseModel):
     username: str
@@ -21,8 +24,14 @@ class UserResponse(UserBase):
     created_at: datetime
     last_login: datetime | None
     last_seen: datetime | None
+    avatar_url: str | None = None
     role: UserRole
     account_status: AccountStatus
+    privacy_policy_accepted: bool = False
+    privacy_policy_accepted_at: datetime | None = None
+    thesis_consent_accepted: bool = False
+    thesis_consent_accepted_at: datetime | None = None
+    consent_version: str | None = None
 
     class Config:
         from_attributes = True
@@ -32,6 +41,7 @@ class UserResponse(UserBase):
 class UserUpdate(BaseModel):
     username: str | None = None
     email: EmailStr | None = None
+    avatar_url: str | None = None
     account_status: AccountStatus | None = None
     role: UserRole | None = None
 
