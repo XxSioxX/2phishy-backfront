@@ -10,6 +10,7 @@ from app.modules.posts.routes.post_routes import router as post_router
 from app.modules.auth.routes.routes import router as auth_router
 from app.modules.announcements.routes import router as announcements_router
 from app.modules.reports.routes import router as reports_router
+from app.modules.system.routes import router as system_router
 from app.utils.logger import get_logger
 from app.core.database_postgres import init_db
 from app.core.startup import startup_super_admin
@@ -19,6 +20,46 @@ from app.core.cache_redis import redis_client
 from app.modules.presence.routes.routes import router as presence_router
 
 logger = get_logger("main")
+
+API_DESCRIPTION = """
+Phishy backend API for authentication, user administration, game progress,
+dashboard analytics, bulletin posts, announcements, reports, and online
+presence.
+
+Interactive browser documentation is available at `/docs` and `/redoc` when
+the backend is running.
+"""
+
+OPENAPI_TAGS = [
+    {
+        "name": "game",
+        "description": "Gameplay, progress, scoring, and admin dashboard analytics.",
+    },
+    {
+        "name": "dashboard analytics",
+        "description": "Admin-facing aggregate metrics used by the main dashboard.",
+    },
+    {
+        "name": "Presence",
+        "description": "Heartbeat and online-user status endpoints.",
+    },
+    {
+        "name": "users",
+        "description": "Registration, login, profiles, and user management.",
+    },
+    {
+        "name": "admin",
+        "description": "Administrative user actions.",
+    },
+    {
+        "name": "posts",
+        "description": "Bulletin board post management.",
+    },
+    {
+        "name": "auth",
+        "description": "Password reset and authentication support endpoints.",
+    },
+]
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
@@ -45,14 +86,22 @@ async def lifespan(app:FastAPI):
         logger.error(f"Redis connection failed: {e}")
 
     try:
-        await preload_static_assets(redis_client)
+        await preload_static_assets()
     except Exception as e:
         logger.error(f"assets caching failed:  {e}")
 
     logger.info("Finished establishing database connections")
     yield
 
-app = FastAPI(title="Phishy Game Backend API", version="6.3.0", lifespan=lifespan)
+app = FastAPI(
+    title="Phishy Game Backend API",
+    version="6.3.0",
+    description=API_DESCRIPTION,
+    openapi_tags=OPENAPI_TAGS,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
 
 
 origins = [
@@ -60,7 +109,7 @@ origins = [
     "http://127.0.0.1:3000",
     "http://localhost:5173",  # Vite default port
     "http://127.0.0.1:5173",
-    "http://localhost:9000",  # Your Phaser game port
+    "http://localhost:9000",  # Phaser game port
     "http://127.0.0.1:9000",
 ]
 
@@ -82,10 +131,19 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(announcements_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
 app.include_router(presence_router, prefix="/api")
+app.include_router(system_router, prefix="/api")
 
 @app.get("/api")
 async def root():
-    return {"message": "Phishy Game Backend API is running", "version": "6.3.0"}
+    return {
+        "message": "Phishy Game Backend API is running",
+        "version": "6.3.0",
+        "documentation": {
+            "swagger": "/docs",
+            "redoc": "/redoc",
+            "openapi": "/openapi.json",
+        },
+    }
 
 @app.get("/api/health")
 async def health_check():
