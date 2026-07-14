@@ -15,11 +15,12 @@ class EmailService:
         self.provider = ResendProvider()
 
     def send_password_reset(self, to_email: str, reset_link: str):
+        expiration_minutes = 15
 
         context = {
             **default_context(),
             "reset_link": reset_link,
-            "expiration_minutes": 15
+            "expiration_minutes": expiration_minutes
         }
 
         html_content = render(
@@ -27,12 +28,18 @@ class EmailService:
             context
         )
 
-    # 👇 PUT IT HERE
-        text_content = f"Reset your password using this link: {reset_link}"
+        text_content = (
+            "Reset your 2Phishy password\n\n"
+            "We received a request to reset your password. "
+            f"This link expires in {expiration_minutes} minutes and can only be used once:\n\n"
+            f"{reset_link}\n\n"
+            "If you did not request this reset, ignore this email. "
+            "Your password will stay unchanged."
+        )
 
         self.provider.send_email(
             to=to_email,
-            subject="Reset Your Password",
+            subject="Reset your 2Phishy password",
             html=html_content,
             text=text_content
         )
