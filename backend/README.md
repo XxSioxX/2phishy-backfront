@@ -37,6 +37,8 @@ Project Latest
 4. **Access API Documentation**:
    - Swagger UI: http://localhost:8000/docs
    - ReDoc: http://localhost:8000/redoc
+   - OpenAPI JSON: http://localhost:8000/openapi.json
+   - Dashboard/testing notes: `../docs/API_AND_TESTING.md`
 
 ## API Endpoints
 
@@ -58,6 +60,10 @@ Project Latest
 - `POST /game/progress/` - Save game progress
 - `GET /game/scores/{user_id}` - Get user's scores
 - `POST /game/scores/` - Save game score
+- `POST /api/game/progress/gameplay` - Record gameplay metric events for dashboard scoring
+- `GET /api/game/admin/level-skill-performance` - Admin dashboard level skill analytics
+- `POST /api/presence/heartbeat` - Refresh current user's online presence and `last_seen`
+- `GET /api/presence/online-status` - Admin online-status map for all users
 
 ## Database Models
 
