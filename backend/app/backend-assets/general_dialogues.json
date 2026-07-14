@@ -107,6 +107,106 @@
         { "id": "5", "text": "Wrong answers still hurt too." },
         { "id": "6", "text": "Reach each angel. Quarantine the malware zone by zone.", "end": true }
       ]
+    },
+    {
+      "id": "level4_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "This place is quieter than the others." },
+        { "id": "2", "text": "That makes it worse." },
+        { "id": "3", "text": "The danger here will not always look like a trap." },
+        { "id": "4", "text": "It may sound urgent. Helpful. Familiar. Official." },
+        { "id": "5", "text": "The people walking these halls may approach me before I am ready." },
+        { "id": "6", "text": "Every answer I give can change how much this place trusts my judgment." },
+        { "id": "7", "text": "Slow down. Verify the request. Never hand over secrets just because someone pressures me.", "end": true }
+      ]
+    },
+    {
+      "id": "level5_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "This room feels different." },
+        { "id": "2", "text": "The fragments are not just memories. They are evidence." },
+        { "id": "3", "text": "Four responders are trapped behind the seals." },
+        { "id": "4", "text": "Identify. Contain. Eradicate. Recover." },
+        { "id": "5", "text": "If malware closes in, I block and keep moving toward the scanner." },
+        { "id": "6", "text": "If I free the responders, they can break the core's guards." },
+        { "id": "7", "text": "Then the last question is whether I can write the report that gets me out.", "end": true }
+      ]
+    },
+    {
+      "id": "ir_boss_truth",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "The core stops fighting." },
+        { "id": "2", "text": "It was never a monster. It was the unfinished incident report." },
+        { "id": "3", "text": "Every room was a damaged record of the same attack." },
+        { "id": "4", "text": "Unsafe trust opened the path. Weak credentials widened it. Malware spread through it. Social pressure hid it." },
+        { "id": "5", "text": "The only way out is to finish the response." },
+        { "id": "6", "text": "Write the report. Close the incident.", "end": true }
+      ]
+    },
+    {
+      "id": "ir_ending",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "The lever locks into place." },
+        { "id": "2", "text": "The sparks fade. The core is quiet." },
+        { "id": "3", "text": "Now I understand where I was." },
+        { "id": "4", "text": "Inside a reconstruction. A training system built from the incident itself." },
+        { "id": "5", "text": "It did not need me to defeat the attack." },
+        { "id": "6", "text": "It needed me to respond correctly." },
+        { "id": "7", "text": "Incident closed.", "end": true }
+      ]
+    },
+    {
+      "id": "ir_final_cutscene",
+      "type": "cutscene",
+      "skippable": false,
+      "settings": {
+        "background": "#000000",
+        "textColor": "#ffffff",
+        "fontSize": 28,
+        "typeSpeed": 30
+      },
+      "nodes": [
+        { "id": "1", "text": "The report is complete." },
+        { "id": "2", "text": "The source was identified." },
+        { "id": "3", "text": "The damage was contained." },
+        { "id": "4", "text": "The threat was removed." },
+        { "id": "5", "text": "The system was recovered." },
+        { "id": "6", "text": "And the lesson was written down." },
+        { "id": "7", "text": "Incident closed." },
+        { "id": "8", "text": "Awareness begins before the next click.", "end": true }
+      ]
     }
   ]
 }

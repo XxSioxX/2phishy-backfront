@@ -109,6 +109,26 @@
       ]
     },
     {
+      "id": "level4_spawn_intro",
+      "type": "linear",
+      "skippable": false,
+      "settings": {
+        "background": null,
+        "textColor": "#ffffff",
+        "fontSize": 24,
+        "typeSpeed": 25
+      },
+      "nodes": [
+        { "id": "1", "text": "This place is quieter than the others." },
+        { "id": "2", "text": "That makes it worse." },
+        { "id": "3", "text": "The danger here will not always look like a trap." },
+        { "id": "4", "text": "It may sound urgent. Helpful. Familiar. Official." },
+        { "id": "5", "text": "The people walking these halls may approach me before I am ready." },
+        { "id": "6", "text": "Every answer I give can change how much this place trusts my judgment." },
+        { "id": "7", "text": "Slow down. Verify the request. Never hand over secrets just because someone pressures me.", "end": true }
+      ]
+    },
+    {
       "id": "level5_spawn_intro",
       "type": "linear",
       "skippable": false,
@@ -178,19 +198,14 @@
         "typeSpeed": 30
       },
       "nodes": [
-        { "id": "1", "text": "The lever locks into place." },
-        { "id": "2", "text": "The core goes silent." },
-        { "id": "3", "text": "No monster falls." },
-        { "id": "4", "text": "No final strike lands." },
-        { "id": "5", "text": "The report is complete." },
-        { "id": "6", "text": "The source was identified." },
-        { "id": "7", "text": "The damage was contained." },
-        { "id": "8", "text": "The threat was removed." },
-        { "id": "9", "text": "The system was recovered." },
-        { "id": "10", "text": "And the lesson was written down." },
-        { "id": "11", "text": "This place was never asking me to win a fight." },
-        { "id": "12", "text": "It was asking me to respond." },
-        { "id": "13", "text": "Incident closed.", "end": true }
+        { "id": "1", "text": "The report is complete." },
+        { "id": "2", "text": "The source was identified." },
+        { "id": "3", "text": "The damage was contained." },
+        { "id": "4", "text": "The threat was removed." },
+        { "id": "5", "text": "The system was recovered." },
+        { "id": "6", "text": "And the lesson was written down." },
+        { "id": "7", "text": "Incident closed." },
+        { "id": "8", "text": "Awareness begins before the next click.", "end": true }
       ]
     }
   ]
