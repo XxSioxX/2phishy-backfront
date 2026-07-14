@@ -1,27 +1,52 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import "./GamePage.scss";
 
+const FULLSCREEN_MODE_STORAGE_KEY = "phishyFullscreenMode";
+type FullscreenMode = "ask" | "windowed";
+
 const GamePage: React.FC = () => {
+    const navigate = useNavigate();
     const gamePageRef = useRef<HTMLDivElement>(null);
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<any>(null);
     const gameInitializedRef = useRef<boolean>(false); // Prevent double initialization
-    const [isPhoneViewport, setIsPhoneViewport] = useState(false);
+    const [isMobileDevice, setIsMobileDevice] = useState(false);
     const [isPortrait, setIsPortrait] = useState(false);
     const [mobilePlayRequested, setMobilePlayRequested] = useState(false);
     const [mobileModeBusy, setMobileModeBusy] = useState(false);
     const [mobileModeMessage, setMobileModeMessage] = useState("");
+    const [showFullscreenConfirm, setShowFullscreenConfirm] = useState(false);
+    const [fullscreenMode, setFullscreenMode] = useState<FullscreenMode>(() => {
+        const savedMode = localStorage.getItem(FULLSCREEN_MODE_STORAGE_KEY);
+        return savedMode === "windowed" ? "windowed" : "ask";
+    });
     const { user, isAuthenticated } = useAuth();
 
     useEffect(() => {
-        const updateMobileState = () => {
-            const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches === true;
-            const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent);
-            const touchPoints = window.navigator.maxTouchPoints ?? 0;
-            const smallestSide = Math.min(window.innerWidth, window.innerHeight);
+        const handleStorageChange = () => {
+            const savedMode = localStorage.getItem(FULLSCREEN_MODE_STORAGE_KEY);
+            setFullscreenMode(savedMode === "windowed" ? "windowed" : "ask");
+        };
 
-            setIsPhoneViewport(coarsePointer || mobileUserAgent || touchPoints > 0 || smallestSide <= 900);
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('phishy-fullscreen-mode-change', handleStorageChange);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('phishy-fullscreen-mode-change', handleStorageChange);
+        };
+    }, []);
+
+    useEffect(() => {
+        const updateMobileState = () => {
+            const ua = window.navigator.userAgent || "";
+            const uaData = (window.navigator as any).userAgentData;
+            const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(ua);
+            const isIpadDesktopUa = window.navigator.platform === "MacIntel" && (window.navigator.maxTouchPoints ?? 0) > 1;
+            const mobileUaData = uaData?.mobile === true;
+
+            setIsMobileDevice(mobileUaData || mobileUserAgent || isIpadDesktopUa);
             setIsPortrait(window.innerHeight >= window.innerWidth);
         };
 
@@ -89,6 +114,35 @@ const GamePage: React.FC = () => {
         }
     };
 
+    const exitFullscreen = async () => {
+        const fullscreenElement = getFullscreenElement();
+        if (!fullscreenElement) return;
+
+        const doc = document as any;
+        const exit =
+            document.exitFullscreen ||
+            doc.webkitExitFullscreen ||
+            doc.msExitFullscreen;
+
+        if (!exit) return;
+
+        try {
+            await exit.call(document);
+        } catch (error) {
+            console.warn("Unable to exit fullscreen before leaving game:", error);
+        }
+    };
+
+    const handleBackToProfile = async () => {
+        await exitFullscreen();
+        try {
+            (window.screen?.orientation as any)?.unlock?.();
+        } catch (error) {
+            console.warn("Unable to unlock screen orientation:", error);
+        }
+        navigate("/profile");
+    };
+
     const refreshGameSize = () => {
         [0, 80, 260, 700].forEach(delay => {
             window.setTimeout(() => {
@@ -105,13 +159,23 @@ const GamePage: React.FC = () => {
         document.body.classList.add('phishy-game-immersive');
         window.scrollTo(0, 0);
         refreshGameSize();
-    }, [isPhoneViewport, mobilePlayRequested, isPortrait]);
+    }, [isMobileDevice, mobilePlayRequested, isPortrait]);
 
-    const handleEnterMobilePlayMode = async () => {
+    const handleOpenMobilePlayMode = () => {
+        if (fullscreenMode === "ask") {
+            setShowFullscreenConfirm(true);
+            return;
+        }
+
+        void handleEnterMobilePlayMode(false);
+    };
+
+    const handleEnterMobilePlayMode = async (requestFullscreenChoice = fullscreenMode === "ask") => {
         if (mobileModeBusy) return;
 
         setMobileModeBusy(true);
         setMobileModeMessage("");
+        setShowFullscreenConfirm(false);
         setMobilePlayRequested(true);
         document.body.classList.add('phishy-game-immersive');
         window.scrollTo(0, 0);
@@ -124,12 +188,15 @@ const GamePage: React.FC = () => {
             gameContainerRef.current?.parentElement ??
             gameContainerRef.current;
 
-        const fullscreenOk = target ? await requestFullscreen(target) : false;
-        const orientationOk = await lockLandscape();
+        const shouldRequestFullscreen = requestFullscreenChoice;
+        const fullscreenOk = shouldRequestFullscreen && target ? await requestFullscreen(target) : false;
+        const orientationOk = shouldRequestFullscreen ? await lockLandscape() : false;
 
         setMobileModeBusy(false);
 
-        if (!fullscreenOk && !orientationOk) {
+        if (!shouldRequestFullscreen) {
+            setMobileModeMessage("Playing in the browser window.");
+        } else if (!fullscreenOk && !orientationOk) {
             setMobileModeMessage("Fullscreen was blocked. Rotate your phone to play.");
         } else if (!orientationOk) {
             setMobileModeMessage("Rotate your phone if the game stays portrait.");
@@ -140,7 +207,7 @@ const GamePage: React.FC = () => {
 
     // Development mode warning
     if (process.env.NODE_ENV === 'development') {
-        console.log("🎮 GamePage: Running in development mode - React StrictMode may cause double mounting");
+        console.log("GamePage: Running in development mode - React StrictMode may cause double mounting");
     }
 
     useEffect(() => {
@@ -435,14 +502,22 @@ const GamePage: React.FC = () => {
         );
     }
 
-    const showMobilePlayPrompt = isPhoneViewport && !mobilePlayRequested;
-    const showRotateHint = isPhoneViewport && mobilePlayRequested && isPortrait;
+    const showMobilePlayPrompt = isMobileDevice && !mobilePlayRequested;
+    const showRotateHint = isMobileDevice && mobilePlayRequested && isPortrait;
 
     return (
         <div
             ref={gamePageRef}
             className={`game-page${mobilePlayRequested ? ' mobile-play-mode' : ''}`}
         >
+            <button
+                type="button"
+                className="game-profile-back"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={handleBackToProfile}
+            >
+                Back to Profile
+            </button>
             <div className="game-container">
                 <div 
                     ref={gameContainerRef} 
@@ -453,21 +528,52 @@ const GamePage: React.FC = () => {
                     <div className="mobile-play-overlay">
                         <div className="mobile-play-panel">
                             <div className="mobile-play-title">
-                                {showMobilePlayPrompt ? 'Mobile play mode' : 'Rotate your phone'}
+                                {showFullscreenConfirm
+                                    ? 'Enter fullscreen?'
+                                    : showMobilePlayPrompt ? 'Mobile play mode' : 'Rotate your phone'}
                             </div>
                             <div className="mobile-play-copy">
-                                {showMobilePlayPrompt
-                                    ? 'Fullscreen landscape gives the controls enough room.'
+                                {showFullscreenConfirm
+                                    ? 'Fullscreen landscape gives the controls enough room. You can stay in the browser window instead.'
+                                    : showMobilePlayPrompt
+                                    ? fullscreenMode === "ask"
+                                    ? 'Open the game on a phone or tablet for the mobile play mode.'
+                                        : 'Start the game in the browser window.'
                                     : mobileModeMessage || 'Landscape is best for movement and action buttons.'}
                             </div>
-                            <button
-                                type="button"
-                                className="mobile-play-button"
-                                onClick={handleEnterMobilePlayMode}
-                                disabled={mobileModeBusy}
-                            >
-                                {mobileModeBusy ? 'Opening...' : showMobilePlayPrompt ? 'Play fullscreen' : 'Try again'}
-                            </button>
+                            {showFullscreenConfirm ? (
+                                <div className="mobile-play-actions">
+                                    <button
+                                        type="button"
+                                        className="mobile-play-button"
+                                        onClick={() => void handleEnterMobilePlayMode(true)}
+                                        disabled={mobileModeBusy}
+                                    >
+                                        {mobileModeBusy ? 'Opening...' : 'Enter fullscreen'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="mobile-play-secondary"
+                                        onClick={() => void handleEnterMobilePlayMode(false)}
+                                        disabled={mobileModeBusy}
+                                    >
+                                        Stay windowed
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="mobile-play-button"
+                                    onClick={showMobilePlayPrompt ? handleOpenMobilePlayMode : () => void handleEnterMobilePlayMode(fullscreenMode === "ask")}
+                                    disabled={mobileModeBusy}
+                                >
+                                    {mobileModeBusy
+                                        ? 'Opening...'
+                                        : showMobilePlayPrompt
+                                          ? fullscreenMode === "ask" ? 'Start game' : 'Start game'
+                                          : 'Try again'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
