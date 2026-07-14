@@ -1,4 +1,27 @@
-__pycache__
-.pytest_cache
-venv
+# Python virtual environments
+virtual_env/
+virt_env_wsl/
+**/virtual_env/
+**/virt_env_wsl/
+**/.venv/
+**/venv/
+
+# Archived code
+app-Ver_Andre/
+archive/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Git
 .git
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Tests (if not needed in image)
+tests/
