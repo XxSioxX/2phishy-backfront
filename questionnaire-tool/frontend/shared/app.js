@@ -367,56 +367,26 @@ const submitGoogleForms = async () => {
   const meta = metaResponse.ok ? await metaResponse.json() : null;
   const hiddenFields = meta?.hidden_fields || {};
 
-  return new Promise((resolve) => {
-    const iframeName = "questionnaire-google-forms-target";
-    let iframe = document.querySelector(`iframe[name="${iframeName}"]`);
+  const payload = new URLSearchParams();
 
-    if (!iframe) {
-      iframe = document.createElement("iframe");
-      iframe.name = iframeName;
-      iframe.style.display = "none";
-      document.body.appendChild(iframe);
-    }
+  Object.entries(hiddenFields).forEach(([name, value]) => {
+    payload.set(name, String(value));
+  });
 
-    const form = document.createElement("form");
-    form.action = config.googleFormsEndpoint;
-    form.method = "POST";
-    form.target = iframeName;
-    form.style.display = "none";
+  config.steps.forEach((step) => {
+    step.questions.forEach((question) => {
+      payload.set(question.entry, state.answers[question.id] ?? "");
 
-    config.steps.forEach((step) => {
-      step.questions.forEach((question) => {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = question.entry;
-        input.value = state.answers[question.id] ?? "";
-        form.appendChild(input);
-
-        if (question.type === "radio") {
-          const sentinel = document.createElement("input");
-          sentinel.type = "hidden";
-          sentinel.name = `${question.entry}_sentinel`;
-          sentinel.value = "";
-          form.appendChild(sentinel);
-        }
-      });
+      if (question.type === "radio") {
+        payload.set(`${question.entry}_sentinel`, "");
+      }
     });
+  });
 
-    Object.entries(hiddenFields).forEach(([name, value]) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name;
-      input.value = String(value);
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-
-    setTimeout(() => {
-      form.remove();
-      resolve();
-    }, 1200);
+  await fetch(config.googleFormsEndpoint, {
+    method: "POST",
+    mode: "no-cors",
+    body: payload.toString(),
   });
 };
 
