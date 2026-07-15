@@ -33,6 +33,8 @@ let state = {
   notice: "",
   transitionDirection: "next",
   theme: "dark",
+  googleFormsHiddenFields: null,
+  draftLoadedAt: null,
 };
 
 const escapeHTML = (value) =>
@@ -77,6 +79,7 @@ const loadDraft = () => {
       ? Math.min(Math.max(parsed.currentStep, 0), config.steps.length - 1)
       : 0;
     state.answers = parsed.answers && typeof parsed.answers === "object" ? parsed.answers : {};
+    state.draftLoadedAt = Number.isInteger(parsed.draftLoadedAt) ? parsed.draftLoadedAt : null;
   } catch (error) {
     console.warn("Failed to restore draft:", error);
   }
@@ -89,6 +92,7 @@ const saveDraft = () => {
     JSON.stringify({
       currentStep: state.currentStep,
       answers: state.answers,
+      draftLoadedAt: state.draftLoadedAt,
       updatedAt: new Date().toISOString(),
     })
   );
@@ -362,26 +366,62 @@ const renderNotice = () => {
     : "";
 };
 
+const loadGoogleFormsMeta = async () => {
+  try {
+    const metaResponse = await fetch(`/api/google-forms/meta?questionnaire_type=${encodeURIComponent(questionnaireId)}`);
+    if (!metaResponse.ok) {
+      return;
+    }
+
+    const meta = await metaResponse.json();
+    state.googleFormsHiddenFields = meta.hidden_fields || null;
+    if (!state.draftLoadedAt) {
+      state.draftLoadedAt = Date.now();
+      saveDraft();
+    }
+  } catch (error) {
+    console.warn("Failed to preload Google Forms metadata:", error);
+  }
+};
+
 const submitGoogleForms = async () => {
-  const metaResponse = await fetch(`/api/google-forms/meta?questionnaire_type=${encodeURIComponent(questionnaireId)}`);
-  const meta = metaResponse.ok ? await metaResponse.json() : null;
-  const hiddenFields = meta?.hidden_fields || {};
-  const includeHiddenFields = Boolean(hiddenFields.fbzx);
+  if (!state.googleFormsHiddenFields) {
+    try {
+      const metaResponse = await fetch(`/api/google-forms/meta?questionnaire_type=${encodeURIComponent(questionnaireId)}`);
+      if (metaResponse.ok) {
+        const meta = await metaResponse.json();
+        state.googleFormsHiddenFields = meta.hidden_fields || null;
+      }
+    } catch (error) {
+      console.warn("Google Forms metadata fetch failed during submit:", error);
+    }
+  }
+
+  const hiddenFields = state.googleFormsHiddenFields || {};
 
   const payload = new URLSearchParams();
 
-  if (includeHiddenFields) {
-    Object.entries(hiddenFields).forEach(([name, value]) => {
-      payload.set(name, String(value));
-    });
-  }
+  Object.entries(hiddenFields).forEach(([name, value]) => {
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+
+    payload.set(name, String(value));
+  });
+
+  payload.set("submissionTimestamp", String(Date.now()));
+  payload.set("dlut", String(state.draftLoadedAt || Date.now()));
 
   config.steps.forEach((step) => {
     step.questions.forEach((question) => {
-      payload.set(question.entry, state.answers[question.id] ?? "");
+      const formEntry = question.googleFormsEntry || question.entry;
+      const answer = state.answers[question.id] ?? "";
+      const formValue =
+        question.googleFormsOtherValue && answer === "Other" ? question.googleFormsOtherValue : answer;
+      payload.set(formEntry, formValue);
 
-      if (question.type === "radio") {
-        payload.set(`${question.entry}_sentinel`, "");
+      if (question.type === "radio" && !formEntry.endsWith("_sentinel")) {
+        payload.set(`${formEntry}_sentinel`, "");
       }
     });
   });
@@ -477,10 +517,14 @@ const boot = () => {
   document.title = config.title;
   loadTheme();
   loadDraft();
+  if (!state.draftLoadedAt) {
+    state.draftLoadedAt = Date.now();
+  }
   state.transitionDirection = "next";
   state.hydrated = true;
   window.addEventListener("beforeunload", handleBeforeUnload);
   render();
+  void loadGoogleFormsMeta();
 };
 
 boot();

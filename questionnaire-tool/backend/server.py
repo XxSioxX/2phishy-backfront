@@ -121,6 +121,7 @@ class QuestionnaireHandler(SimpleHTTPRequestHandler):
             fbzx = fetch_fbzx(form_config["view_url"])
             hidden_fields = {
                 "fvv": 1,
+                "draftResponse": "[null,null,\"%s\"]" % fbzx,
                 "partialResponse": "[null,null,\"%s\"]" % fbzx,
                 "pageHistory": ",".join(str(i) for i in range(form_config["page_history_count"])),
                 "fbzx": fbzx,

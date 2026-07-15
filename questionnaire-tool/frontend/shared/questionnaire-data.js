@@ -20,6 +20,7 @@ export const QUESTIONNAIRES = {
           {
             id: "consent",
             entry: "entry.511338609",
+            googleFormsEntry: "entry.511338609_sentinel",
             question:
               "I am aware of my rights and the responsibilities of the researchers regarding the management of my data. I hereby grant permission for this group's researchers to use the information I will provide on this form for the purposes of this study.",
             type: "radio",
@@ -68,9 +69,10 @@ export const QUESTIONNAIRES = {
           {
             id: "school_department",
             entry: "entry.1045391551",
+            googleFormsOtherValue: "__other_option__",
             question: "What is your school department?",
             type: "radio",
-            required: true,
+            required: false,
             choices: [
               "School of Information Technology",
               "School of Media Studies",
@@ -85,7 +87,7 @@ export const QUESTIONNAIRES = {
             entry: "entry.439680690",
             question: "Have you previously received any formal education or training related to cybersecurity?",
             type: "radio",
-            required: true,
+            required: false,
             choices: ["Yes", "No"],
           },
         ],
@@ -237,6 +239,7 @@ export const QUESTIONNAIRES = {
           {
             id: "consent",
             entry: "entry.511338609",
+            googleFormsEntry: "entry.511338609_sentinel",
             question:
               "I am aware of my rights and the responsibilities of the researchers regarding the management of my data. I hereby grant permission for this group's researchers to use the information I will provide on this form for the purposes of this study.",
             type: "radio",
@@ -461,4 +464,3 @@ export const QUESTIONNAIRES = {
     ],
   },
 };
-
