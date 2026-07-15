@@ -116,6 +116,58 @@ const currentStep = () => config.steps[state.currentStep];
 
 const currentProgress = () => ((state.currentStep + 1) / config.steps.length) * 100;
 
+const isLikertScaleQuestion = (question) =>
+  question.type === "radio" &&
+  Array.isArray(question.choices) &&
+  question.choices.length === 5 &&
+  question.choices.every((choice, index) => String(choice) === String(index + 1));
+
+const renderLikertScale = (question, value, error, requiredMark) => {
+  const choices = question.choices || [];
+  const parsedValue = Number.parseInt(value || "", 10);
+  const selectedIndex = Number.isInteger(parsedValue)
+    ? Math.max(0, Math.min(choices.length - 1, parsedValue - 1))
+    : Math.floor(choices.length / 2);
+  const sliderValue = String(selectedIndex + 1);
+  const hasValue = value !== "";
+  const valueLabel =
+    choices[selectedIndex] && hasValue ? `${choices[selectedIndex]}` : "Select a response";
+
+  return `
+    <div class="question ${error ? "has-error" : ""}">
+      <label class="label" for="${escapeHTML(question.id)}">${escapeHTML(question.question)}${requiredMark}</label>
+      ${question.helperText ? `<p class="question-helper">${escapeHTML(question.helperText)}</p>` : ""}
+      <div class="likert-scale ${hasValue ? "has-value" : "is-unanswered"}">
+        <div class="likert-scale__header">
+          <span class="likert-scale__value">${escapeHTML(valueLabel)}</span>
+          <span class="likert-scale__hint">1 = Strongly disagree · 5 = Strongly agree</span>
+        </div>
+        <input
+          id="${escapeHTML(question.id)}"
+          class="likert-slider"
+          type="range"
+          min="1"
+          max="5"
+          step="1"
+          value="${escapeHTML(sliderValue)}"
+          aria-valuemin="1"
+          aria-valuemax="5"
+          aria-valuenow="${escapeHTML(sliderValue)}"
+          aria-label="${escapeHTML(question.question)}"
+        />
+        <div class="likert-scale__labels" aria-hidden="true">
+          <span>1</span>
+          <span>2</span>
+          <span>3</span>
+          <span>4</span>
+          <span>5</span>
+        </div>
+      </div>
+      ${error ? `<p class="error">${error}</p>` : ""}
+    </div>
+  `;
+};
+
 const validateQuestion = (question) => {
   const value = (state.answers[question.id] ?? "").trim();
   if (question.required && !value) {
@@ -243,6 +295,10 @@ const renderQuestion = (question) => {
     `;
   }
 
+  if (isLikertScaleQuestion(question)) {
+    return renderLikertScale(question, value, error, requiredMark);
+  }
+
   return `
     <div class="question ${error ? "has-error" : ""}">
       <label class="label">${escapeHTML(question.question)}${requiredMark}</label>
@@ -290,6 +346,10 @@ const renderStep = () => {
     if (question.type === "short_answer") {
       const input = elements.step.querySelector(`#${CSS.escape(question.id)}`);
       input.addEventListener("input", (event) => updateAnswer(question, event.target.value));
+    } else if (isLikertScaleQuestion(question)) {
+      const input = elements.step.querySelector(`#${CSS.escape(question.id)}`);
+      input.addEventListener("input", (event) => updateAnswer(question, event.target.value));
+      input.addEventListener("change", (event) => updateAnswer(question, event.target.value));
     } else {
       elements.step.querySelectorAll(`input[name="${CSS.escape(question.id)}"]`).forEach((input) => {
         input.addEventListener("change", (event) => updateAnswer(question, event.target.value));

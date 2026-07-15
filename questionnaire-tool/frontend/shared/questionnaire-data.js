@@ -187,7 +187,7 @@ export const QUESTIONNAIRES = {
       {
         id: "confidence",
         title: "CyberSecurity Section 3: Cybersecurity Confidence",
-        description: "Use the 1–5 scale below for each statement.",
+        description: "Use the slider below for each statement. For this project, 1 = Strongly disagree and 5 = Strongly agree.",
         questions: [
           {
             id: "conf_phishing",
@@ -361,7 +361,7 @@ export const QUESTIONNAIRES = {
       {
         id: "confidence",
         title: "CyberSecurity Section 3: Cybersecurity Confidence",
-        description: "Use the 1–5 scale below for each statement.",
+        description: "Use the slider below for each statement. For this project, 1 = Strongly disagree and 5 = Strongly agree.",
         questions: [
           {
             id: "conf_phishing",
