@@ -366,12 +366,15 @@ const submitGoogleForms = async () => {
   const metaResponse = await fetch(`/api/google-forms/meta?questionnaire_type=${encodeURIComponent(questionnaireId)}`);
   const meta = metaResponse.ok ? await metaResponse.json() : null;
   const hiddenFields = meta?.hidden_fields || {};
+  const includeHiddenFields = Boolean(hiddenFields.fbzx);
 
   const payload = new URLSearchParams();
 
-  Object.entries(hiddenFields).forEach(([name, value]) => {
-    payload.set(name, String(value));
-  });
+  if (includeHiddenFields) {
+    Object.entries(hiddenFields).forEach(([name, value]) => {
+      payload.set(name, String(value));
+    });
+  }
 
   config.steps.forEach((step) => {
     step.questions.forEach((question) => {
@@ -386,7 +389,7 @@ const submitGoogleForms = async () => {
   await fetch(config.googleFormsEndpoint, {
     method: "POST",
     mode: "no-cors",
-    body: payload.toString(),
+    body: payload,
   });
 };
 
