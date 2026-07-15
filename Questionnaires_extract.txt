@@ -1,0 +1,495 @@
+PAGE 0:
+2Phishy: Pre-test Assessment
+Good Day!
+
+We are third-year BS Information Technology students from Mapúa University – Makati Campus conducting our thesis entitled "2Phishy: A Gamified Learning Application for Cybersecurity Awareness."
+Thank you for participating in this pre-playtest assessment. This questionnaire aims to measure your current cybersecurity awareness, experiences with online scams, and ability to recognize common scam scenarios before using the 2Phishy application. Your responses will serve as the baseline for evaluating the effectiveness of our gamified cybersecurity learning application.
+
+This assessment consists of questions about your demographic information, cybersecurity awareness, prior experiences with online scams, and scenario-based cybersecurity situations. Please answer each question honestly based on your own knowledge and experience.
+
+Your participation is voluntary, and all responses will be kept strictly confidential. The information collected will be used solely for academic research purposes.
+
+In accordance with the Data Privacy Act of 2012 (Republic Act No. 10173), all data collected will be securely stored, treated with confidentiality, and permanently deleted after the completion of the study. Only the authorized research team will have access to the collected information.
+
+As a participant, you have the right to:
+Keep your identity and responses confidential.
+Withdraw from the study at any time without penalty.
+Request the removal of your personal data from the study by contacting the researchers.
+For further questions, you may reach us through the following:
+Jahnreil J. Amarillento - jjamarillento@mymail.mapua.edu.ph
+Mon Andre V. Perez - mavperez@mymail.mapua.edu.ph
+
+PAGE 1:
+{
+    "question": "I am aware of my rights and the responsibilities of the researchers regarding the management of my data. I hereby grant permission for this group's researchers to use the information I will provide on this form for the purposes of this study.",
+    "entry": "entry.511338609_sentinel"
+}
+
+PAGE 2:
+
+    {
+        "section": "Participant Profile",
+        "question": "Participant ID", note: (Please ask facilitator if unknown)
+        "entry": "entry.907467691",
+        "type": "short_answer",
+        "required": true
+    },
+    {
+        "section": "Participant Profile",
+        "question": "Age", note: (Example: 20), must be integer
+        "entry": "entry.966320300",
+        "type": "short_answer",
+        "required": true
+    },
+    {
+        "section": "Participant Profile",
+        "question": "What is your average internet usage per day?",
+        "entry": "entry.1511657596",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Less than 1 hour",
+            "1 to 3 hours",
+            "3 to 6 hours",
+            "6 to 9 hours",
+            "Greater than 9 hours"
+        ]
+    },
+    {
+        "section": "Participant Profile",
+        "question": "What is your school department?",
+        "entry": "entry.1045391551",
+        "type": "radio",
+        "required": false,
+        "choices": [
+            "School of Information Technology",
+            "School of Media Studies",
+            "School of Nursing",
+            "School of Health Sciences",
+            "School of Business",
+            "__other_option__"
+        ]
+    },
+    {
+        "section": "Participant Profile",
+        "question": "Have you previously received any formal education or training related to cybersecurity?",
+        "entry": "entry.439680690",
+        "type": "radio",
+        "required": false,
+        "choices": [
+            "Yes",
+            "No"
+        ]
+    }
+]
+
+PAGE 3:
+[
+    {
+        "section": "CyberSecurity Section 2: Baseline Cybersecurity Knowledge Assessment",
+        "question": "Which URL is most likely a phishing website?",
+        "entry": "entry.1673979401",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "www.microsoft.com",
+            "www.paypal-login.com",
+            "www.google.com",
+            "www.mapua.edu.ph"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: Baseline Cybersecurity Knowledge Assessment",
+        "question": "Which password is the strongest?",
+        "entry": "entry.629643857",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Password123",
+            "Qwert2025",
+            "my$ecurePassw0rd!",
+            "Abc12345"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: Baseline Cybersecurity Knowledge Assessment",
+        "question": "You receive an unexpected email asking you to verify your account by clicking a link. What should you do?",
+        "entry": "entry.1958849132",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Click the link immediately",
+            "Verify through the official website first",
+            "Reply with your information",
+            "Forward the email to friends"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: Baseline Cybersecurity Knowledge Assessment",
+        "question": "How does malware most commonly infect computers?",
+        "entry": "entry.70721282",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Operating system updates",
+            "Suspicious downloads or email attachments",
+            "Changing desktop wallpaper",
+            "Restarting the computer"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: Baseline Cybersecurity Knowledge Assessment",
+        "question": "Someone claiming to be IT support asks for your password. What should you do?",
+        "entry": "entry.527102369",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Give your password",
+            "Verify their identity before sharing anything",
+            "Ignore all IT staff",
+            "Change your username"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: Baseline Cybersecurity Knowledge Assessment",
+        "question": "Which information should generally NOT be shared publicly?",
+        "entry": "entry.1904816629",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Favorite movie",
+            "Phone number and home address",
+            "Favorite food",
+            "School subject"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: Baseline Cybersecurity Knowledge Assessment",
+        "question": "If you believe your computer has been infected, what should you do first?",
+        "entry": "entry.1048288850",
+        "type": "radio",
+        "required": false,
+        "choices": [
+            "Disconnect from the internet",
+            "Continue using it",
+            "Ignore the issue",
+            "Download random cleaning software"
+        ]
+    }
+]
+
+PAGE 4:
+[
+    {
+        "section": "CyberSecurity Section 3: Cybersecurity Confidence",
+        "question": "I am confident in identifying phishing attempts.",
+        "entry": "entry.1099657759",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 3: Cybersecurity Confidence",
+        "question": "I know how to protect my personal information online.",
+        "entry": "entry.1745437936",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 3: Cybersecurity Confidence",
+        "question": "I know the appropriate actions to take after encountering a cybersecurity threat.",
+        "entry": "entry.88328170",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+        ]
+    }
+]
+
+
+================================
+
+PAGE 0:
+2Phishy: Post-test Assessment
+
+Good Day!
+
+We are third-year BS Information Technology students from Mapúa University – Makati Campus conducting our thesis entitled "2Phishy: A Gamified Learning Application for Cybersecurity Awareness."
+
+Thank you for participating in the 2Phishy playtest. This post-playtest questionnaire aims to evaluate your cybersecurity knowledge, awareness, and learning experience after using the 2Phishy application. Your responses will be compared with your pre-test responses to assess the effectiveness of the application as a gamified cybersecurity learning tool.
+
+This questionnaire consists of questions about your cybersecurity knowledge, confidence in recognizing cybersecurity threats, and your experience using the application. Please answer each question honestly based on your current knowledge and your experience while using 2Phishy.
+
+Your participation remains voluntary, and all responses will be treated with strict confidentiality. The information collected will be used solely for academic research purposes.
+
+In accordance with the Data Privacy Act of 2012 (Republic Act No. 10173), all collected information will be securely stored, kept confidential, and permanently deleted upon the completion of the study. Your responses will be matched with your pre-test questionnaire using your assigned Participant ID while preserving your anonymity.
+
+As a participant, you have the right to:
+
+Keep your identity and responses confidential.
+Withdraw from the study at any time without penalty.
+Request the removal of your data from the study by contacting the researchers.
+
+For further questions regarding this study, you may contact:
+
+Jahnreil J. Amarillento – jjamarillento@mymail.mapua.edu.ph
+Mon Andre V. Perez – mavperez@mymail.mapua.edu.ph
+
+PAGE 1:
+[
+    {
+        "section": "Data Privacy Agreement",
+        "question": "I am aware of my rights and the responsibilities of the researchers regarding the management of my data. I hereby grant permission for this group's researchers to use the information I will provide on this form for the purposes of this study.",
+        "entry": "entry.511338609",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "I agree with terms and conditions outlined above"
+        ]
+    }
+]
+
+PAGE 2:
+[
+    {
+        "section": "Participant Profile",
+        "question": "Participant ID", #note: (Please ask facilitator if unknown)
+        "entry": "entry.907467691",
+        "type": "short_answer",
+        "required": false
+    }
+]
+
+PAGE 3:
+[
+    {
+        "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+        "question": "What does the padlock icon beside a website's address usually indicate?",
+        "entry": "entry.1673979401",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "The website is safe from malware",
+            "The connection is encrypted using HTTPS",
+            "The website is government-approved",
+            "The website has no advertisements"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+        "question": "Which practice improves password security the most?",
+        "entry": "entry.629643857",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Reusing one password",
+            "Using long, unique passwords for each account",
+            "Sharing passwords with trusted friends",
+            "Writing passwords on paper beside your computer"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+        "question": "Which is the best way to verify an email claiming to be from your bank?",
+        "entry": "entry.1958849132",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Click the provided link",
+            "Contact the bank using its official contact information",
+            "Reply to the email",
+            "Ignore every bank email"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+        "question": "What does ransomware do?",
+        "entry": "entry.70721282",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Encrypts files and demands payment",
+            "Speeds up your computer",
+            "Blocks advertisements",
+            "Creates stronger password"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+        "question": "Which is an example of social engineering?",
+        "entry": "entry.527102369",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Tricking users into revealing confidential information",
+            "Updating antivirus software",
+            "Encrypting internet traffic",
+            "Creating secure passwords"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+        "question": "Which action best protects your personal information online?",
+        "entry": "entry.1904816629",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "Sharing personal details only when necessary",
+            "Posting all information publicly",
+            "Using the same password everywhere",
+            "Accepting every permission request"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+        "question": "After discovering suspicious activity on your account, what should you do first?",
+        "entry": "entry.1048288850",
+        "type": "radio",
+        "required": false,
+        "choices": [
+            "Change your password and report the incident",
+            "Ignore it",
+            "Share your password with friends",
+            "Delete your browser"
+        ]
+    }
+]
+
+PAGE 4:
+
+[
+    {
+        "section": "CyberSecurity Section 3: Cybersecurity Confidence",
+        "question": "I am confident in identifying phishing attempts.",
+        "entry": "entry.1099657759",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 3: Cybersecurity Confidence",
+        "question": "I know how to protect my personal information online.",
+        "entry": "entry.1745437936",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+        ]
+    },
+    {
+        "section": "CyberSecurity Section 3: Cybersecurity Confidence",
+        "question": "I know the appropriate actions to take after encountering a cybersecurity threat.",
+        "entry": "entry.88328170",
+        "type": "radio",
+        "required": true,
+        "choices": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+        ]
+    }
+]
+
+Page 5:
+[
+    {
+        "section": "Section 4: Game Experience",
+        "question": "How engaging did you find the game?",
+        "entry": "entry.253549919",
+        "type": "radio",
+        "required": false,
+        "choices": [
+            "Very Engaging",
+            "Somewhat Engaging",
+            "Neutral",
+            "Not Engaging",
+            "Very Unengaging"
+        ]
+    },
+    {
+        "section": "Section 4: Game Experience",
+        "question": "Which game component contributed the most to your learning?",
+        "entry": "entry.1452349600",
+        "type": "radio",
+        "required": false,
+        "choices": [
+            "Interactive challenges",
+            "Storyline",
+            "NPC interactions",
+            "Educational explanations",
+            "Scenario-based decision making"
+        ]
+    },
+    {
+        "section": "Section 4: Game Experience",
+        "question": "Which cybersecurity topic do you think you learned the most?",
+        "entry": "entry.887819345",
+        "type": "radio",
+        "required": false,
+        "choices": [
+            "Safe Browsing",
+            "Password Security",
+            "Malware",
+            "Social Engineering",
+            "Incident Response"
+        ]
+    },
+    {
+        "section": "Section 4: Game Experience",
+        "question": "Do you feel that playing 2Phishy improved your cybersecurity awareness?",
+        "entry": "entry.407570034",
+        "type": "radio",
+        "required": false,
+        "choices": [
+            "Strongly Agree",
+            "Agree",
+            "Neutral",
+            "Disagree",
+            "Strongly Disagree"
+        ]
+    },
+    {
+        "section": "Section 4: Game Experience",
+        "question": "Would you recommend 2Phishy as a cybersecurity learning tool to other students?",
+        "entry": "entry.48342652",
+        "type": "radio",
+        "required": false,
+        "choices": [
+            "Definitely Yes",
+            "Probably Yes",
+            "Not Sure",
+            "Probably No",
+            "Definitely No"
+        ]
+    }
+]
