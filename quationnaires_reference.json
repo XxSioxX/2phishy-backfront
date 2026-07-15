@@ -1,0 +1,201 @@
+{
+  "formName": "2Phishy: Post-test Assessment",
+  "hiddenFields": {
+    "fvv": 1,
+    "partialResponse": "[null,null,\"<fbzx value, fetched live>\"]",
+    "pageHistory": "0,1,2,3,4,5",
+    "fbzx": "<MUST be scraped fresh from the live form HTML each load — not static>",
+    "submissionTimestamp": "<Date.now() in ms at submit time>",
+    "dlut": "<Date.now() in ms when the page/draft is first loaded>"
+  },
+  "sentinelNote": "Every 'radio' entry below also submits a paired entry.<id>_sentinel field with an empty string value. short_answer entries do not get a sentinel.",
+  "pages": [
+    {
+      "page": 0,
+      "title": "Intro",
+      "fields": []
+    },
+    {
+      "page": 1,
+      "title": "Data Privacy Agreement",
+      "fields": [
+        {
+          "section": "Data Privacy Agreement",
+          "question": "I am aware of my rights and the responsibilities of the researchers regarding the management of my data. I hereby grant permission for this group's researchers to use the information I will provide on this form for the purposes of this study.",
+          "entry": "entry.511338609",
+          "sentinel": "entry.511338609_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["I agree with terms and conditions outlined above"]
+        }
+      ]
+    },
+    {
+      "page": 2,
+      "title": "Participant Profile",
+      "fields": [
+        {
+          "section": "Participant Profile",
+          "question": "Participant ID",
+          "note": "Please ask facilitator if unknown",
+          "entry": "entry.907467691",
+          "type": "short_answer",
+          "required": false
+        }
+      ]
+    },
+    {
+      "page": 3,
+      "title": "General Cybersecurity Knowledge",
+      "fields": [
+        {
+          "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+          "question": "What does the padlock icon beside a website's address usually indicate?",
+          "entry": "entry.1673979401",
+          "sentinel": "entry.1673979401_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["The website is safe from malware", "The connection is encrypted using HTTPS", "The website is government-approved", "The website has no advertisements"]
+        },
+        {
+          "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+          "question": "Which practice improves password security the most?",
+          "entry": "entry.629643857",
+          "sentinel": "entry.629643857_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["Reusing one password", "Using long, unique passwords for each account", "Sharing passwords with trusted friends", "Writing passwords on paper beside your computer"]
+        },
+        {
+          "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+          "question": "Which is the best way to verify an email claiming to be from your bank?",
+          "entry": "entry.1958849132",
+          "sentinel": "entry.1958849132_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["Click the provided link", "Contact the bank using its official contact information", "Reply to the email", "Ignore every bank email"]
+        },
+        {
+          "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+          "question": "What does ransomware do?",
+          "entry": "entry.70721282",
+          "sentinel": "entry.70721282_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["Encrypts files and demands payment", "Speeds up your computer", "Blocks advertisements", "Creates stronger password"]
+        },
+        {
+          "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+          "question": "Which is an example of social engineering?",
+          "entry": "entry.527102369",
+          "sentinel": "entry.527102369_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["Tricking users into revealing confidential information", "Updating antivirus software", "Encrypting internet traffic", "Creating secure passwords"]
+        },
+        {
+          "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+          "question": "Which action best protects your personal information online?",
+          "entry": "entry.1904816629",
+          "sentinel": "entry.1904816629_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["Sharing personal details only when necessary", "Posting all information publicly", "Using the same password everywhere", "Accepting every permission request"]
+        },
+        {
+          "section": "CyberSecurity Section 2: General Cybersecurity Knowledge",
+          "question": "After discovering suspicious activity on your account, what should you do first?",
+          "entry": "entry.1048288850",
+          "sentinel": "entry.1048288850_sentinel",
+          "type": "radio",
+          "required": false,
+          "choices": ["Change your password and report the incident", "Ignore it", "Share your password with friends", "Delete your browser"]
+        }
+      ]
+    },
+    {
+      "page": 4,
+      "title": "Cybersecurity Confidence",
+      "fields": [
+        {
+          "section": "CyberSecurity Section 3: Cybersecurity Confidence",
+          "question": "I am confident in identifying phishing attempts.",
+          "entry": "entry.1099657759",
+          "sentinel": "entry.1099657759_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["1", "2", "3", "4", "5"]
+        },
+        {
+          "section": "CyberSecurity Section 3: Cybersecurity Confidence",
+          "question": "I know how to protect my personal information online.",
+          "entry": "entry.1745437936",
+          "sentinel": "entry.1745437936_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["1", "2", "3", "4", "5"]
+        },
+        {
+          "section": "CyberSecurity Section 3: Cybersecurity Confidence",
+          "question": "I know the appropriate actions to take after encountering a cybersecurity threat.",
+          "entry": "entry.88328170",
+          "sentinel": "entry.88328170_sentinel",
+          "type": "radio",
+          "required": true,
+          "choices": ["1", "2", "3", "4", "5"]
+        }
+      ]
+    },
+    {
+      "page": 5,
+      "title": "Game Experience",
+      "fields": [
+        {
+          "section": "Section 4: Game Experience",
+          "question": "How engaging did you find the game?",
+          "entry": "entry.253549919",
+          "sentinel": "entry.253549919_sentinel",
+          "type": "radio",
+          "required": false,
+          "choices": ["Very Engaging", "Somewhat Engaging", "Neutral", "Not Engaging", "Very Unengaging"]
+        },
+        {
+          "section": "Section 4: Game Experience",
+          "question": "Which game component contributed the most to your learning?",
+          "entry": "entry.1452349600",
+          "sentinel": "entry.1452349600_sentinel",
+          "type": "radio",
+          "required": false,
+          "choices": ["Interactive challenges", "Storyline", "NPC interactions", "Educational explanations", "Scenario-based decision making"]
+        },
+        {
+          "section": "Section 4: Game Experience",
+          "question": "Which cybersecurity topic do you think you learned the most?",
+          "entry": "entry.887819345",
+          "sentinel": "entry.887819345_sentinel",
+          "type": "radio",
+          "required": false,
+          "choices": ["Safe Browsing", "Password Security", "Malware", "Social Engineering", "Incident Response"]
+        },
+        {
+          "section": "Section 4: Game Experience",
+          "question": "Do you feel that playing 2Phishy improved your cybersecurity awareness?",
+          "entry": "entry.407570034",
+          "sentinel": "entry.407570034_sentinel",
+          "type": "radio",
+          "required": false,
+          "choices": ["Strongly Agree", "Agree", "Neutral", "Disagree", "Strongly Disagree"]
+        },
+        {
+          "section": "Section 4: Game Experience",
+          "question": "Would you recommend 2Phishy as a cybersecurity learning tool to other students?",
+          "entry": "entry.48342652",
+          "sentinel": "entry.48342652_sentinel",
+          "type": "radio",
+          "required": false,
+          "choices": ["Definitely Yes", "Probably Yes", "Not Sure", "Probably No", "Definitely No"]
+        }
+      ]
+    }
+  ]
+}
