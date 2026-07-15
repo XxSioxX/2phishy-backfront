@@ -20,7 +20,6 @@ export const QUESTIONNAIRES = {
           {
             id: "consent",
             entry: "entry.511338609",
-            googleFormsEntry: "entry.511338609_sentinel",
             question:
               "I am aware of my rights and the responsibilities of the researchers regarding the management of my data. I hereby grant permission for this group's researchers to use the information I will provide on this form for the purposes of this study.",
             type: "radio",
@@ -239,7 +238,6 @@ export const QUESTIONNAIRES = {
           {
             id: "consent",
             entry: "entry.511338609",
-            googleFormsEntry: "entry.511338609_sentinel",
             question:
               "I am aware of my rights and the responsibilities of the researchers regarding the management of my data. I hereby grant permission for this group's researchers to use the information I will provide on this form for the purposes of this study.",
             type: "radio",

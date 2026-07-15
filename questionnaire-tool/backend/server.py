@@ -18,13 +18,16 @@ DB_DIR = ROOT_DIR / "backend" / "data"
 DB_PATH = DB_DIR / "questionnaire_submissions.sqlite3"
 
 QUESTIONNAIRE_FORMS = {
+    # Both forms are single-page (one section), so pageHistory must be just "0".
+    # Any larger value (e.g. "0,1,2,3,4") makes Google reject the whole submission
+    # with HTTP 400, so page_history_count is 1 => range(1) => pageHistory="0".
     "pretest": {
         "view_url": "https://docs.google.com/forms/d/e/1FAIpQLSd0R0egqnpZtpO5jHGFuV0Nv_wDr_IFCNtVwpXDqAkJBaMU5Q/viewform?usp=header",
-        "page_history_count": 5,
+        "page_history_count": 1,
     },
     "posttest": {
         "view_url": "https://docs.google.com/forms/d/e/1FAIpQLSd3QliZOYKICcbaOIcvXFOp--sv9Rf3fXqeau2boySgaOFj5g/viewform?usp=header",
-        "page_history_count": 6,
+        "page_history_count": 1,
     },
 }
 
@@ -92,7 +95,20 @@ class QuestionnaireHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.end_headers()
 
+    def end_headers(self):  # noqa: N802
+        # Never let the browser cache the frontend assets. Otherwise an edit to
+        # app.js / questionnaire-data.js is masked by a stale 304-cached copy and
+        # the user keeps running old code (e.g. a since-fixed Google Forms bug).
+        self.send_header("Cache-Control", "no-store, must-revalidate")
+        super().end_headers()
+
     def do_GET(self):  # noqa: N802
+        # Drop conditional-request headers so SimpleHTTPRequestHandler always
+        # returns a fresh 200 for static files instead of a 304 from cache.
+        for header in ("If-Modified-Since", "If-None-Match"):
+            if header in self.headers:
+                del self.headers[header]
+
         parsed = urlparse(self.path)
         if parsed.path == "/":
             self.send_response(HTTPStatus.SEE_OTHER)

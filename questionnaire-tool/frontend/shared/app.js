@@ -385,44 +385,24 @@ const loadGoogleFormsMeta = async () => {
 };
 
 const submitGoogleForms = async () => {
-  if (!state.googleFormsHiddenFields) {
-    try {
-      const metaResponse = await fetch(`/api/google-forms/meta?questionnaire_type=${encodeURIComponent(questionnaireId)}`);
-      if (metaResponse.ok) {
-        const meta = await metaResponse.json();
-        state.googleFormsHiddenFields = meta.hidden_fields || null;
-      }
-    } catch (error) {
-      console.warn("Google Forms metadata fetch failed during submit:", error);
-    }
-  }
-
-  const hiddenFields = state.googleFormsHiddenFields || {};
-
+  // Minimal payload that Google actually accepts: only the answered entry.*
+  // fields plus fvv/pageHistory. Both forms are single-page, so pageHistory is
+  // "0" — any larger value (and any malformed draftResponse/sentinel) makes
+  // Google reject the whole submission with HTTP 400.
   const payload = new URLSearchParams();
-
-  Object.entries(hiddenFields).forEach(([name, value]) => {
-    if (value === undefined || value === null || value === "") {
-      return;
-    }
-
-    payload.set(name, String(value));
-  });
-
-  payload.set("submissionTimestamp", String(Date.now()));
-  payload.set("dlut", String(state.draftLoadedAt || Date.now()));
+  payload.set("fvv", "1");
+  payload.set("pageHistory", "0");
 
   config.steps.forEach((step) => {
     step.questions.forEach((question) => {
+      const answer = String(state.answers[question.id] ?? "");
+      if (answer === "") {
+        return; // never submit empty values — Google rejects empty required fields
+      }
       const formEntry = question.googleFormsEntry || question.entry;
-      const answer = state.answers[question.id] ?? "";
       const formValue =
         question.googleFormsOtherValue && answer === "Other" ? question.googleFormsOtherValue : answer;
       payload.set(formEntry, formValue);
-
-      if (question.type === "radio" && !formEntry.endsWith("_sentinel")) {
-        payload.set(`${formEntry}_sentinel`, "");
-      }
     });
   });
 
