@@ -363,6 +363,10 @@ const renderNotice = () => {
 };
 
 const submitGoogleForms = async () => {
+  const metaResponse = await fetch(`/api/google-forms/meta?questionnaire_type=${encodeURIComponent(questionnaireId)}`);
+  const meta = metaResponse.ok ? await metaResponse.json() : null;
+  const hiddenFields = meta?.hidden_fields || {};
+
   return new Promise((resolve) => {
     const iframeName = "questionnaire-google-forms-target";
     let iframe = document.querySelector(`iframe[name="${iframeName}"]`);
@@ -387,7 +391,23 @@ const submitGoogleForms = async () => {
         input.name = question.entry;
         input.value = state.answers[question.id] ?? "";
         form.appendChild(input);
+
+        if (question.type === "radio") {
+          const sentinel = document.createElement("input");
+          sentinel.type = "hidden";
+          sentinel.name = `${question.entry}_sentinel`;
+          sentinel.value = "";
+          form.appendChild(sentinel);
+        }
       });
+    });
+
+    Object.entries(hiddenFields).forEach(([name, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = String(value);
+      form.appendChild(input);
     });
 
     document.body.appendChild(form);

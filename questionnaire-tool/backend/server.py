@@ -2,18 +2,31 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import re
 import uuid
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.request import urlopen
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
 DB_DIR = ROOT_DIR / "backend" / "data"
 DB_PATH = DB_DIR / "questionnaire_submissions.sqlite3"
+
+QUESTIONNAIRE_FORMS = {
+    "pretest": {
+        "view_url": "https://docs.google.com/forms/d/e/1FAIpQLSd0R0egqnpZtpO5jHGFuV0Nv_wDr_IFCNtVwpXDqAkJBaMU5Q/viewform?usp=header",
+        "page_history_count": 5,
+    },
+    "posttest": {
+        "view_url": "https://docs.google.com/forms/d/e/1FAIpQLSd3QliZOYKICcbaOIcvXFOp--sv9Rf3fXqeau2boySgaOFj5g/viewform?usp=header",
+        "page_history_count": 6,
+    },
+}
 
 
 def ensure_database() -> None:
@@ -50,6 +63,24 @@ def json_response(handler: SimpleHTTPRequestHandler, status: int, payload: dict)
     handler.wfile.write(encoded)
 
 
+def fetch_fbzx(view_url: str) -> str:
+    try:
+        with urlopen(view_url, timeout=10) as response:
+            html = response.read().decode("utf-8", errors="ignore")
+        patterns = [
+            r'name="fbzx" value="([^"]+)"',
+            r'fbzx"[^>]*value="([^"]+)"',
+            r'fbzx=([^"&]+)',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, html)
+            if match:
+                return match.group(1)
+    except Exception:
+        return ""
+    return ""
+
+
 class QuestionnaireHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
@@ -71,6 +102,40 @@ class QuestionnaireHandler(SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/health":
             json_response(self, HTTPStatus.OK, {"status": "ok"})
+            return
+
+        if parsed.path == "/api/google-forms/meta":
+            from urllib.parse import parse_qs
+
+            query = parse_qs(parsed.query or "")
+            questionnaire_type = (query.get("questionnaire_type", [""])[0] or "").strip().lower()
+            form_config = QUESTIONNAIRE_FORMS.get(questionnaire_type)
+            if not form_config:
+                json_response(
+                    self,
+                    HTTPStatus.BAD_REQUEST,
+                    {"detail": "questionnaire_type must be pretest or posttest"},
+                )
+                return
+
+            fbzx = fetch_fbzx(form_config["view_url"])
+            hidden_fields = {
+                "fvv": 1,
+                "partialResponse": "[null,null,\"%s\"]" % fbzx,
+                "pageHistory": ",".join(str(i) for i in range(form_config["page_history_count"])),
+                "fbzx": fbzx,
+                "submissionTimestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
+                "dlut": int(datetime.now(timezone.utc).timestamp() * 1000),
+            }
+            json_response(
+                self,
+                HTTPStatus.OK,
+                {
+                    "questionnaire_type": questionnaire_type,
+                    "fbzx": fbzx,
+                    "hidden_fields": hidden_fields,
+                },
+            )
             return
 
         super().do_GET()
@@ -183,4 +248,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
