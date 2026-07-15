@@ -174,10 +174,10 @@ class QuestionnaireHandler(SimpleHTTPRequestHandler):
 
 def main() -> None:
     ensure_database()
-    server = ThreadingHTTPServer(("0.0.0.0", 8010), QuestionnaireHandler)
-    print("Questionnaire tool running at http://localhost:8010")
-    print("Pre-test:  http://localhost:8010/pretest/")
-    print("Post-test: http://localhost:8010/posttest/")
+    server = ThreadingHTTPServer(("0.0.0.0", 8011), QuestionnaireHandler)
+    print("Questionnaire tool running at http://localhost:8011")
+    print("Pre-test:  http://localhost:8011/pretest/")
+    print("Post-test: http://localhost:8011/posttest/")
     server.serve_forever()
 
 

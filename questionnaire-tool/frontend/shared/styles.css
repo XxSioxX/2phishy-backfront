@@ -40,10 +40,30 @@ html, body {
   background:
     radial-gradient(circle at top, rgba(111, 140, 255, 0.16), transparent 30%),
     linear-gradient(180deg, var(--main-bg), var(--dark-bg));
+  transition: background 180ms ease, color 180ms ease;
 }
 
 body {
   min-height: 100vh;
+}
+
+html.theme-transitioning body,
+html.theme-transitioning .card,
+html.theme-transitioning .input,
+html.theme-transitioning .textarea,
+html.theme-transitioning .theme-toggle,
+html.theme-transitioning .primary,
+html.theme-transitioning .secondary,
+html.theme-transitioning .chip,
+html.theme-transitioning .track,
+html.theme-transitioning .fill {
+  transition:
+    background-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 a {
@@ -130,6 +150,12 @@ button {
   padding: 22px 24px;
 }
 
+.sticky-progress {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+}
+
 .intro-copy {
   display: grid;
   gap: 8px;
@@ -199,6 +225,18 @@ button {
 .section-title {
   margin: 0 0 6px;
   font-size: 1.1rem;
+}
+
+.step-card {
+  will-change: transform, opacity;
+}
+
+.step-card--next {
+  animation: step-next 170ms ease-out;
+}
+
+.step-card--prev {
+  animation: step-prev 170ms ease-out;
 }
 
 .section-intro {
@@ -393,6 +431,28 @@ button {
   100% { transform: scale(1); opacity: 1; }
 }
 
+@keyframes step-next {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes step-prev {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 768px) {
   .page {
     padding: 18px 12px 30px;
@@ -430,4 +490,3 @@ button {
     order: 3;
   }
 }
-

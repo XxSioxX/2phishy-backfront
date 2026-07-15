@@ -31,6 +31,7 @@ let state = {
   errors: {},
   submissionId: null,
   notice: "",
+  transitionDirection: "next",
   theme: "dark",
 };
 
@@ -46,6 +47,12 @@ const setTheme = (theme) => {
   state.theme = theme;
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem(themeKey, theme);
+  document.documentElement.classList.remove("theme-transitioning");
+  void document.documentElement.offsetWidth;
+  document.documentElement.classList.add("theme-transitioning");
+  window.setTimeout(() => {
+    document.documentElement.classList.remove("theme-transitioning");
+  }, 240);
   if (elements.themeToggle) {
     elements.themeToggle.textContent = theme === "dark" ? "Light mode" : "Dark mode";
   }
@@ -153,7 +160,6 @@ const updateAnswer = (question, value) => {
   state.answers[question.id] = value;
   delete state.errors[question.id];
   saveDraft();
-  render();
 };
 
 const handleBeforeUnload = (event) => {
@@ -188,7 +194,7 @@ const renderIntro = () => {
 
 const renderProgress = () => {
   elements.progress.innerHTML = `
-    <div class="card progress-card">
+    <div class="card progress-card sticky-progress">
       <div class="progress-meta">
         <span>Section ${state.currentStep + 1} of ${config.steps.length}</span>
         <span>${Math.round(currentProgress())}%</span>
@@ -257,7 +263,7 @@ const renderQuestion = (question) => {
 const renderStep = () => {
   const step = currentStep();
   elements.step.innerHTML = `
-    <div class="card step-card">
+    <div class="card step-card step-card--${state.transitionDirection}">
       <div class="section-head">
         <div>
           <h2 class="section-title">${escapeHTML(step.title)}</h2>
@@ -311,6 +317,7 @@ const renderFooter = () => {
 
   prev?.addEventListener("click", () => {
     if (state.currentStep > 0) {
+      state.transitionDirection = "prev";
       state.currentStep -= 1;
       state.errors = {};
       saveDraft();
@@ -325,6 +332,7 @@ const renderFooter = () => {
     }
 
     if (validateStep(state.currentStep)) {
+      state.transitionDirection = "next";
       state.currentStep += 1;
       saveDraft();
       render();
@@ -355,17 +363,40 @@ const renderNotice = () => {
 };
 
 const submitGoogleForms = async () => {
-  const formData = new FormData();
-  config.steps.forEach((step) => {
-    step.questions.forEach((question) => {
-      formData.append(question.entry, state.answers[question.id] ?? "");
-    });
-  });
+  return new Promise((resolve) => {
+    const iframeName = "questionnaire-google-forms-target";
+    let iframe = document.querySelector(`iframe[name="${iframeName}"]`);
 
-  await fetch(config.googleFormsEndpoint, {
-    method: "POST",
-    mode: "no-cors",
-    body: formData,
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.name = iframeName;
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+    }
+
+    const form = document.createElement("form");
+    form.action = config.googleFormsEndpoint;
+    form.method = "POST";
+    form.target = iframeName;
+    form.style.display = "none";
+
+    config.steps.forEach((step) => {
+      step.questions.forEach((question) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = question.entry;
+        input.value = state.answers[question.id] ?? "";
+        form.appendChild(input);
+      });
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+
+    setTimeout(() => {
+      form.remove();
+      resolve();
+    }, 1200);
   });
 };
 
@@ -453,6 +484,7 @@ const boot = () => {
   document.title = config.title;
   loadTheme();
   loadDraft();
+  state.transitionDirection = "next";
   state.hydrated = true;
   window.addEventListener("beforeunload", handleBeforeUnload);
   render();
