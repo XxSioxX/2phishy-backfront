@@ -159,7 +159,6 @@ const downloadSeekerCard = async () => {
   render();
 
   try {
-    const scale = 2;
     const canvas = document.createElement("canvas");
     canvas.width = 1600;
     canvas.height = 1080;
@@ -169,10 +168,8 @@ const downloadSeekerCard = async () => {
       throw new Error("Your browser cannot create the Seeker Card image.");
     }
 
-    context.scale(scale, scale);
-
-    const width = canvas.width / scale;
-    const height = canvas.height / scale;
+    const width = canvas.width;
+    const height = canvas.height;
     const centerX = width / 2;
 
     const gradient = context.createLinearGradient(0, 0, 0, height);
@@ -182,16 +179,16 @@ const downloadSeekerCard = async () => {
     context.fillStyle = gradient;
     context.fillRect(0, 0, width, height);
 
-    const glow = context.createRadialGradient(centerX, height * 0.22, 30, centerX, height * 0.22, 460);
-    glow.addColorStop(0, "rgba(111, 140, 255, 0.28)");
+    const glow = context.createRadialGradient(centerX, height * 0.22, 40, centerX, height * 0.22, 620);
+    glow.addColorStop(0, "rgba(111, 140, 255, 0.25)");
     glow.addColorStop(1, "rgba(111, 140, 255, 0)");
     context.fillStyle = glow;
     context.fillRect(0, 0, width, height);
 
-    const frameX = 160;
+    const frameX = 180;
     const frameY = 120;
-    const frameW = width - 320;
-    const frameH = height - 240;
+    const frameW = width - 360;
+    const frameH = height - 250;
 
     context.save();
     context.shadowColor = "rgba(0, 0, 0, 0.35)";
@@ -221,38 +218,38 @@ const downloadSeekerCard = async () => {
     context.textAlign = "center";
     context.textBaseline = "alphabetic";
 
-    context.font = "700 26px Georgia, 'Times New Roman', serif";
-    context.fillText("The crystal resonates...", centerX, frameY + 100);
+    context.font = "700 38px Georgia, 'Times New Roman', serif";
+    context.fillText("The crystal resonates...", centerX, frameY + 118);
 
-    context.font = "600 20px Georgia, 'Times New Roman', serif";
+    context.font = "600 28px Georgia, 'Times New Roman', serif";
     const subtitleLines = wrapLines(
       context,
       "You have been recognized by the Guild of Seekers.",
-      760
+      1080
     );
-    drawCenteredLines(context, subtitleLines, centerX, frameY + 146, 28);
+    drawCenteredLines(context, subtitleLines, centerX, frameY + 182, 38);
 
     context.strokeStyle = "rgba(255, 255, 255, 0.34)";
     context.lineWidth = 2;
     context.beginPath();
-    context.moveTo(frameX + 110, frameY + 54);
-    context.lineTo(width - frameX - 110, frameY + 54);
+    context.moveTo(frameX + 140, frameY + 64);
+    context.lineTo(width - frameX - 140, frameY + 64);
     context.stroke();
 
     context.beginPath();
-    context.moveTo(frameX + 110, height - frameY - 54);
-    context.lineTo(width - frameX - 110, height - frameY - 54);
+    context.moveTo(frameX + 140, height - frameY - 64);
+    context.lineTo(width - frameX - 140, height - frameY - 64);
     context.stroke();
 
-    context.font = "700 17px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    context.font = "700 25px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
     context.fillStyle = "rgba(198, 207, 223, 0.92)";
-    context.fillText("Your Seeker Mark", centerX, 500);
+    context.fillText("Your Seeker Mark", centerX, 560);
 
-    const badgeW = 540;
-    const badgeH = 120;
+    const badgeW = 760;
+    const badgeH = 180;
     const badgeX = (width - badgeW) / 2;
-    const badgeY = 538;
-    const badgeRadius = 24;
+    const badgeY = 595;
+    const badgeRadius = 30;
 
     const badgeGradient = context.createLinearGradient(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH);
     badgeGradient.addColorStop(0, "rgba(111, 140, 255, 0.24)");
@@ -264,34 +261,34 @@ const downloadSeekerCard = async () => {
     context.fill();
     context.stroke();
 
-    const runeGlow = context.createRadialGradient(centerX, badgeY + badgeH / 2, 8, centerX, badgeY + badgeH / 2, 160);
+    const runeGlow = context.createRadialGradient(centerX, badgeY + badgeH / 2, 10, centerX, badgeY + badgeH / 2, 240);
     runeGlow.addColorStop(0, "rgba(255, 255, 255, 0.96)");
     runeGlow.addColorStop(1, "rgba(122, 164, 255, 0)");
     context.fillStyle = runeGlow;
     context.beginPath();
-    context.arc(centerX - 208, badgeY + badgeH / 2, 10, 0, Math.PI * 2);
+    context.arc(centerX - 310, badgeY + badgeH / 2, 15, 0, Math.PI * 2);
     context.fill();
 
     context.fillStyle = "#ffffff";
-    context.font = "800 50px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-    context.fillText(state.seekerMark, centerX + 10, badgeY + 78);
+    context.font = "800 84px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    context.fillText(state.seekerMark, centerX + 18, badgeY + 118);
     context.shadowColor = "rgba(111, 140, 255, 0.45)";
-    context.shadowBlur = 18;
+    context.shadowBlur = 28;
     context.fillStyle = "rgba(255, 255, 255, 0.95)";
     context.beginPath();
-    context.arc(centerX - 208, badgeY + badgeH / 2, 10, 0, Math.PI * 2);
+    context.arc(centerX - 310, badgeY + badgeH / 2, 15, 0, Math.PI * 2);
     context.fill();
     context.shadowBlur = 0;
 
     const note = "Keep this mark safe. It is how the Guild will recognize your journey.";
     context.fillStyle = "rgba(198, 207, 223, 0.94)";
-    context.font = "500 21px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-    const lines = wrapLines(context, note, 660);
-    drawCenteredLines(context, lines, centerX, 736, 30);
+    context.font = "500 26px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    const lines = wrapLines(context, note, 980);
+    drawCenteredLines(context, lines, centerX, 832, 34);
 
-    context.font = "600 16px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    context.font = "600 22px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
     context.fillStyle = "rgba(151, 245, 214, 0.86)";
-    context.fillText("Guild of Seekers", centerX, height - frameY - 66);
+    context.fillText("Guild of Seekers", centerX, height - frameY - 44);
 
     const link = document.createElement("a");
     link.download = `${state.seekerMark}.jpg`;
