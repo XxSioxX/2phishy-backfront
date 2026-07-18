@@ -295,6 +295,14 @@ button {
   box-shadow: 0 0 0 3px rgba(111, 140, 255, 0.15);
 }
 
+.input[readonly],
+.input[readonly]:focus {
+  background: rgba(127, 144, 190, 0.11);
+  border-color: rgba(132, 154, 255, 0.18);
+  box-shadow: none;
+  cursor: default;
+}
+
 .radio-group {
   display: grid;
   gap: 10px;
@@ -502,6 +510,20 @@ button {
 
 .warning {
   color: var(--warning);
+}
+
+.sync-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(132, 154, 255, 0.25);
+  color: var(--accent);
+  background: rgba(111, 140, 255, 0.1);
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 @keyframes spin {

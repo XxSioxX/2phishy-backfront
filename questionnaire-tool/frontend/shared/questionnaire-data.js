@@ -35,11 +35,10 @@ export const QUESTIONNAIRES = {
           {
             id: "participant_id",
             entry: "entry.907467691",
-            question: "Participant ID",
+            question: "Seeker Mark",
             type: "short_answer",
             required: true,
-            placeholder: "Please ask the facilitator if unknown",
-            helperText: "If you are unsure, ask the facilitator before continuing.",
+            helperText: "Your mark will be assigned by the Guild and used to match your responses.",
           },
           {
             id: "age",
@@ -49,7 +48,6 @@ export const QUESTIONNAIRES = {
             required: true,
             inputType: "number",
             placeholder: "Example: 20",
-            helperText: "Enter a whole number only.",
           },
           {
             id: "internet_usage",
@@ -253,11 +251,11 @@ export const QUESTIONNAIRES = {
           {
             id: "participant_id",
             entry: "entry.907467691",
-            question: "Participant ID",
+            question: "Seeker Mark",
             type: "short_answer",
             required: true,
-            placeholder: "Please ask the facilitator if unknown",
-            helperText: "If you are unsure, ask the facilitator before continuing.",
+            placeholder: "SKR-7K4P",
+            helperText: "This is the same mark assigned when you entered the Caverns.",
           },
         ],
       },

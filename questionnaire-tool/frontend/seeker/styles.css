@@ -1,0 +1,376 @@
+.seeker-page {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+.seeker-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(122, 164, 255, 0.26), transparent 24%),
+    radial-gradient(circle at 20% 20%, rgba(109, 141, 255, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(10, 14, 24, 0.96), rgba(8, 10, 17, 1));
+  pointer-events: none;
+}
+
+.seeker-page::after {
+  content: "";
+  position: fixed;
+  inset: auto 0 0;
+  height: 34vh;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(122, 164, 255, 0.12), transparent 24%),
+    radial-gradient(circle at 82% 0%, rgba(138, 93, 255, 0.12), transparent 24%),
+    linear-gradient(180deg, transparent, rgba(4, 7, 12, 0.95));
+  pointer-events: none;
+}
+
+.seeker-shell {
+  position: relative;
+  z-index: 1;
+  width: min(920px, 100%);
+  padding-block: 20px 36px;
+}
+
+.seeker-header {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 24px 22px;
+}
+
+.seeker-header::after {
+  content: "";
+  position: absolute;
+  inset: auto -12% -40% -12%;
+  height: 220px;
+  background: radial-gradient(circle, rgba(111, 140, 255, 0.2), transparent 58%);
+  filter: blur(6px);
+  animation: pulseGlow 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.seeker-stage {
+  display: grid;
+  justify-items: center;
+  animation: fadeIn 420ms ease-out;
+}
+
+.seeker-panel {
+  position: relative;
+  width: min(100%, 760px);
+  padding: 28px;
+  overflow: hidden;
+}
+
+.seeker-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top, rgba(122, 164, 255, 0.15), transparent 38%),
+    linear-gradient(180deg, rgba(20, 28, 46, 0.94), rgba(12, 16, 28, 0.96));
+  pointer-events: none;
+}
+
+.seeker-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.seeker-welcome,
+.seeker-card {
+  display: grid;
+  gap: 22px;
+}
+
+.seeker-welcome {
+  align-items: start;
+}
+
+.seeker-copy {
+  display: grid;
+  gap: 10px;
+  line-height: 1.7;
+  color: var(--soft-color);
+  font-size: 1.02rem;
+}
+
+.seeker-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.seeker-action {
+  min-width: 170px;
+}
+
+.seeker-hint {
+  font-size: 0.92rem;
+  color: var(--soft-color);
+}
+
+.seeker-card {
+  align-items: center;
+  text-align: center;
+}
+
+.seeker-frame {
+  position: relative;
+  width: min(100%, 620px);
+  padding: 28px 24px;
+  border-radius: 24px;
+  border: 1px solid rgba(132, 154, 255, 0.22);
+  background:
+    radial-gradient(circle at top, rgba(111, 140, 255, 0.18), transparent 44%),
+    linear-gradient(180deg, rgba(14, 18, 32, 0.96), rgba(9, 12, 20, 0.98));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 30px 60px rgba(0, 0, 0, 0.35);
+}
+
+.seeker-frame::before,
+.seeker-frame::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(122, 164, 255, 0.1);
+  pointer-events: none;
+}
+
+.seeker-frame::after {
+  inset: 24px;
+  border-style: dashed;
+  opacity: 0.45;
+}
+
+.seeker-lines {
+  display: grid;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.seeker-rune {
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  padding-block: 12px 6px;
+}
+
+.seeker-rune__label {
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(198, 207, 223, 0.72);
+}
+
+.seeker-mark {
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 22px;
+  border-radius: 18px;
+  border: 1px solid rgba(132, 154, 255, 0.24);
+  background: linear-gradient(90deg, rgba(111, 140, 255, 0.16), rgba(138, 93, 255, 0.14));
+  box-shadow: 0 0 40px rgba(111, 140, 255, 0.12);
+}
+
+.seeker-mark__value {
+  font-size: clamp(1.5rem, 4vw, 2.4rem);
+  letter-spacing: 0.16em;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(111, 140, 255, 0.38);
+}
+
+.seeker-mark__glow {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgba(122, 164, 255, 0.75));
+  box-shadow: 0 0 18px rgba(122, 164, 255, 0.9);
+  animation: crystalPulse 2.4s ease-in-out infinite;
+}
+
+.seeker-note {
+  max-width: 42ch;
+  margin: 0 auto;
+  color: var(--soft-color);
+  line-height: 1.65;
+}
+
+.seeker-status {
+  min-height: 1.5rem;
+  color: var(--soft-color);
+  font-size: 0.94rem;
+}
+
+.seeker-status--error {
+  color: var(--danger);
+}
+
+.seeker-status--success {
+  color: #97f5d6;
+}
+
+.seeker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.seeker-actions .secondary,
+.seeker-actions .primary {
+  min-width: 170px;
+}
+
+.seeker-copy-button {
+  min-width: 154px;
+  padding-inline: 16px;
+}
+
+.seeker-background-note {
+  font-size: 0.85rem;
+  color: var(--soft-color);
+}
+
+.seeker-atmosphere {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.seeker-atmosphere__orb,
+.seeker-atmosphere__mist {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.seeker-atmosphere__orb {
+  filter: blur(4px);
+  opacity: 0.6;
+  animation: drift 10s ease-in-out infinite;
+}
+
+.seeker-atmosphere__orb--1 {
+  left: 10%;
+  top: 18%;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(111, 140, 255, 0.28), transparent 65%);
+}
+
+.seeker-atmosphere__orb--2 {
+  right: 8%;
+  top: 12%;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(138, 93, 255, 0.2), transparent 65%);
+  animation-delay: -4s;
+}
+
+.seeker-atmosphere__mist {
+  bottom: 0;
+  width: 40vw;
+  height: 28vh;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.05), transparent 65%);
+  animation: sway 14s ease-in-out infinite;
+}
+
+.seeker-atmosphere__mist--left {
+  left: -8vw;
+}
+
+.seeker-atmosphere__mist--right {
+  right: -6vw;
+  animation-delay: -6s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes crystalPulse {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes drift {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(-14px) translateX(10px);
+  }
+}
+
+@keyframes sway {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(16px);
+  }
+}
+
+@media (max-width: 720px) {
+  .seeker-header,
+  .seeker-panel {
+    padding: 20px;
+  }
+
+  .seeker-frame {
+    padding: 22px 18px;
+  }
+
+  .seeker-mark {
+    gap: 10px;
+    padding: 14px 18px;
+  }
+
+  .seeker-actions .secondary,
+  .seeker-actions .primary,
+  .seeker-action {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .seeker-cta-row,
+  .seeker-actions {
+    width: 100%;
+  }
+}

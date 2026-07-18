@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guild of Seekers</title>
+    <link rel="stylesheet" href="../shared/styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page seeker-page" data-page>
+      <div class="seeker-atmosphere" aria-hidden="true">
+        <span class="seeker-atmosphere__mist seeker-atmosphere__mist--left"></span>
+        <span class="seeker-atmosphere__mist seeker-atmosphere__mist--right"></span>
+        <span class="seeker-atmosphere__orb seeker-atmosphere__orb--1"></span>
+        <span class="seeker-atmosphere__orb seeker-atmosphere__orb--2"></span>
+      </div>
+
+      <section class="shell seeker-shell">
+        <header class="card seeker-header">
+          <div>
+            <p class="kicker">Guild of Seekers</p>
+            <h1 class="title">Awaken Within the Caverns</h1>
+            <p class="subtitle">
+              Before the trial begins, the Guild must recognize your presence and seal your path with a Seeker Mark.
+            </p>
+          </div>
+        </header>
+
+        <section class="seeker-stage" data-stage></section>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

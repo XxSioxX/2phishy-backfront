@@ -1,4 +1,9 @@
 import { QUESTIONNAIRES } from "./questionnaire-data.js";
+import {
+  getSeekerMarkFromLocation,
+  getStoredSeekerMark,
+  setStoredSeekerMark,
+} from "./seeker-mark.js";
 
 const questionnaireId = window.QUESTIONNAIRE_ID || "pretest";
 const config = QUESTIONNAIRES[questionnaireId];
@@ -35,6 +40,7 @@ let state = {
   theme: "dark",
   googleFormsHiddenFields: null,
   draftLoadedAt: null,
+  seekerMark: "",
 };
 
 const escapeHTML = (value) =>
@@ -100,6 +106,21 @@ const saveDraft = () => {
 
 const clearDraft = () => {
   localStorage.removeItem(storageKey);
+};
+
+const hydrateSeekerMark = () => {
+  const queryMark = getSeekerMarkFromLocation();
+  const storedMark = getStoredSeekerMark();
+  const seekerMark = queryMark || storedMark;
+
+  if (!seekerMark) {
+    return;
+  }
+
+  state.seekerMark = seekerMark;
+  setStoredSeekerMark(seekerMark);
+
+  state.answers.participant_id = seekerMark;
 };
 
 const buildAnswerMap = () => {
@@ -276,19 +297,29 @@ const renderQuestion = (question) => {
   const value = state.answers[question.id] ?? "";
   const error = state.errors[question.id];
   const requiredMark = question.required ? '<span class="required">*</span>' : "";
+  const isSeekerMarkField = question.id === "participant_id" && Boolean(state.seekerMark);
+  const helperText =
+    isSeekerMarkField && question.id === "participant_id"
+      ? "Auto-filled from your Seeker Mark."
+      : question.helperText;
 
   if (question.type === "short_answer") {
     return `
       <div class="question ${error ? "has-error" : ""}">
         <label class="label" for="${escapeHTML(question.id)}">${escapeHTML(question.question)}${requiredMark}</label>
-        ${question.helperText ? `<p class="question-helper">${escapeHTML(question.helperText)}</p>` : ""}
+        ${
+          helperText
+            ? `<p class="question-helper">${escapeHTML(helperText)}${isSeekerMarkField ? ' <span class="sync-pill">Synced</span>' : ""}</p>`
+            : ""
+        }
         <input
           id="${escapeHTML(question.id)}"
-          class="input"
+          class="input ${isSeekerMarkField ? "input--locked" : ""}"
           type="${question.inputType === "number" ? "number" : "text"}"
           inputmode="${question.inputType === "number" ? "numeric" : "text"}"
           placeholder="${escapeHTML(question.placeholder || "")}"
           value="${escapeHTML(value)}"
+          ${isSeekerMarkField ? "readonly aria-readonly=\"true\"" : ""}
         />
         ${error ? `<p class="error">${error}</p>` : ""}
       </div>
@@ -491,7 +522,7 @@ const submit = async () => {
       },
       body: JSON.stringify({
         questionnaire_type: questionnaireId,
-        participant_id: state.answers.participant_id || "Unknown",
+        participant_id: state.answers.participant_id || state.seekerMark || "Unknown",
         answers: buildAnswerMap(),
         current_step: state.currentStep,
         user_agent: navigator.userAgent,
@@ -557,6 +588,7 @@ const boot = () => {
   document.title = config.title;
   loadTheme();
   loadDraft();
+  hydrateSeekerMark();
   if (!state.draftLoadedAt) {
     state.draftLoadedAt = Date.now();
   }

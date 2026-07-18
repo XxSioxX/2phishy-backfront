@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import re
+import secrets
 import uuid
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -51,6 +52,17 @@ def ensure_database() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS seeker_marks (
+                id TEXT PRIMARY KEY,
+                seeker_mark TEXT NOT NULL UNIQUE,
+                user_agent TEXT,
+                referrer TEXT,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
         conn.commit()
 
 
@@ -84,6 +96,79 @@ def fetch_fbzx(view_url: str) -> str:
     return ""
 
 
+def generate_seeker_mark() -> str:
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    token = "".join(secrets.choice(alphabet) for _ in range(4))
+    return f"SKR-{token}"
+
+
+def issue_seeker_mark(user_agent: str = "", referrer: str = "") -> dict:
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    with sqlite3.connect(DB_PATH) as conn:
+        for _ in range(100):
+            seeker_mark = generate_seeker_mark()
+            issue_id = str(uuid.uuid4())
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO seeker_marks (
+                        id, seeker_mark, user_agent, referrer, created_at
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        issue_id,
+                        seeker_mark,
+                        user_agent,
+                        referrer,
+                        created_at,
+                    ),
+                )
+                conn.commit()
+                return {
+                    "id": issue_id,
+                    "seeker_mark": seeker_mark,
+                    "created_at": created_at,
+                }
+            except sqlite3.IntegrityError:
+                continue
+
+    raise RuntimeError("Failed to issue a unique Seeker Mark")
+
+
+def list_seeker_marks(search: str = "", limit: int = 200) -> list[dict]:
+    query = """
+        SELECT seeker_mark, created_at, user_agent, referrer
+        FROM seeker_marks
+    """
+    params: list[object] = []
+
+    search = search.strip()
+    if search:
+        query += """
+            WHERE seeker_mark LIKE ? OR created_at LIKE ? OR user_agent LIKE ? OR referrer LIKE ?
+        """
+        like = f"%{search}%"
+        params.extend([like, like, like, like])
+
+    query += " ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(query, params).fetchall()
+
+    return [
+        {
+            "seeker_mark": row["seeker_mark"],
+            "created_at": row["created_at"],
+            "user_agent": row["user_agent"],
+            "referrer": row["referrer"],
+        }
+        for row in rows
+    ]
+
+
 class QuestionnaireHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
@@ -112,12 +197,46 @@ class QuestionnaireHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/":
             self.send_response(HTTPStatus.SEE_OTHER)
-            self.send_header("Location", "/pretest/")
+            self.send_header("Location", "/seeker/")
+            self.end_headers()
+            return
+
+        if parsed.path == "/seeker":
+            self.send_response(HTTPStatus.SEE_OTHER)
+            self.send_header("Location", "/seeker/")
+            self.end_headers()
+            return
+
+        if parsed.path == "/seeker-log":
+            self.send_response(HTTPStatus.SEE_OTHER)
+            self.send_header("Location", "/seeker-log/")
             self.end_headers()
             return
 
         if parsed.path == "/api/health":
             json_response(self, HTTPStatus.OK, {"status": "ok"})
+            return
+
+        if parsed.path == "/api/seeker-marks":
+            from urllib.parse import parse_qs
+
+            query = parse_qs(parsed.query or "")
+            search = (query.get("q", [""])[0] or "").strip()
+            try:
+                limit = int((query.get("limit", ["200"])[0] or "200").strip())
+            except ValueError:
+                limit = 200
+            limit = max(1, min(limit, 500))
+            items = list_seeker_marks(search=search, limit=limit)
+
+            json_response(
+                self,
+                HTTPStatus.OK,
+                {
+                    "items": items,
+                    "count": len(items),
+                },
+            )
             return
 
         if parsed.path == "/api/google-forms/meta":
@@ -155,10 +274,50 @@ class QuestionnaireHandler(SimpleHTTPRequestHandler):
             )
             return
 
+        if parsed.path == "/api/seeker-marks":
+            json_response(
+                self,
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                {"detail": "Use POST to issue a Seeker Mark"},
+            )
+            return
+
         super().do_GET()
 
     def do_POST(self):  # noqa: N802
         parsed = urlparse(self.path)
+        if parsed.path == "/api/seeker-marks":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length) if content_length else b""
+
+            referrer = self.headers.get("Referer", "")
+            if raw_body:
+                try:
+                    payload = json.loads(raw_body.decode("utf-8") or "{}")
+                except json.JSONDecodeError:
+                    payload = {}
+                referrer = str(payload.get("referrer") or referrer)
+
+            try:
+                result = issue_seeker_mark(
+                    user_agent=self.headers.get("User-Agent", ""),
+                    referrer=referrer,
+                )
+            except RuntimeError as error:
+                json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"detail": str(error)})
+                return
+
+            json_response(
+                self,
+                HTTPStatus.CREATED,
+                {
+                    "status": "success",
+                    "seeker_mark": result["seeker_mark"],
+                    "created_at": result["created_at"],
+                },
+            )
+            return
+
         if parsed.path != "/api/questionnaires/submissions":
             json_response(
                 self,
@@ -258,6 +417,8 @@ def main() -> None:
     ensure_database()
     server = ThreadingHTTPServer(("0.0.0.0", 8011), QuestionnaireHandler)
     print("Questionnaire tool running at http://localhost:8011")
+    print("Seeker portal: http://localhost:8011/seeker/")
+    print("Seeker log:    http://localhost:8011/seeker-log/")
     print("Pre-test:  http://localhost:8011/pretest/")
     print("Post-test: http://localhost:8011/posttest/")
     server.serve_forever()

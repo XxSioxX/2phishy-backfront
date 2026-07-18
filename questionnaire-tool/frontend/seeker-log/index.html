@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guild of Seekers — Log</title>
+    <link rel="stylesheet" href="../shared/styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page seeker-log-page" data-page>
+      <section class="shell seeker-log-shell">
+        <header class="card header seeker-log-header">
+          <div>
+            <p class="kicker">Internal Archive</p>
+            <h1 class="title">Seeker Registry</h1>
+            <p class="subtitle">Search issued Seeker Marks and review their creation timestamps.</p>
+          </div>
+          <div class="seeker-log-header__actions">
+            <button type="button" class="theme-toggle" data-refresh>Refresh</button>
+          </div>
+        </header>
+
+        <section class="card seeker-log-toolbar">
+          <label class="seeker-log-search">
+            <span>Search</span>
+            <input
+              type="search"
+              class="input seeker-log-search__input"
+              data-search
+              placeholder="Search by mark, date, referrer, or user agent"
+            />
+          </label>
+          <div class="seeker-log-meta" data-meta></div>
+        </section>
+
+        <section class="card seeker-log-table-card">
+          <div class="seeker-log-table-wrap" data-table></div>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
