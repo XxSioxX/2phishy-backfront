@@ -243,12 +243,12 @@ const downloadSeekerCard = async () => {
 
     context.font = "700 25px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
     context.fillStyle = "rgba(198, 207, 223, 0.92)";
-    context.fillText("Your Seeker Mark", centerX, 560);
+    context.fillText("Your Seeker Mark", centerX, 548);
 
     const badgeW = 760;
-    const badgeH = 180;
+    const badgeH = 172;
     const badgeX = (width - badgeW) / 2;
-    const badgeY = 595;
+    const badgeY = 582;
     const badgeRadius = 30;
 
     const badgeGradient = context.createLinearGradient(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH);
@@ -270,8 +270,8 @@ const downloadSeekerCard = async () => {
     context.fill();
 
     context.fillStyle = "#ffffff";
-    context.font = "800 84px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-    context.fillText(state.seekerMark, centerX + 18, badgeY + 118);
+    context.font = "800 80px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    context.fillText(state.seekerMark, centerX + 18, badgeY + 112);
     context.shadowColor = "rgba(111, 140, 255, 0.45)";
     context.shadowBlur = 28;
     context.fillStyle = "rgba(255, 255, 255, 0.95)";
@@ -284,11 +284,11 @@ const downloadSeekerCard = async () => {
     context.fillStyle = "rgba(198, 207, 223, 0.94)";
     context.font = "500 26px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
     const lines = wrapLines(context, note, 980);
-    drawCenteredLines(context, lines, centerX, 832, 34);
+    drawCenteredLines(context, lines, centerX, 824, 34);
 
     context.font = "600 22px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
     context.fillStyle = "rgba(151, 245, 214, 0.86)";
-    context.fillText("Guild of Seekers", centerX, height - frameY - 44);
+    context.fillText("Guild of Seekers", centerX, height - 44);
 
     const link = document.createElement("a");
     link.download = `${state.seekerMark}.jpg`;
