@@ -1,3 +1,5 @@
+import { apiUrl } from "../shared/api.js";
+
 const elements = {
   search: document.querySelector("[data-search]"),
   refresh: document.querySelector("[data-refresh]"),
@@ -129,7 +131,7 @@ const loadRecords = async () => {
   render();
 
   try {
-    const url = new URL("/api/seeker-marks", window.location.origin);
+    const url = new URL(apiUrl("/api/seeker-marks"));
     if (state.query.trim()) {
       url.searchParams.set("q", state.query.trim());
     }

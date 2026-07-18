@@ -4,6 +4,7 @@ import {
   getStoredSeekerMark,
   setStoredSeekerMark,
 } from "./seeker-mark.js";
+import { apiUrl } from "./api.js";
 
 const questionnaireId = window.QUESTIONNAIRE_ID || "pretest";
 const config = QUESTIONNAIRES[questionnaireId];
@@ -459,7 +460,7 @@ const renderNotice = () => {
 
 const loadGoogleFormsMeta = async () => {
   try {
-    const metaResponse = await fetch(`/api/google-forms/meta?questionnaire_type=${encodeURIComponent(questionnaireId)}`);
+    const metaResponse = await fetch(apiUrl(`/api/google-forms/meta?questionnaire_type=${encodeURIComponent(questionnaireId)}`));
     if (!metaResponse.ok) {
       return;
     }
@@ -515,7 +516,7 @@ const submit = async () => {
   render();
 
   try {
-    const response = await fetch("/api/questionnaires/submissions", {
+    const response = await fetch(apiUrl("/api/questionnaires/submissions"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

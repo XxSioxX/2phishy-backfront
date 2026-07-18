@@ -3,6 +3,7 @@ import {
   normalizeSeekerMark,
   setStoredSeekerMark,
 } from "../shared/seeker-mark.js";
+import { apiUrl } from "../shared/api.js";
 
 const PRODUCTION_PRETEST_URL = "https://pretest.phishydev.tech";
 
@@ -60,7 +61,7 @@ const issueSeekerMark = async () => {
   render();
 
   try {
-    const response = await fetch("/api/seeker-marks", {
+    const response = await fetch(apiUrl("/api/seeker-marks"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

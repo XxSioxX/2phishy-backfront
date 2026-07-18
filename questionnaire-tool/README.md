@@ -34,6 +34,8 @@ The portal issues Seeker Marks through the backend and passes them into the pre-
 
 The seeker registry page is link-only and is intended for internal use without participant access.
 
+Deployment note: the frontend expects the backend API to be reachable at the same origin by default. If you host the frontend and backend separately in the cloud, set `window.QUESTIONNAIRE_API_BASE_URL` to the backend origin before loading the scripts.
+
 The frontend saves drafts to browser local storage by default and sends the final submission to:
 
 1. the local backend, then
