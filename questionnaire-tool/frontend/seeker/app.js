@@ -290,6 +290,10 @@ const downloadSeekerCard = async () => {
     context.fillStyle = "rgba(151, 245, 214, 0.86)";
     context.fillText("Guild of Seekers", centerX, height - 44);
 
+    context.font = "500 14px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    context.fillStyle = "rgba(198, 207, 223, 0.38)";
+    context.fillText("Amarillento-Perez-2Phishy-Mapua-University", centerX, height - 18);
+
     const link = document.createElement("a");
     link.download = `${state.seekerMark}.jpg`;
     link.href = canvas.toDataURL("image/jpeg", 0.95);
