@@ -36,6 +36,8 @@ The seeker registry page is link-only and is intended for internal use without p
 
 Deployment note: the frontend expects the backend API to be reachable at the same origin by default. If you host the frontend and backend separately in the cloud, set `window.QUESTIONNAIRE_API_BASE_URL` to the backend origin before loading the scripts.
 
+If the seeker portal should redirect to a different pretest host, set `window.QUESTIONNAIRE_PRETEST_URL` before loading `frontend/seeker/app.js`. Otherwise it uses `/pretest/` on the current origin, which keeps the `sid` query parameter intact in same-origin deployments.
+
 The frontend saves drafts to browser local storage by default and sends the final submission to:
 
 1. the local backend, then

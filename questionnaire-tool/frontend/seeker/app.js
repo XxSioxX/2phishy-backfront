@@ -8,6 +8,11 @@ import { apiUrl } from "../shared/api.js";
 const PRODUCTION_PRETEST_URL = "https://pretest.phishydev.tech";
 
 const getPretestUrl = () => {
+  const configured = window.QUESTIONNAIRE_PRETEST_URL;
+  if (typeof configured === "string" && configured.trim()) {
+    return configured.trim().replace(/\/$/, "");
+  }
+
   const isLocalHost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1" ||
@@ -17,7 +22,7 @@ const getPretestUrl = () => {
     return new URL("/pretest/", window.location.origin).toString();
   }
 
-  return PRODUCTION_PRETEST_URL;
+  return new URL("/pretest/", window.location.origin).toString();
 };
 
 const elements = {
