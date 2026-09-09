@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { api } from "../../services/api";
 import { User } from "../../types";
 import { useAuth } from "../../contexts/AuthContext";
@@ -64,6 +64,10 @@ const Users = () => {
   const [assessmentModalUser, setAssessmentModalUser] = useState<User | null>(null);
   const [roleDraftByUserId, setRoleDraftByUserId] = useState<Record<string, User["role"]>>({});
   const [actionBusyByUserId, setActionBusyByUserId] = useState<Record<string, boolean>>({});
+  const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
+  const [createUserForm, setCreateUserForm] = useState({ username: '', email: '', password: '', confirmPassword: '' });
+  const [createUserError, setCreateUserError] = useState<string | null>(null);
+  const [createUserBusy, setCreateUserBusy] = useState(false);
 
   // Check if user is online (last seen within last 60 seconds, or is the current user)
   const isUserOnline = (userToCheck?: any, lastSeen?: string | null): boolean => {
@@ -178,6 +182,38 @@ const Users = () => {
   const openInitialAssessmentFromDetails = (targetUser: User) => {
     closeUserDetailsModal();
     openInitialAssessmentModal(targetUser);
+  };
+
+  const closeCreateUserModal = () => {
+    if (createUserBusy) return;
+    setCreateUserModalOpen(false);
+    setCreateUserError(null);
+    setCreateUserForm({ username: '', email: '', password: '', confirmPassword: '' });
+  };
+
+  const handleCreateUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (createUserForm.password !== createUserForm.confirmPassword) {
+      setCreateUserError('Passwords do not match.');
+      return;
+    }
+
+    setCreateUserBusy(true);
+    setCreateUserError(null);
+    try {
+      await api.createAdminUser({
+        username: createUserForm.username.trim(),
+        email: createUserForm.email.trim(),
+        password: createUserForm.password,
+      });
+      setCreateUserForm({ username: '', email: '', password: '', confirmPassword: '' });
+      setCreateUserModalOpen(false);
+      await fetchUsers();
+    } catch (err) {
+      setCreateUserError(err instanceof Error ? err.message : 'Failed to create user.');
+    } finally {
+      setCreateUserBusy(false);
+    }
   };
 
   const setUserActionBusy = (targetUser: User, busy: boolean) => {
@@ -297,6 +333,9 @@ const Users = () => {
           />
           <button onClick={fetchUsers} className="refresh-btn">
             Refresh
+          </button>
+          <button onClick={() => setCreateUserModalOpen(true)} className="create-user-btn">
+            Create User
           </button>
         </div>
       </div>
@@ -486,6 +525,68 @@ const Users = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {createUserModalOpen && (
+        <div className="modal-overlay" onClick={closeCreateUserModal}>
+          <form className="modal-content create-user-modal-content" onSubmit={handleCreateUser} onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3>Create User</h3>
+                <p>New accounts are created as students.</p>
+              </div>
+              <button type="button" className="modal-close" onClick={closeCreateUserModal} aria-label="Close create user form">
+                x
+              </button>
+            </div>
+            <div className="modal-body create-user-form">
+              <label>
+                Username
+                <input
+                  required
+                  value={createUserForm.username}
+                  onChange={(event) => setCreateUserForm((prev) => ({ ...prev, username: event.target.value }))}
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  required
+                  type="email"
+                  value={createUserForm.email}
+                  onChange={(event) => setCreateUserForm((prev) => ({ ...prev, email: event.target.value }))}
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  required
+                  type="password"
+                  value={createUserForm.password}
+                  onChange={(event) => setCreateUserForm((prev) => ({ ...prev, password: event.target.value }))}
+                />
+              </label>
+              <label>
+                Confirm password
+                <input
+                  required
+                  type="password"
+                  value={createUserForm.confirmPassword}
+                  onChange={(event) => setCreateUserForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                />
+              </label>
+              {createUserError && <p className="create-user-error">{createUserError}</p>}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="cancel-btn" onClick={closeCreateUserModal} disabled={createUserBusy}>
+                Cancel
+              </button>
+              <button type="submit" className="confirm-btn" disabled={createUserBusy}>
+                {createUserBusy ? 'Creating...' : 'Create User'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

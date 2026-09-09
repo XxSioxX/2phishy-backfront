@@ -10,12 +10,12 @@ from app.core.database_postgres import get_db
 from app.core.database_mongo import get_mongo_db
 from app.modules.auth.services.auth_service import require_admin_role, require_super_admin_role, get_current_user_role
 from app.modules.user.schemas.schemas import (
-    UserResponse, UserUpdate, UserStatsResponse, AdminUserResponse
+    AdminUserCreate, UserCreate, UserResponse, UserUpdate, UserStatsResponse, AdminUserResponse
 )
 from app.modules.user.services.services import (
     get_all_users, get_user, admin_update_user, update_user_role, 
     update_user_status, get_user_statistics, get_users_by_role, 
-    get_users_by_status, delete_user
+    get_users_by_status, delete_user, create_user, validate_password_strength
 )
 from app.modules.user.models.user import User, UserRole, AccountStatus
 from app.utils.logger import get_logger
@@ -327,6 +327,30 @@ async def get_admin_data_export(
     }
 
 # Super admin only routes
+@router.post("/users", response_model=AdminUserResponse, status_code=201)
+def create_admin_user_account(
+    user_data: AdminUserCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_role),
+):
+    """Create a regular student account from the admin panel."""
+    password_errors = validate_password_strength(user_data.password)
+    if password_errors:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must include " + ", ".join(password_errors) + ".",
+        )
+
+    return create_user(
+        db,
+        UserCreate(
+            username=user_data.username,
+            email=user_data.email,
+            password=user_data.password,
+        ),
+    )
+
+
 @router.post("/users/create-admin", response_model=AdminUserResponse)
 def create_admin_user(
     user_data: UserUpdate,
@@ -346,6 +370,5 @@ def get_super_admin_stats(
     """Get detailed statistics (super admin only)"""
     logger.info(f"Super admin {current_user.username} requesting detailed statistics")
     return get_user_statistics(db)
-
 
 

@@ -702,6 +702,20 @@ export const api = {
     },
 
     // Admin endpoints
+    async createAdminUser(userData: { username: string; email: string; password: string }): Promise<User> {
+        const response = await fetch(`${API_BASE_URL}/admin/users`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(userData),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Failed to create user');
+        }
+        const user = await response.json();
+        return { ...user, userid: user.userid || user.id };
+    },
+
     async changeUserRole(userId: string, newRole: string): Promise<User> {
         const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/role/${newRole}`, {
             method: 'PATCH',

@@ -16,6 +16,9 @@ class UserCreate(UserBase):
     thesis_consent_accepted: bool = False
     consent_version: str | None = None
 
+class AdminUserCreate(UserBase):
+    password: str
+
 class UserLogin(BaseModel):
     username: str
     password: str
